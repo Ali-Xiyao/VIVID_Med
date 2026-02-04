@@ -498,9 +498,10 @@ class VIVIDModel(nn.Module):
         # 注意：outputs 包含了 prompt tokens，需要跳过
         generated_texts = []
         for i, output in enumerate(outputs):
-            # 跳过 prompt 部分
+            # 跳过 visual tokens + prompt 部分
+            input_len = num_visual_tokens + prompt_inputs.input_ids.shape[1]
             generated = self.tokenizer.decode(
-                output[prompt_inputs.input_ids.shape[1]:],
+                output[input_len:],
                 skip_special_tokens=True,
             )
             generated_texts.append(generated)
