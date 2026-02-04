@@ -11,6 +11,7 @@ Image → ViT(train) → Projector(train) → Frozen LLM(forward) → JSON token
 - 梯度只更新 ViT 和 Projector
 """
 
+import os
 import torch
 import torch.nn as nn
 from typing import Optional, Dict, Any, Tuple, List, Union
@@ -106,6 +107,11 @@ class VIVIDModel(nn.Module):
         """
         from transformers import AutoModelForCausalLM, AutoTokenizer
 
+        # 下载相关环境变量（提升稳定性，避免 Xet）
+        os.environ.setdefault("HF_HUB_DISABLE_XET", "1")
+        os.environ.setdefault("HF_HUB_DOWNLOAD_TIMEOUT", "300")
+        os.environ.setdefault("HF_HUB_ETAG_TIMEOUT", "300")
+
         print(f"Loading LLM: {model_name}")
 
         # 尝试从 ModelScope 下载（国内镜像）
@@ -155,20 +161,24 @@ class VIVIDModel(nn.Module):
         # 加载模型
         attn_implementation = "flash_attention_2" if use_flash_attention else "eager"
 
+        common_load_kwargs = dict(
+            trust_remote_code=True,
+            torch_dtype=llm_dtype,
+            resume_download=True,
+        )
+
         try:
             self.llm = AutoModelForCausalLM.from_pretrained(
                 model_path,
-                trust_remote_code=True,
-                torch_dtype=llm_dtype,
                 attn_implementation=attn_implementation,
+                **common_load_kwargs,
             )
         except Exception as e:
             print(f"Flash attention not available, falling back to eager: {e}")
             self.llm = AutoModelForCausalLM.from_pretrained(
                 model_path,
-                trust_remote_code=True,
-                torch_dtype=llm_dtype,
                 attn_implementation="eager",
+                **common_load_kwargs,
             )
 
         # 冻结 LLM 参数
