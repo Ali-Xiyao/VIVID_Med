@@ -95,6 +95,11 @@ python train_cxr.py --debug
 python train_cxr.py --config ../configs/cxr_chexpert.yaml
 ```
 
+评估 VIVID（生成 UMS 并计算指标）：
+```bash
+python eval_vivid.py --config ../configs/cxr_chexpert.yaml --checkpoint ../outputs/cxr_chexpert/checkpoints/best.pt
+```
+
 ## ViT Baseline（论文对比）
 
 训练基线：
