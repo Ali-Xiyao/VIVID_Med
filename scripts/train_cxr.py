@@ -169,12 +169,23 @@ def main():
     # Debug 模式
     if args.debug:
         print("Debug mode enabled")
-        config["data"]["max_train_samples"] = 100
-        config["data"]["max_val_samples"] = 20
-        config["training"]["max_steps"] = 50
-        config["training"]["log_interval"] = 5
-        config["training"]["eval_interval"] = 25
-        config["training"]["save_interval"] = 50
+        config["data"]["max_train_samples"] = 20
+        config["data"]["max_val_samples"] = 4
+        config["data"]["num_workers"] = 0
+        config["training"]["batch_size"] = 2
+        config["training"]["gradient_accumulation_steps"] = 1
+        config["training"]["max_steps"] = 5
+        config["training"]["log_interval"] = 1
+        config["training"]["eval_interval"] = 2
+        config["training"]["save_interval"] = 5
+        # 使用小模型以加速调试（避免下载大模型）
+        config["model"]["llm_model_name"] = config["model"].get(
+            "debug_llm_model_name", "sshleifer/tiny-gpt2"
+        )
+        config["model"]["use_flash_attention"] = False
+        # 调试时禁用混合精度，避免 CPU 环境报错
+        config["training"]["bf16"] = False
+        config["training"]["fp16"] = False
 
     # 设置随机种子
     seed = config.get("seed", 42)

@@ -60,6 +60,7 @@ class VIVIDModel(nn.Module):
         self.vit_model_name = vit_model_name
         self.llm_model_name = llm_model_name
         self.vit_output_type = vit_output_type
+        self.llm_device = llm_device
 
         # 1. 创建 ViT 编码器（可训练）
         self.vit = ViTEncoder(
@@ -75,7 +76,7 @@ class VIVIDModel(nn.Module):
         self.llm_embed_dim = None
 
         if load_llm:
-            self._load_llm(llm_model_name, use_flash_attention)
+            self._load_llm(llm_model_name, use_flash_attention, llm_device=self.llm_device)
         else:
             # 使用默认值（Qwen3-1.7B）
             self.llm_embed_dim = 1536
@@ -91,7 +92,12 @@ class VIVIDModel(nn.Module):
         # 4. Answerability Head（可选，用于预测字段可答性）
         self.answerability_head = None
 
-    def _load_llm(self, model_name: str, use_flash_attention: bool = True):
+    def _load_llm(
+        self,
+        model_name: str,
+        use_flash_attention: bool = True,
+        llm_device: Optional[str] = None,
+    ):
         """
         加载并冻结 LLM
 
@@ -142,6 +148,10 @@ class VIVIDModel(nn.Module):
         if self.tokenizer.pad_token is None:
             self.tokenizer.pad_token = self.tokenizer.eos_token
 
+        # 选择 dtype（CPU 用 float32，CUDA 用 bfloat16）
+        target_device = llm_device or ("cuda" if torch.cuda.is_available() else "cpu")
+        llm_dtype = torch.bfloat16 if str(target_device).startswith("cuda") else torch.float32
+
         # 加载模型
         attn_implementation = "flash_attention_2" if use_flash_attention else "eager"
 
@@ -149,7 +159,7 @@ class VIVIDModel(nn.Module):
             self.llm = AutoModelForCausalLM.from_pretrained(
                 model_path,
                 trust_remote_code=True,
-                torch_dtype=torch.bfloat16,
+                torch_dtype=llm_dtype,
                 attn_implementation=attn_implementation,
             )
         except Exception as e:
@@ -157,7 +167,7 @@ class VIVIDModel(nn.Module):
             self.llm = AutoModelForCausalLM.from_pretrained(
                 model_path,
                 trust_remote_code=True,
-                torch_dtype=torch.bfloat16,
+                torch_dtype=llm_dtype,
                 attn_implementation="eager",
             )
 
