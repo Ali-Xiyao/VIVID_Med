@@ -12,6 +12,7 @@ Image → ViT(train) → Projector(train) → Frozen LLM(forward) → JSON token
 """
 
 import os
+import json
 import torch
 import torch.nn as nn
 from typing import Optional, Dict, Any, Tuple, List, Union
@@ -494,16 +495,57 @@ class VIVIDModel(nn.Module):
             **kwargs,
         )
 
-        # 解码
-        # 注意：outputs 包含了 prompt tokens，需要跳过
+        prompt_lengths = prompt_inputs.attention_mask.sum(dim=1).tolist()
+
+        def extract_json_block(text: str, required_key: Optional[str] = None) -> Optional[str]:
+            start_positions = [i for i, ch in enumerate(text) if ch == "{"]
+            for start in start_positions:
+                depth = 0
+                for j in range(start, len(text)):
+                    if text[j] == "{":
+                        depth += 1
+                    elif text[j] == "}":
+                        depth -= 1
+                        if depth == 0:
+                            candidate = text[start:j + 1]
+                            try:
+                                parsed = json.loads(candidate)
+                            except Exception:
+                                break
+                            if isinstance(parsed, dict):
+                                if required_key is None or required_key in parsed:
+                                    return candidate
+                            break
+            return None
+
         generated_texts = []
         for i, output in enumerate(outputs):
-            # 跳过 visual tokens + prompt 部分
-            input_len = num_visual_tokens + prompt_inputs.input_ids.shape[1]
-            generated = self.tokenizer.decode(
-                output[input_len:],
-                skip_special_tokens=True,
-            )
-            generated_texts.append(generated)
+            prompt_len = int(prompt_lengths[i])
+            decoded_full = self.tokenizer.decode(output, skip_special_tokens=True)
+            candidates = []
+            if prompt_len < output.shape[0]:
+                candidates.append(
+                    self.tokenizer.decode(output[prompt_len:], skip_special_tokens=True)
+                )
+            visual_prompt_len = prompt_len + num_visual_tokens
+            if visual_prompt_len < output.shape[0]:
+                candidates.append(
+                    self.tokenizer.decode(output[visual_prompt_len:], skip_special_tokens=True)
+                )
+            candidates.append(decoded_full)
+
+            selected = None
+            for cand in candidates:
+                selected = extract_json_block(cand, required_key="findings")
+                if selected:
+                    break
+            if selected is None:
+                for cand in candidates:
+                    selected = extract_json_block(cand)
+                    if selected:
+                        break
+            if selected is None:
+                selected = candidates[0] if candidates else decoded_full
+            generated_texts.append(selected)
 
         return generated_texts

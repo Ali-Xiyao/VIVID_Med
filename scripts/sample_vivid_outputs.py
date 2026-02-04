@@ -29,17 +29,36 @@ def load_config(path: str) -> Dict[str, Any]:
 
 
 def parse_json_from_text(text: str) -> Optional[Dict[str, Any]]:
-    try:
-        return json.loads(text)
-    except Exception:
-        start = text.find("{")
-        end = text.rfind("}")
-        if start != -1 and end != -1 and end > start:
-            try:
-                return json.loads(text[start:end + 1])
-            except Exception:
-                return None
-    return None
+    def try_parse(candidate: str) -> Optional[Dict[str, Any]]:
+        try:
+            parsed = json.loads(candidate)
+            return parsed if isinstance(parsed, dict) else None
+        except Exception:
+            return None
+
+    parsed = try_parse(text)
+    if parsed is not None:
+        return parsed
+
+    start_positions = [i for i, ch in enumerate(text) if ch == "{"]
+    fallback = None
+    for start in start_positions:
+        depth = 0
+        for i in range(start, len(text)):
+            if text[i] == "{":
+                depth += 1
+            elif text[i] == "}":
+                depth -= 1
+                if depth == 0:
+                    candidate = text[start:i + 1]
+                    parsed = try_parse(candidate)
+                    if parsed is not None:
+                        if "findings" in parsed:
+                            return parsed
+                        if fallback is None:
+                            fallback = parsed
+                    break
+    return fallback
 
 
 def main():
