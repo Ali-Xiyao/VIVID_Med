@@ -95,6 +95,18 @@ python train_cxr.py --debug
 python train_cxr.py --config ../configs/cxr_chexpert.yaml
 ```
 
+## ViT Baseline（论文对比）
+
+训练基线：
+```bash
+python train_vit_baseline.py --config ../configs/baseline_vit_chexpert.yaml
+```
+
+评估基线（指定 checkpoint）：
+```bash
+python eval_vit_baseline.py --config ../configs/baseline_vit_chexpert.yaml --checkpoint ../outputs/baseline_vit/best.pt
+```
+
 ### 5. 恢复训练
 
 ```bash
