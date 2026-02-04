@@ -164,7 +164,6 @@ class VIVIDModel(nn.Module):
         common_load_kwargs = dict(
             trust_remote_code=True,
             torch_dtype=llm_dtype,
-            resume_download=True,
         )
 
         try:
