@@ -1,0 +1,76 @@
+# VIVID-Med CXR Training Configuration
+# CheXpert 数据集 + Qwen3-1.7B
+
+# 数据配置
+data:
+  data_root: "./data/dataset"
+  train_ums_path: "./data/dataset/processed/chexpert_ums.jsonl"
+  val_ums_path: null  # 使用 train 的一部分作为验证
+  image_size: 224
+  use_common_labels_only: false  # 使用全部 14 个标签
+  max_train_samples: null  # null 表示使用全部
+  max_val_samples: 1000
+  num_workers: 4
+
+# 模型配置
+model:
+  # ViT 配置
+  vit_model_name: "vit_base_patch16_224"
+  vit_pretrained: true
+  vit_output_type: "cls"  # "cls", "mean", "all"
+
+  # Projector 配置
+  num_prefix_tokens: 16
+  projector_dropout: 0.1
+
+  # LLM 配置
+  llm_model_name: "Qwen/Qwen2.5-1.5B-Instruct"  # 使用 Qwen2.5-1.5B 作为替代
+  use_flash_attention: true
+
+# 训练配置
+training:
+  # 优化器
+  learning_rate: 1.0e-4
+  weight_decay: 0.01
+  warmup_steps: 500
+  max_steps: 10000
+
+  # 损失权重 (v1.0 先只用 L_tok)
+  lambda_rank: 0.0
+  lambda_vdep: 0.0
+  lambda_ans: 0.0
+
+  # 训练参数
+  batch_size: 8
+  gradient_accumulation_steps: 4  # 有效 batch size = 8 * 4 = 32
+  max_grad_norm: 1.0
+  fp16: false
+  bf16: true
+
+  # 日志和保存
+  log_interval: 10
+  eval_interval: 500
+  save_interval: 1000
+  output_dir: "./outputs/cxr_chexpert"
+
+# Prompt 配置
+prompt:
+  template: |
+    You are a medical imaging AI assistant. Analyze this chest X-ray image and generate a structured report in JSON format.
+
+    Output the following fields:
+    - modality: "CXR"
+    - findings: for each condition, specify state as "present", "absent", "uncertain", or null
+    - study_view: "AP", "PA", "LAT", or null
+
+    JSON output:
+
+# wandb 配置
+wandb:
+  enabled: false
+  project: "vivid-med"
+  run_name: null  # 自动生成
+
+# 其他
+seed: 42
+device: "cuda"

@@ -1,0 +1,153 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:vivid-med:ums:v0.2",
+  "title": "UMS (Unified Medical Schema) v0.2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "modality",
+    "anatomy",
+    "findings",
+    "laterality",
+    "study_view",
+    "geometry",
+    "measurements",
+    "answerability",
+    "uncertainty",
+    "provenance",
+    "verifier"
+  ],
+  "properties": {
+    "modality": {
+      "type": "string",
+      "enum": ["CT", "CXR", "MRI", "US", "Fundus", "Dermoscopy", "Pathology", "Other"]
+    },
+    "anatomy": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "findings": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["state"],
+        "properties": {
+          "state": {
+            "type": ["string", "null"],
+            "enum": ["present", "absent", "uncertain", null]
+          },
+          "score": {
+            "type": ["number", "null"],
+            "minimum": 0,
+            "maximum": 1
+          }
+        }
+      }
+    },
+    "laterality": {
+      "type": ["string", "null"],
+      "enum": ["left", "right", "bilateral", null]
+    },
+    "study_view": {
+      "type": ["string", "null"],
+      "enum": ["AP", "PA", "LAT", null]
+    },
+    "geometry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["bbox", "mask", "keypoints"],
+      "properties": {
+        "bbox": {
+          "type": ["array", "null"],
+          "minItems": 4,
+          "maxItems": 4,
+          "items": { "type": "number" }
+        },
+        "mask": {
+          "type": ["string", "null"],
+          "description": "Optional mask representation (e.g., path/uri/encoded string)."
+        },
+        "keypoints": {
+          "type": ["array", "null"],
+          "items": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2,
+            "items": { "type": "number" }
+          }
+        }
+      }
+    },
+    "measurements": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["value", "unit", "state", "spacing_source"],
+        "properties": {
+          "value": { "type": ["number", "null"] },
+          "unit": { "type": ["string", "null"] },
+          "state": {
+            "type": ["string", "null"],
+            "enum": ["measured", "uncertain", null]
+          },
+          "spacing_source": {
+            "type": ["string", "null"],
+            "enum": ["DICOM", "dataset_metadata", "unknown", null]
+          }
+        }
+      }
+    },
+    "answerability": {
+      "type": "object",
+      "additionalProperties": { "type": "boolean" }
+    },
+    "uncertainty": {
+      "type": "object",
+      "additionalProperties": {
+        "anyOf": [
+          { "type": "boolean" },
+          { "type": "number", "minimum": 0, "maximum": 1 },
+          { "type": "null" }
+        ]
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": ["label_source", "verifier_version", "failure_type"],
+        "properties": {
+          "label_source": {
+            "type": "string",
+            "enum": ["dataset", "derived", "ai", "doctor", "unknown"]
+          },
+          "verifier_version": { "type": "string" },
+          "failure_type": { "type": ["string", "null"] }
+        }
+      }
+    },
+    "verifier": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pass", "failure_type", "confidence", "role"],
+      "properties": {
+        "pass": { "type": "boolean" },
+        "failure_type": { "type": ["string", "null"] },
+        "confidence": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+        "role": {
+          "type": ["string", "null"],
+          "enum": ["positive", "abstain", "negative-only", "drop", null]
+        }
+      }
+    },
+    "extensions": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Dataset-specific extensions. Keep UMS core stable; put non-core fields here."
+    }
+  }
+}
+

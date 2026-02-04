@@ -1,0 +1,15 @@
+{
+  "modality": "CT",
+  "anatomy": [],
+  "findings": {},
+  "laterality": null,
+  "study_view": null,
+  "geometry": { "bbox": null, "mask": null, "keypoints": null },
+  "measurements": {},
+  "answerability": {},
+  "uncertainty": {},
+  "provenance": {},
+  "verifier": { "pass": true, "failure_type": null, "confidence": 1.0, "role": "positive" },
+  "extensions": {}
+}
+

@@ -1,0 +1,9 @@
+vivid_env/
+data/dataset/
+outputs/
+
+__pycache__/
+*.py[cod]
+
+.DS_Store
+.claude/
