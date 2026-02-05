@@ -29,7 +29,7 @@ training:
   log_interval: 10
   eval_interval: 500
   save_interval: 1000
-  output_dir: "./outputs/baseline_vit"
+  output_dir: "./outputs/baseline_vit_v2"
 
 evaluation:
   threshold: 0.5
