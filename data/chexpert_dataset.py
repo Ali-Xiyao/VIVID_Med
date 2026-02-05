@@ -45,6 +45,9 @@ class CheXpertUMSDataset(Dataset):
         is_train: bool = True,
         use_common_labels_only: bool = False,
         max_samples: Optional[int] = None,
+        json_include_all_labels: bool = False,
+        json_missing_state: Optional[str] = None,
+        json_null_state: Optional[str] = None,
     ):
         """
         Args:
@@ -58,6 +61,9 @@ class CheXpertUMSDataset(Dataset):
         self.data_root = Path(data_root)
         self.is_train = is_train
         self.use_common_labels_only = use_common_labels_only
+        self.json_include_all_labels = json_include_all_labels
+        self.json_missing_state = json_missing_state
+        self.json_null_state = json_null_state
 
         # 设置 transform
         if transform is None:
@@ -134,6 +140,14 @@ class CheXpertUMSDataset(Dataset):
 
         return answerable
 
+    def _normalize_state(self, state: Optional[str], missing: bool = False) -> Optional[str]:
+        if state is None:
+            if missing and self.json_missing_state is not None:
+                return self.json_missing_state
+            if not missing and self.json_null_state is not None:
+                return self.json_null_state
+        return state
+
     def _create_ums_json_string(self, sample: Dict) -> str:
         """
         创建用于训练的 UMS JSON 字符串（简化版，只包含 findings）
@@ -149,7 +163,14 @@ class CheXpertUMSDataset(Dataset):
         # 只包含使用的标签
         for name in self.label_names:
             if name in sample["findings"]:
-                output["findings"][name] = sample["findings"][name]
+                item = dict(sample["findings"][name])
+                item["state"] = self._normalize_state(item.get("state"), missing=False)
+                output["findings"][name] = item
+            elif self.json_include_all_labels:
+                output["findings"][name] = {
+                    "state": self._normalize_state(None, missing=True),
+                    "score": None,
+                }
 
         return json.dumps(output, ensure_ascii=False)
 

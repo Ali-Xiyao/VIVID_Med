@@ -87,6 +87,17 @@ def compute_classification_metrics(
         metrics["per_label"] = per_label_metrics
         metrics["macro_f1"] = np.mean(f1s) if f1s else 0
         metrics["macro_auc"] = np.mean(aucs) if aucs else None
+        # micro-F1 (ignore NaN)
+        valid_mask = ~np.isnan(y_true)
+        if valid_mask.any():
+            y_true_flat = y_true[valid_mask].astype(int)
+            if y_pred.ndim == 2:
+                y_pred_flat = (y_pred[valid_mask] > threshold).astype(int)
+            else:
+                y_pred_flat = y_pred[valid_mask].astype(int)
+            metrics["micro_f1"] = f1_score(y_true_flat, y_pred_flat, average="micro", zero_division=0)
+        else:
+            metrics["micro_f1"] = 0
 
     else:
         # 单标签情况

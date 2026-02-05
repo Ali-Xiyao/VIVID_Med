@@ -77,6 +77,9 @@ def main():
 
     config = load_config(args.config)
     data_cfg = config["data"]
+    json_include_all_labels = data_cfg.get("json_include_all_labels", False)
+    json_missing_state = data_cfg.get("json_missing_state")
+    json_null_state = data_cfg.get("json_null_state")
 
     requested_device = config.get("device", "cuda" if torch.cuda.is_available() else "cpu")
     if isinstance(requested_device, str) and requested_device.startswith("cuda"):
@@ -93,6 +96,9 @@ def main():
         is_train=False,
         use_common_labels_only=data_cfg.get("use_common_labels_only", False),
         max_samples=args.num_samples,
+        json_include_all_labels=json_include_all_labels,
+        json_missing_state=json_missing_state,
+        json_null_state=json_null_state,
     )
 
     loader = DataLoader(

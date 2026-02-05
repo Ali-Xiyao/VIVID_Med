@@ -1,16 +1,20 @@
-# VIVID-Med CXR Training Configuration
-# CheXpert 数据集 + Qwen3-1.7B
+﻿# VIVID-Med CXR Training Configuration
+# CheXpert 数据集 + Qwen2.5-1.5B
 
 # 数据配置
 data:
   data_root: "./data/dataset"
-  train_ums_path: "./data/dataset/processed/chexpert_ums.jsonl"
-  val_ums_path: null  # 使用 train 的一部分作为验证
+  train_ums_path: "./data/dataset/processed/chexpert_ums_train.jsonl"
+  val_ums_path: "./data/dataset/processed/chexpert_ums_val.jsonl"
   image_size: 224
   use_common_labels_only: false  # 使用全部 14 个标签
-  max_train_samples: null  # null 表示使用全部
+  max_train_samples: null
   max_val_samples: 1000
   num_workers: 4
+  # 生成 JSON 的策略
+  json_include_all_labels: true
+  json_missing_state: "absent"
+  json_null_state: "absent"
 
 # 模型配置
 model:
@@ -24,18 +28,17 @@ model:
   projector_dropout: 0.1
 
   # LLM 配置
-  llm_model_name: "Qwen/Qwen2.5-1.5B-Instruct"  # 使用 Qwen2.5-1.5B 作为替代
+  llm_model_name: "Qwen/Qwen2.5-1.5B-Instruct"
   use_flash_attention: true
 
 # 训练配置
 training:
-  # 优化器
   learning_rate: 1.0e-4
   weight_decay: 0.01
   warmup_steps: 500
   max_steps: 10000
 
-  # 损失权重 (v1.0 先只用 L_tok)
+  # 损失权重 (v1.0 只用 L_tok)
   lambda_rank: 0.0
   lambda_vdep: 0.0
   lambda_ans: 0.0
@@ -51,25 +54,46 @@ training:
   log_interval: 10
   eval_interval: 500
   save_interval: 1000
-  output_dir: "./outputs/cxr_chexpert"
+  output_dir: "./outputs/cxr_chexpert_v2"
 
 # Prompt 配置
 prompt:
   template: |
-    You are a medical imaging AI assistant. Analyze this chest X-ray image and generate a structured report in JSON format.
+    You are a medical imaging AI assistant. Analyze this chest X-ray image and output ONLY valid JSON.
 
-    Output the following fields:
-    - modality: "CXR"
-    - findings: for each condition, specify state as "present", "absent", "uncertain", or null
-    - study_view: "AP", "PA", "LAT", or null
+    Requirements:
+    - modality must be "CXR"
+    - findings must include ALL 14 conditions
+    - state must be one of: "present", "absent", "uncertain" (no null)
+    - study_view must be "AP", "PA", "LAT", or null
 
-    JSON output:
+    Output JSON with this exact schema:
+    {
+      "modality": "CXR",
+      "findings": {
+        "No Finding": {"state": "absent", "score": null},
+        "Enlarged Cardiomediastinum": {"state": "absent", "score": null},
+        "Cardiomegaly": {"state": "absent", "score": null},
+        "Lung Opacity": {"state": "absent", "score": null},
+        "Lung Lesion": {"state": "absent", "score": null},
+        "Edema": {"state": "absent", "score": null},
+        "Consolidation": {"state": "absent", "score": null},
+        "Pneumonia": {"state": "absent", "score": null},
+        "Atelectasis": {"state": "absent", "score": null},
+        "Pneumothorax": {"state": "absent", "score": null},
+        "Pleural Effusion": {"state": "absent", "score": null},
+        "Pleural Other": {"state": "absent", "score": null},
+        "Fracture": {"state": "absent", "score": null},
+        "Support Devices": {"state": "absent", "score": null}
+      },
+      "study_view": null
+    }
 
 # wandb 配置
 wandb:
   enabled: false
   project: "vivid-med"
-  run_name: null  # 自动生成
+  run_name: null
 
 # 其他
 seed: 42

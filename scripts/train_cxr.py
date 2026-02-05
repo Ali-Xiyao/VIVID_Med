@@ -54,6 +54,9 @@ def create_dataloaders(config: dict):
     use_common_labels_only = data_cfg.get("use_common_labels_only", False)
     max_train_samples = data_cfg.get("max_train_samples")
     max_val_samples = data_cfg.get("max_val_samples", 1000)
+    json_include_all_labels = data_cfg.get("json_include_all_labels", False)
+    json_missing_state = data_cfg.get("json_missing_state")
+    json_null_state = data_cfg.get("json_null_state")
 
     # 训练数据集
     train_dataset = CheXpertUMSDataset(
@@ -63,6 +66,9 @@ def create_dataloaders(config: dict):
         is_train=True,
         use_common_labels_only=use_common_labels_only,
         max_samples=max_train_samples,
+        json_include_all_labels=json_include_all_labels,
+        json_missing_state=json_missing_state,
+        json_null_state=json_null_state,
     )
 
     # 验证数据集
@@ -75,6 +81,9 @@ def create_dataloaders(config: dict):
             is_train=False,
             use_common_labels_only=use_common_labels_only,
             max_samples=max_val_samples,
+            json_include_all_labels=json_include_all_labels,
+            json_missing_state=json_missing_state,
+            json_null_state=json_null_state,
         )
     else:
         if max_val_samples and max_val_samples < len(train_dataset):
@@ -93,6 +102,9 @@ def create_dataloaders(config: dict):
                 is_train=False,
                 use_common_labels_only=use_common_labels_only,
                 max_samples=val_pool_max_samples,
+                json_include_all_labels=json_include_all_labels,
+                json_missing_state=json_missing_state,
+                json_null_state=json_null_state,
             )
             val_dataset = Subset(val_base_dataset, val_indices)
 

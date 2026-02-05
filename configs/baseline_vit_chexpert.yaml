@@ -1,9 +1,9 @@
-# Baseline ViT classifier for CheXpert (multi-label)
+﻿# Baseline ViT classifier for CheXpert (multi-label)
 
 data:
   data_root: "./data/dataset"
-  train_ums_path: "./data/dataset/processed/chexpert_ums.jsonl"
-  val_ums_path: null  # 若要外部验证可填 nih_external_test_ums.jsonl
+  train_ums_path: "./data/dataset/processed/chexpert_ums_train.jsonl"
+  val_ums_path: "./data/dataset/processed/chexpert_ums_val.jsonl"
   image_size: 224
   use_common_labels_only: false
   max_train_samples: null
