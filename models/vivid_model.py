@@ -44,6 +44,7 @@ class VIVIDModel(nn.Module):
         load_llm: bool = True,
         # 其他
         use_flash_attention: bool = True,
+        max_text_length: int = 512,
     ):
         """
         Args:
@@ -56,6 +57,7 @@ class VIVIDModel(nn.Module):
             llm_device: LLM 设备（默认与模型相同）
             load_llm: 是否加载 LLM（调试时可设为 False）
             use_flash_attention: 是否使用 Flash Attention
+            max_text_length: 文本最大长度（token）
         """
         super().__init__()
 
@@ -63,6 +65,7 @@ class VIVIDModel(nn.Module):
         self.llm_model_name = llm_model_name
         self.vit_output_type = vit_output_type
         self.llm_device = llm_device
+        self.max_text_length = max_text_length
 
         # 1. 创建 ViT 编码器（可训练）
         self.vit = ViTEncoder(
@@ -253,7 +256,7 @@ class VIVIDModel(nn.Module):
         """
         batch_size = images.shape[0]
         device = images.device
-        max_length = 512
+        max_length = self.max_text_length
 
         if isinstance(prompt_text, list):
             if len(prompt_text) != batch_size:
@@ -428,6 +431,7 @@ class VIVIDModel(nn.Module):
                 "loss": outputs.loss,
                 "logits": outputs.logits,
                 "hidden_states": outputs.hidden_states if hasattr(outputs, "hidden_states") else None,
+                "labels": labels,
             }
         else:
             return outputs
@@ -484,16 +488,19 @@ class VIVIDModel(nn.Module):
         attention_mask = torch.cat([visual_attention, prompt_inputs.attention_mask], dim=1)
 
         # 生成
-        outputs = self.llm.generate(
+        generation_kwargs = dict(
             inputs_embeds=inputs_embeds,
             attention_mask=attention_mask,
             max_new_tokens=max_new_tokens,
-            temperature=temperature,
             do_sample=do_sample,
             pad_token_id=self.tokenizer.pad_token_id,
             eos_token_id=self.tokenizer.eos_token_id,
             **kwargs,
         )
+        if do_sample:
+            generation_kwargs["temperature"] = temperature
+
+        outputs = self.llm.generate(**generation_kwargs)
 
         prompt_lengths = prompt_inputs.attention_mask.sum(dim=1).tolist()
 

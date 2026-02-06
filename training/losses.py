@@ -11,7 +11,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List, Tuple
 
 
 class StructuredLoss(nn.Module):
@@ -27,6 +27,9 @@ class StructuredLoss(nn.Module):
         ignore_index: int = -100,
         label_smoothing: float = 0.0,
         reduction: str = "mean",
+        token_id_weights: Optional[Dict[int, float]] = None,
+        token_sequence_weights: Optional[List[Tuple[List[int], float]]] = None,
+        default_token_weight: float = 1.0,
     ):
         """
         Args:
@@ -36,11 +39,31 @@ class StructuredLoss(nn.Module):
         """
         super().__init__()
         self.ignore_index = ignore_index
+        self.reduction = reduction
+        self.default_token_weight = float(default_token_weight)
+        self.token_id_weights = {
+            int(token_id): float(weight)
+            for token_id, weight in (token_id_weights or {}).items()
+        }
+        self.token_sequence_weights = [
+            ([int(token_id) for token_id in token_ids], float(weight))
+            for token_ids, weight in (token_sequence_weights or [])
+            if token_ids
+        ]
         self.ce_loss = nn.CrossEntropyLoss(
             ignore_index=ignore_index,
             label_smoothing=label_smoothing,
-            reduction=reduction,
+            reduction="none",
         )
+
+    def _reduce(self, losses: torch.Tensor) -> torch.Tensor:
+        if self.reduction == "sum":
+            return losses.sum()
+        if self.reduction == "none":
+            return losses
+        if losses.numel() == 0:
+            return torch.zeros((), device=losses.device, dtype=losses.dtype)
+        return losses.mean()
 
     def forward(
         self,
@@ -65,15 +88,46 @@ class StructuredLoss(nn.Module):
         shift_logits = logits[..., :-1, :].contiguous()
         shift_labels = labels[..., 1:].contiguous()
 
+        batch_size = shift_logits.shape[0]
+        seq_len = shift_logits.shape[1]
+
         # Flatten
         vocab_size = shift_logits.shape[-1]
         shift_logits = shift_logits.view(-1, vocab_size)
         shift_labels = shift_labels.view(-1)
 
-        # Compute loss
-        loss = self.ce_loss(shift_logits, shift_labels)
+        # Compute token-wise CE
+        token_losses = self.ce_loss(shift_logits, shift_labels)
+        valid_mask = shift_labels != self.ignore_index
 
-        return loss
+        if not self.token_id_weights and not self.token_sequence_weights:
+            return self._reduce(token_losses[valid_mask])
+
+        weights = torch.full_like(token_losses, self.default_token_weight, dtype=token_losses.dtype)
+
+        if self.token_id_weights:
+            for token_id, token_weight in self.token_id_weights.items():
+                token_weight_tensor = torch.tensor(token_weight, device=token_losses.device, dtype=token_losses.dtype)
+                weights = torch.where(shift_labels == token_id, token_weight_tensor, weights)
+
+        if self.token_sequence_weights and seq_len > 0:
+            labels_2d = shift_labels.view(batch_size, seq_len)
+            weights_2d = weights.view(batch_size, seq_len)
+            for token_ids, token_weight in self.token_sequence_weights:
+                window_len = len(token_ids)
+                if window_len <= 1 or window_len > seq_len:
+                    continue
+                window_ids = torch.tensor(token_ids, device=labels_2d.device, dtype=labels_2d.dtype)
+                window_weight = torch.tensor(token_weight, device=weights_2d.device, dtype=weights_2d.dtype)
+                for start in range(seq_len - window_len + 1):
+                    window = labels_2d[:, start:start + window_len]
+                    matched = (window == window_ids.unsqueeze(0)).all(dim=1)
+                    if matched.any():
+                        weights_2d[matched, start:start + window_len] = window_weight
+            weights = weights_2d.view(-1)
+
+        weighted_losses = token_losses * weights
+        return self._reduce(weighted_losses[valid_mask])
 
 
 class AnswerabilityLoss(nn.Module):

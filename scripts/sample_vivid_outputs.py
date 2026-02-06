@@ -118,6 +118,7 @@ def main():
         projector_dropout=model_cfg.get("projector_dropout", 0.1),
         llm_model_name=model_cfg["llm_model_name"],
         use_flash_attention=model_cfg.get("use_flash_attention", True),
+        max_text_length=model_cfg.get("max_text_length", 512),
         load_llm=True,
     ).to(device)
 

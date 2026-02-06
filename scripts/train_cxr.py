@@ -150,6 +150,7 @@ def create_model(config: dict, device: str):
         projector_dropout=model_cfg.get("projector_dropout", 0.1),
         llm_model_name=model_cfg["llm_model_name"],
         use_flash_attention=model_cfg.get("use_flash_attention", True),
+        max_text_length=model_cfg.get("max_text_length", 512),
         load_llm=True,
     )
 
@@ -198,6 +199,8 @@ def main():
         # 调试时禁用混合精度，避免 CPU 环境报错
         config["training"]["bf16"] = False
         config["training"]["fp16"] = False
+        if "token_weighting" in config["training"]:
+            config["training"]["token_weighting"]["enabled"] = False
 
     # 设置随机种子
     seed = config.get("seed", 42)
@@ -244,6 +247,7 @@ def main():
         lambda_rank=training_cfg.get("lambda_rank", 0.0),
         lambda_vdep=training_cfg.get("lambda_vdep", 0.0),
         lambda_ans=training_cfg.get("lambda_ans", 0.0),
+        token_weighting=training_cfg.get("token_weighting"),
         gradient_accumulation_steps=training_cfg["gradient_accumulation_steps"],
         max_grad_norm=training_cfg["max_grad_norm"],
         fp16=training_cfg.get("fp16", False),

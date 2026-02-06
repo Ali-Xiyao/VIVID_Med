@@ -1,7 +1,6 @@
-﻿# VIVID-Med CXR Training Configuration
-# CheXpert 数据集 + Qwen2.5-1.5B
+# VIVID-Med CXR Training Configuration (V3)
+# 目标：缓解 state=null 塌缩，提升结构化标签判别能力
 
-# 数据配置
 data:
   data_root: "./data/dataset"
   train_ums_path: "./data/dataset/processed/chexpert_ums_train.jsonl"
@@ -15,7 +14,6 @@ data:
   json_missing_state: null
   json_null_state: null
 
-# 模型配置
 model:
   vit_model_name: "vit_base_patch16_224"
   vit_pretrained: true
@@ -26,7 +24,6 @@ model:
   use_flash_attention: true
   max_text_length: 384
 
-# 训练配置
 training:
   learning_rate: 1.0e-4
   weight_decay: 0.01
@@ -43,9 +40,18 @@ training:
   log_interval: 10
   eval_interval: 500
   save_interval: 1000
-  output_dir: "./outputs/cxr_chexpert_v2"
+  output_dir: "./outputs/cxr_chexpert_v3"
 
-# Prompt 配置
+  token_weighting:
+    enabled: true
+    default_weight: 1.0
+    label_smoothing: 0.0
+    state_weights:
+      present: 3.0
+      uncertain: 2.5
+      absent: 1.5
+      null: 0.35
+
 prompt:
   template: |
     You are a medical imaging AI assistant. Output ONLY valid JSON.
@@ -54,12 +60,10 @@ prompt:
     Output JSON with this schema:
     {"modality":"CXR","findings":{"No Finding":{"state":null,"score":null},"Enlarged Cardiomediastinum":{"state":null,"score":null},"Cardiomegaly":{"state":null,"score":null},"Lung Opacity":{"state":null,"score":null},"Lung Lesion":{"state":null,"score":null},"Edema":{"state":null,"score":null},"Consolidation":{"state":null,"score":null},"Pneumonia":{"state":null,"score":null},"Atelectasis":{"state":null,"score":null},"Pneumothorax":{"state":null,"score":null},"Pleural Effusion":{"state":null,"score":null},"Pleural Other":{"state":null,"score":null},"Fracture":{"state":null,"score":null},"Support Devices":{"state":null,"score":null}},"study_view":null}
 
-# wandb 配置
 wandb:
   enabled: false
   project: "vivid-med"
   run_name: null
 
-# 其他
 seed: 42
 device: "cuda"

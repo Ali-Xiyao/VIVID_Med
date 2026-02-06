@@ -1,7 +1,5 @@
-﻿# VIVID-Med CXR Training Configuration
-# CheXpert 数据集 + Qwen2.5-1.5B
+# VIVID-Med CXR quick validation config
 
-# 数据配置
 data:
   data_root: "./data/dataset"
   train_ums_path: "./data/dataset/processed/chexpert_ums_train.jsonl"
@@ -9,13 +7,12 @@ data:
   image_size: 224
   use_common_labels_only: false
   max_train_samples: null
-  max_val_samples: 1000
-  num_workers: 4
+  max_val_samples: 200
+  num_workers: 0
   json_include_all_labels: true
   json_missing_state: null
   json_null_state: null
 
-# 模型配置
 model:
   vit_model_name: "vit_base_patch16_224"
   vit_pretrained: true
@@ -26,12 +23,11 @@ model:
   use_flash_attention: true
   max_text_length: 384
 
-# 训练配置
 training:
   learning_rate: 1.0e-4
   weight_decay: 0.01
-  warmup_steps: 500
-  max_steps: 10000
+  warmup_steps: 50
+  max_steps: 300
   lambda_rank: 0.0
   lambda_vdep: 0.0
   lambda_ans: 0.0
@@ -41,11 +37,10 @@ training:
   fp16: false
   bf16: true
   log_interval: 10
-  eval_interval: 500
-  save_interval: 1000
-  output_dir: "./outputs/cxr_chexpert_v2"
+  eval_interval: 100
+  save_interval: 100
+  output_dir: "./outputs/cxr_chexpert_quick_rerun"
 
-# Prompt 配置
 prompt:
   template: |
     You are a medical imaging AI assistant. Output ONLY valid JSON.
@@ -54,12 +49,10 @@ prompt:
     Output JSON with this schema:
     {"modality":"CXR","findings":{"No Finding":{"state":null,"score":null},"Enlarged Cardiomediastinum":{"state":null,"score":null},"Cardiomegaly":{"state":null,"score":null},"Lung Opacity":{"state":null,"score":null},"Lung Lesion":{"state":null,"score":null},"Edema":{"state":null,"score":null},"Consolidation":{"state":null,"score":null},"Pneumonia":{"state":null,"score":null},"Atelectasis":{"state":null,"score":null},"Pneumothorax":{"state":null,"score":null},"Pleural Effusion":{"state":null,"score":null},"Pleural Other":{"state":null,"score":null},"Fracture":{"state":null,"score":null},"Support Devices":{"state":null,"score":null}},"study_view":null}
 
-# wandb 配置
 wandb:
   enabled: false
   project: "vivid-med"
   run_name: null
 
-# 其他
 seed: 42
 device: "cuda"

@@ -23,7 +23,7 @@ try:
 except ImportError:
     WANDB_AVAILABLE = False
 
-from .losses import VIVIDLoss
+from .losses import StructuredLoss
 
 
 class VIVIDTrainer:
@@ -51,6 +51,7 @@ class VIVIDTrainer:
         lambda_rank: float = 0.0,  # v1.0 先设为 0
         lambda_vdep: float = 0.0,  # v1.0 先设为 0
         lambda_ans: float = 0.0,   # v1.0 先设为 0
+        token_weighting: Optional[Dict[str, Any]] = None,
         # 训练配置
         gradient_accumulation_steps: int = 1,
         max_grad_norm: float = 1.0,
@@ -89,16 +90,13 @@ class VIVIDTrainer:
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
         self.prompt_template = prompt_template
+        self.token_weighting = token_weighting or {}
 
         # 设备
         self.device = next(model.parameters()).device
 
-        # 损失函数
-        self.criterion = VIVIDLoss(
-            lambda_rank=lambda_rank,
-            lambda_vdep=lambda_vdep,
-            lambda_ans=lambda_ans,
-        )
+        # 可选：state-aware token loss（V3 anti-collapse）
+        self.token_loss = self._build_token_loss(self.token_weighting)
 
         # 优化器（只优化可训练参数）
         trainable_params = model.get_trainable_parameters()
@@ -156,6 +154,77 @@ class VIVIDTrainer:
         # 训练状态
         self.global_step = 0
         self.best_val_loss = float("inf")
+
+    def _build_state_token_weights(
+        self,
+        state_weights: Dict[str, Any],
+    ) -> (Dict[int, float], List[tuple[list[int], float]]):
+        tokenizer = getattr(self.model, "tokenizer", None)
+        if tokenizer is None:
+            return {}, []
+
+        token_id_weights: Dict[int, float] = {}
+        token_sequence_weights: List[tuple[list[int], float]] = []
+
+        for state_name, state_weight in state_weights.items():
+            try:
+                weight = float(state_weight)
+            except (TypeError, ValueError):
+                continue
+
+            variants = [
+                state_name,
+                f" {state_name}",
+                f"\"{state_name}\"",
+                f" \"{state_name}\"",
+                f": {state_name}",
+                f": \"{state_name}\"",
+                f"state\": \"{state_name}\"",
+            ]
+
+            seen = set()
+            for text in variants:
+                token_ids = tokenizer.encode(text, add_special_tokens=False)
+                if not token_ids:
+                    continue
+                key = tuple(int(token_id) for token_id in token_ids)
+                if key in seen:
+                    continue
+                seen.add(key)
+                if len(key) == 1:
+                    token_id = key[0]
+                    prev = token_id_weights.get(token_id, 1.0)
+                    token_id_weights[token_id] = max(prev, weight)
+                else:
+                    token_sequence_weights.append((list(key), weight))
+
+        return token_id_weights, token_sequence_weights
+
+    def _build_token_loss(self, token_weighting: Dict[str, Any]) -> Optional[StructuredLoss]:
+        if not token_weighting or not token_weighting.get("enabled", False):
+            return None
+
+        state_weights = token_weighting.get("state_weights", {})
+        token_id_weights, token_sequence_weights = self._build_state_token_weights(state_weights)
+        if not token_id_weights and not token_sequence_weights:
+            print("Warning: token weighting enabled but no state tokens were found in tokenizer.")
+            return None
+
+        default_weight = float(token_weighting.get("default_weight", 1.0))
+        label_smoothing = float(token_weighting.get("label_smoothing", 0.0))
+        print("Using state-aware token weighting:")
+        print(f"  default weight: {default_weight}")
+        print(f"  weighted token ids: {len(token_id_weights)}")
+        print(f"  weighted token sequences: {len(token_sequence_weights)}")
+
+        return StructuredLoss(
+            ignore_index=-100,
+            label_smoothing=label_smoothing,
+            reduction="mean",
+            token_id_weights=token_id_weights,
+            token_sequence_weights=token_sequence_weights,
+            default_token_weight=default_weight,
+        )
 
     def train(self):
         """主训练循环"""
@@ -262,7 +331,10 @@ class VIVIDTrainer:
         use_amp = self.device.type == "cuda" and (self.bf16 or self.fp16)
         if use_amp:
             autocast_dtype = torch.bfloat16 if self.bf16 else torch.float16
-            autocast_ctx = torch.cuda.amp.autocast(dtype=autocast_dtype)
+            if hasattr(torch, "amp") and hasattr(torch.amp, "autocast"):
+                autocast_ctx = torch.amp.autocast(device_type="cuda", dtype=autocast_dtype)
+            else:
+                autocast_ctx = torch.cuda.amp.autocast(dtype=autocast_dtype)
         else:
             autocast_ctx = contextlib.nullcontext()
 
@@ -275,7 +347,11 @@ class VIVIDTrainer:
             )
 
             # 计算损失
-            loss_dict = {"total": outputs["loss"]}
+            if self.token_loss is not None and outputs.get("labels") is not None:
+                total_loss = self.token_loss(outputs["logits"], outputs["labels"])
+            else:
+                total_loss = outputs["loss"]
+            loss_dict = {"total": total_loss}
 
         # 反向传播
         loss = loss_dict["total"] / self.gradient_accumulation_steps
@@ -304,7 +380,11 @@ class VIVIDTrainer:
                 target_text=target_jsons,
             )
 
-            total_loss += outputs["loss"].item()
+            if self.token_loss is not None and outputs.get("labels") is not None:
+                val_loss = self.token_loss(outputs["logits"], outputs["labels"])
+            else:
+                val_loss = outputs["loss"]
+            total_loss += val_loss.item()
             num_batches += 1
 
         return total_loss / max(num_batches, 1)

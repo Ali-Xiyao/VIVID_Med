@@ -89,6 +89,8 @@ def evaluate(
     do_sample: bool,
     uncertain_policy: str,
     threshold: float,
+    json_missing_state: Optional[str] = None,
+    json_null_state: Optional[str] = None,
 ):
     model.eval()
 
@@ -119,14 +121,21 @@ def evaluate(
                 findings = parsed.get("findings", {}) if isinstance(parsed, dict) else {}
                 if isinstance(findings, dict):
                     for i, name in enumerate(label_names):
+                        state = None
                         if name in findings and isinstance(findings[name], dict):
                             state = findings[name].get("state")
-                            if state == "present":
-                                pred_row[i] = 1.0
-                            elif state == "absent":
-                                pred_row[i] = 0.0
-                            elif state == "uncertain":
-                                pred_row[i] = -1.0
+                            if state is None and json_null_state is not None:
+                                state = json_null_state
+                        else:
+                            if json_missing_state is not None:
+                                state = json_missing_state
+
+                        if state == "present":
+                            pred_row[i] = 1.0
+                        elif state == "absent":
+                            pred_row[i] = 0.0
+                        elif state == "uncertain":
+                            pred_row[i] = -1.0
 
             pred_matrix.append(pred_row)
             true_matrix.append(y_true)
@@ -220,6 +229,7 @@ def main():
         projector_dropout=model_cfg.get("projector_dropout", 0.1),
         llm_model_name=model_cfg["llm_model_name"],
         use_flash_attention=model_cfg.get("use_flash_attention", True),
+        max_text_length=model_cfg.get("max_text_length", 512),
         load_llm=True,
     ).to(device)
 
@@ -248,6 +258,8 @@ def main():
         do_sample=args.do_sample,
         uncertain_policy=uncertain_policy,
         threshold=threshold,
+        json_missing_state=json_missing_state,
+        json_null_state=json_null_state,
     )
 
     output_path = Path(args.output) if args.output else Path(args.checkpoint).with_suffix(".metrics.json")
