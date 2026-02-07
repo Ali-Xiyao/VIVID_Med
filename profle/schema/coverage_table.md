@@ -15,6 +15,8 @@
 
 ## CheXpert 字段覆盖详情（30k 采样）
 
+> 总体缺失率：30k * 14 findings 的 missing(blank/NaN)≈70.47%（来源：`data/dataset/processed/chexpert_sampled_30k.csv`；在 UMS 中表现为 `state=null + answerability=false`）。
+
 **基础信息**
 - 采样数量：30,000
 - 采样策略：类均衡采样（稀有标签权重更高）
