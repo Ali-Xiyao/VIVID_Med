@@ -52,6 +52,7 @@ class VIVIDTrainer:
         lambda_vdep: float = 0.0,  # v1.0 先设为 0
         lambda_ans: float = 0.0,   # v1.0 先设为 0
         token_weighting: Optional[Dict[str, Any]] = None,
+        answerability_mask: Optional[Dict[str, Any]] = None,
         # 训练配置
         gradient_accumulation_steps: int = 1,
         max_grad_norm: float = 1.0,
@@ -91,12 +92,26 @@ class VIVIDTrainer:
 
         self.prompt_template = prompt_template
         self.token_weighting = token_weighting or {}
+        self.answerability_mask = self._build_answerability_mask_config(answerability_mask)
+        self._answerability_span_cache: Dict[str, Dict[str, Any]] = {}
+        self._num_visual_tokens = self._infer_num_visual_tokens()
 
         # 设备
         self.device = next(model.parameters()).device
 
         # 可选：state-aware token loss（V3 anti-collapse）
         self.token_loss = self._build_token_loss(self.token_weighting)
+        self.base_token_loss = StructuredLoss(
+            ignore_index=-100,
+            label_smoothing=0.0,
+            reduction="mean",
+        )
+        if self.answerability_mask["enabled"]:
+            print("Using answerability-aware token mask:")
+            print(f"  true_weight: {self.answerability_mask['true_weight']}")
+            print(f"  false_weight: {self.answerability_mask['false_weight']}")
+            print(f"  scope: {self.answerability_mask['scope']}")
+            print(f"  keep_structural_tokens: {self.answerability_mask['keep_structural_tokens']}")
 
         # 优化器（只优化可训练参数）
         trainable_params = model.get_trainable_parameters()
@@ -155,6 +170,36 @@ class VIVIDTrainer:
         self.global_step = 0
         self.best_val_loss = float("inf")
 
+    def _infer_num_visual_tokens(self) -> int:
+        projector = getattr(self.model, "projector", None)
+        vit = getattr(self.model, "vit", None)
+        if projector is not None and vit is not None and hasattr(vit, "get_num_tokens"):
+            return int(projector.num_prefix_tokens + vit.get_num_tokens())
+        return 0
+
+    def _build_answerability_mask_config(self, mask_cfg: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+        cfg = dict(mask_cfg or {})
+        enabled = bool(cfg.get("enabled", False))
+        true_weight = float(cfg.get("true_weight", 1.0))
+        false_weight = float(cfg.get("false_weight", 0.0))
+        scope = str(cfg.get("scope", "findings_only"))
+        keep_structural_tokens = bool(cfg.get("keep_structural_tokens", True))
+
+        if true_weight < 0.0:
+            raise ValueError("answerability_mask.true_weight must be >= 0")
+        if false_weight < 0.0:
+            raise ValueError("answerability_mask.false_weight must be >= 0")
+        if scope != "findings_only":
+            raise ValueError("answerability_mask.scope currently only supports 'findings_only'")
+
+        return {
+            "enabled": enabled,
+            "true_weight": true_weight,
+            "false_weight": false_weight,
+            "scope": scope,
+            "keep_structural_tokens": keep_structural_tokens,
+        }
+
     def _build_state_token_weights(
         self,
         state_weights: Dict[str, Any],
@@ -166,7 +211,8 @@ class VIVIDTrainer:
         token_id_weights: Dict[int, float] = {}
         token_sequence_weights: List[tuple[list[int], float]] = []
 
-        for state_name, state_weight in state_weights.items():
+        for raw_state_name, state_weight in state_weights.items():
+            state_name = "null" if raw_state_name is None else str(raw_state_name)
             try:
                 weight = float(state_weight)
             except (TypeError, ValueError):
@@ -225,6 +271,223 @@ class VIVIDTrainer:
             token_sequence_weights=token_sequence_weights,
             default_token_weight=default_weight,
         )
+
+    def _find_matching_brace(self, text: str, open_brace_index: int) -> int:
+        if open_brace_index < 0 or open_brace_index >= len(text) or text[open_brace_index] != "{":
+            return -1
+
+        depth = 0
+        in_string = False
+        escaped = False
+
+        for index in range(open_brace_index, len(text)):
+            char = text[index]
+            if in_string:
+                if escaped:
+                    escaped = False
+                elif char == "\\":
+                    escaped = True
+                elif char == "\"":
+                    in_string = False
+                continue
+
+            if char == "\"":
+                in_string = True
+            elif char == "{":
+                depth += 1
+            elif char == "}":
+                depth -= 1
+                if depth == 0:
+                    return index
+
+        return -1
+
+    def _find_finding_span(
+        self,
+        target_json: str,
+        finding_name: str,
+        keep_structural_tokens: bool,
+    ) -> Optional[tuple[int, int]]:
+        name_token = f"\"{finding_name}\""
+        name_pos = target_json.find(name_token)
+        if name_pos < 0:
+            return None
+
+        colon_pos = target_json.find(":", name_pos + len(name_token))
+        if colon_pos < 0:
+            return None
+
+        object_start = target_json.find("{", colon_pos)
+        if object_start < 0:
+            return None
+
+        object_end = self._find_matching_brace(target_json, object_start)
+        if object_end < 0:
+            return None
+
+        if not keep_structural_tokens:
+            return name_pos, object_end + 1
+
+        state_key_pos = target_json.find("\"state\"", object_start, object_end + 1)
+        if state_key_pos < 0:
+            return None
+
+        state_colon_pos = target_json.find(":", state_key_pos, object_end + 1)
+        if state_colon_pos < 0:
+            return None
+
+        value_start = state_colon_pos + 1
+        while value_start < object_end and target_json[value_start] in {" ", "\t", "\n", "\r"}:
+            value_start += 1
+
+        if value_start > object_end:
+            return None
+
+        if target_json[value_start] == "\"":
+            value_end = target_json.find("\"", value_start + 1, object_end + 1)
+            if value_end < 0:
+                return None
+            value_end += 1
+        else:
+            value_end = value_start
+            while value_end <= object_end and target_json[value_end] not in {",", "}"}:
+                value_end += 1
+
+        return value_start, value_end
+
+    def _get_or_build_answerability_cache_entry(self, target_json: str) -> Optional[Dict[str, Any]]:
+        cache_key = f"{self.answerability_mask['keep_structural_tokens']}|{target_json}"
+        if cache_key in self._answerability_span_cache:
+            return self._answerability_span_cache[cache_key]
+
+        tokenizer = getattr(self.model, "tokenizer", None)
+        if tokenizer is None:
+            return None
+
+        prompt_text = self.prompt_template
+        full_text = f"{prompt_text}{target_json}"
+
+        try:
+            tokenized = tokenizer(
+                full_text,
+                padding=False,
+                truncation=True,
+                max_length=getattr(self.model, "max_text_length", 512),
+                return_offsets_mapping=True,
+                add_special_tokens=True,
+            )
+        except Exception:
+            return None
+
+        input_ids = tokenized.get("input_ids")
+        offsets = tokenized.get("offset_mapping")
+        if input_ids is None or offsets is None:
+            return None
+
+        try:
+            findings = json.loads(target_json).get("findings", {})
+            finding_names = list(findings.keys())
+        except Exception:
+            finding_names = []
+
+        token_indices_by_finding: Dict[str, List[int]] = {}
+        prompt_char_len = len(prompt_text)
+        keep_structural_tokens = self.answerability_mask["keep_structural_tokens"]
+
+        for finding_name in finding_names:
+            span = self._find_finding_span(
+                target_json=target_json,
+                finding_name=finding_name,
+                keep_structural_tokens=keep_structural_tokens,
+            )
+            if span is None:
+                continue
+
+            char_start, char_end = span
+            full_char_start = prompt_char_len + char_start
+            full_char_end = prompt_char_len + char_end
+
+            matched_token_indices: List[int] = []
+            for token_index, (token_start, token_end) in enumerate(offsets):
+                if token_end <= token_start:
+                    continue
+                if token_end <= full_char_start or token_start >= full_char_end:
+                    continue
+                matched_token_indices.append(token_index)
+
+            if matched_token_indices:
+                token_indices_by_finding[finding_name] = matched_token_indices
+
+        cache_entry = {
+            "seq_len": len(input_ids),
+            "finding_names": finding_names,
+            "token_indices_by_finding": token_indices_by_finding,
+        }
+        self._answerability_span_cache[cache_key] = cache_entry
+        return cache_entry
+
+    def _build_answerability_token_weights(
+        self,
+        target_jsons: List[str],
+        answerable: torch.Tensor,
+        labels: torch.Tensor,
+    ) -> Optional[torch.Tensor]:
+        if not self.answerability_mask["enabled"]:
+            return None
+        if labels is None or labels.dim() != 2:
+            return None
+
+        batch_size = labels.shape[0]
+        if not isinstance(target_jsons, list) or len(target_jsons) != batch_size:
+            return None
+
+        if self._num_visual_tokens <= 0:
+            return None
+
+        text_seq_len = labels.shape[1] - self._num_visual_tokens
+        if text_seq_len <= 0:
+            return None
+
+        true_weight = self.answerability_mask["true_weight"]
+        false_weight = self.answerability_mask["false_weight"]
+        token_weights = torch.full(
+            labels.shape,
+            fill_value=true_weight,
+            dtype=torch.float32,
+            device=labels.device,
+        )
+
+        for sample_index, target_json in enumerate(target_jsons):
+            cache_entry = self._get_or_build_answerability_cache_entry(target_json)
+            if cache_entry is None:
+                continue
+
+            sample_seq_len = int(cache_entry["seq_len"])
+            pad_len = text_seq_len - sample_seq_len
+            if pad_len < 0:
+                continue
+
+            answerable_row = answerable[sample_index]
+            if answerable_row.device.type != "cpu":
+                answerable_row = answerable_row.cpu()
+            answerable_row = answerable_row.tolist()
+
+            finding_names = cache_entry["finding_names"]
+            token_indices_by_finding = cache_entry["token_indices_by_finding"]
+
+            for finding_index, finding_name in enumerate(finding_names):
+                if finding_index >= len(answerable_row):
+                    break
+                if bool(answerable_row[finding_index]):
+                    continue
+
+                token_indices = token_indices_by_finding.get(finding_name, [])
+                for token_index in token_indices:
+                    label_index = self._num_visual_tokens + pad_len + int(token_index)
+                    if 0 <= label_index < labels.shape[1] and labels[sample_index, label_index] != -100:
+                        token_weights[sample_index, label_index] = false_weight
+
+        return token_weights
 
     def train(self):
         """主训练循环"""
@@ -326,6 +589,7 @@ class VIVIDTrainer:
         # 移动数据到设备
         images = batch["images"].to(self.device)
         target_jsons = batch["target_jsons"]
+        answerable = batch.get("answerable")
 
         # 混合精度上下文（仅 CUDA）
         use_amp = self.device.type == "cuda" and (self.bf16 or self.fp16)
@@ -347,8 +611,23 @@ class VIVIDTrainer:
             )
 
             # 计算损失
-            if self.token_loss is not None and outputs.get("labels") is not None:
-                total_loss = self.token_loss(outputs["logits"], outputs["labels"])
+            answerability_token_weights = None
+            if outputs.get("labels") is not None and answerable is not None:
+                answerability_token_weights = self._build_answerability_token_weights(
+                    target_jsons=target_jsons,
+                    answerable=answerable,
+                    labels=outputs["labels"],
+                )
+
+            if outputs.get("labels") is not None and (
+                self.token_loss is not None or answerability_token_weights is not None
+            ):
+                token_loss_fn = self.token_loss if self.token_loss is not None else self.base_token_loss
+                total_loss = token_loss_fn(
+                    outputs["logits"],
+                    outputs["labels"],
+                    extra_token_weights=answerability_token_weights,
+                )
             else:
                 total_loss = outputs["loss"]
             loss_dict = {"total": total_loss}
@@ -373,6 +652,7 @@ class VIVIDTrainer:
         for batch in tqdm(self.val_dataloader, desc="Validating", leave=False):
             images = batch["images"].to(self.device)
             target_jsons = batch["target_jsons"]
+            answerable = batch.get("answerable")
 
             outputs = self.model(
                 images=images,
@@ -380,8 +660,23 @@ class VIVIDTrainer:
                 target_text=target_jsons,
             )
 
-            if self.token_loss is not None and outputs.get("labels") is not None:
-                val_loss = self.token_loss(outputs["logits"], outputs["labels"])
+            answerability_token_weights = None
+            if outputs.get("labels") is not None and answerable is not None:
+                answerability_token_weights = self._build_answerability_token_weights(
+                    target_jsons=target_jsons,
+                    answerable=answerable,
+                    labels=outputs["labels"],
+                )
+
+            if outputs.get("labels") is not None and (
+                self.token_loss is not None or answerability_token_weights is not None
+            ):
+                token_loss_fn = self.token_loss if self.token_loss is not None else self.base_token_loss
+                val_loss = token_loss_fn(
+                    outputs["logits"],
+                    outputs["labels"],
+                    extra_token_weights=answerability_token_weights,
+                )
             else:
                 val_loss = outputs["loss"]
             total_loss += val_loss.item()

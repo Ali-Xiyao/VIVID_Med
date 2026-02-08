@@ -248,6 +248,7 @@ def main():
         lambda_vdep=training_cfg.get("lambda_vdep", 0.0),
         lambda_ans=training_cfg.get("lambda_ans", 0.0),
         token_weighting=training_cfg.get("token_weighting"),
+        answerability_mask=training_cfg.get("answerability_mask"),
         gradient_accumulation_steps=training_cfg["gradient_accumulation_steps"],
         max_grad_norm=training_cfg["max_grad_norm"],
         fp16=training_cfg.get("fp16", False),

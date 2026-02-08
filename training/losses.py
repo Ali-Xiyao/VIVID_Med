@@ -70,6 +70,7 @@ class StructuredLoss(nn.Module):
         logits: torch.Tensor,
         labels: torch.Tensor,
         attention_mask: Optional[torch.Tensor] = None,
+        extra_token_weights: Optional[torch.Tensor] = None,
     ) -> torch.Tensor:
         """
         计算 L_tok
@@ -100,7 +101,7 @@ class StructuredLoss(nn.Module):
         token_losses = self.ce_loss(shift_logits, shift_labels)
         valid_mask = shift_labels != self.ignore_index
 
-        if not self.token_id_weights and not self.token_sequence_weights:
+        if not self.token_id_weights and not self.token_sequence_weights and extra_token_weights is None:
             return self._reduce(token_losses[valid_mask])
 
         weights = torch.full_like(token_losses, self.default_token_weight, dtype=token_losses.dtype)
@@ -125,6 +126,29 @@ class StructuredLoss(nn.Module):
                     if matched.any():
                         weights_2d[matched, start:start + window_len] = window_weight
             weights = weights_2d.view(-1)
+
+        if extra_token_weights is not None:
+            if extra_token_weights.dim() == 2:
+                if extra_token_weights.shape == labels.shape:
+                    extra = extra_token_weights[..., 1:].contiguous()
+                elif extra_token_weights.shape == (batch_size, seq_len):
+                    extra = extra_token_weights
+                else:
+                    raise ValueError(
+                        f"extra_token_weights shape {tuple(extra_token_weights.shape)} "
+                        f"is not compatible with labels shape {tuple(labels.shape)}"
+                    )
+                extra = extra.view(-1)
+            elif extra_token_weights.dim() == 1 and extra_token_weights.numel() == weights.numel():
+                extra = extra_token_weights
+            else:
+                raise ValueError(
+                    "extra_token_weights must be 2D tensor aligned to labels/shifted labels, "
+                    "or a flattened 1D tensor aligned to shifted labels"
+                )
+
+            extra = extra.to(device=weights.device, dtype=weights.dtype)
+            weights = weights * extra
 
         weighted_losses = token_losses * weights
         return self._reduce(weighted_losses[valid_mask])

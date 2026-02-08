@@ -1,0 +1,76 @@
+# VIVID-Med CXR Training Configuration (V4)
+# V4 = V3(state-aware token weighting) + answerability-aware token mask
+
+data:
+  data_root: "./data/dataset"
+  train_ums_path: "./data/dataset/processed/chexpert_ums_train.jsonl"
+  val_ums_path: "./data/dataset/processed/chexpert_ums_val.jsonl"
+  image_size: 224
+  use_common_labels_only: false
+  max_train_samples: null
+  max_val_samples: 1000
+  num_workers: 4
+  json_include_all_labels: true
+  json_missing_state: null
+  json_null_state: null
+
+model:
+  vit_model_name: "vit_base_patch16_224"
+  vit_pretrained: true
+  vit_output_type: "cls"
+  num_prefix_tokens: 16
+  projector_dropout: 0.1
+  llm_model_name: "Qwen/Qwen2.5-1.5B-Instruct"
+  use_flash_attention: true
+  max_text_length: 384
+
+training:
+  learning_rate: 1.0e-4
+  weight_decay: 0.01
+  warmup_steps: 500
+  max_steps: 10000
+  lambda_rank: 0.0
+  lambda_vdep: 0.0
+  lambda_ans: 0.0
+  batch_size: 4
+  gradient_accumulation_steps: 8
+  max_grad_norm: 1.0
+  fp16: false
+  bf16: true
+  log_interval: 10
+  eval_interval: 500
+  save_interval: 1000
+  output_dir: "./outputs/cxr_chexpert_v4"
+
+  token_weighting:
+    enabled: true
+    default_weight: 1.0
+    label_smoothing: 0.0
+    state_weights:
+      present: 3.0
+      uncertain: 2.5
+      absent: 1.5
+      null: 0.35
+
+  answerability_mask:
+    enabled: true
+    true_weight: 1.0
+    false_weight: 0.0
+    scope: "findings_only"
+    keep_structural_tokens: true
+
+prompt:
+  template: |
+    You are a medical imaging AI assistant. Output ONLY valid JSON.
+    Rules: modality="CXR"; findings include ALL 14 conditions; state in {present, absent, uncertain, null};
+    study_view is "AP"/"PA"/"LAT"/null.
+    Output JSON with this schema:
+    {"modality":"CXR","findings":{"No Finding":{"state":null,"score":null},"Enlarged Cardiomediastinum":{"state":null,"score":null},"Cardiomegaly":{"state":null,"score":null},"Lung Opacity":{"state":null,"score":null},"Lung Lesion":{"state":null,"score":null},"Edema":{"state":null,"score":null},"Consolidation":{"state":null,"score":null},"Pneumonia":{"state":null,"score":null},"Atelectasis":{"state":null,"score":null},"Pneumothorax":{"state":null,"score":null},"Pleural Effusion":{"state":null,"score":null},"Pleural Other":{"state":null,"score":null},"Fracture":{"state":null,"score":null},"Support Devices":{"state":null,"score":null}},"study_view":null}
+
+wandb:
+  enabled: false
+  project: "vivid-med"
+  run_name: null
+
+seed: 42
+device: "cuda"
