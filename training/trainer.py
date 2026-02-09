@@ -94,7 +94,7 @@ class VIVIDTrainer:
         self.token_weighting = token_weighting or {}
         self.answerability_mask = self._build_answerability_mask_config(answerability_mask)
         self._answerability_span_cache: Dict[str, Dict[str, Any]] = {}
-        self._num_visual_tokens = self._infer_num_visual_tokens()
+        self._answerability_state_patterns = self._build_answerability_state_patterns()
 
         # 设备
         self.device = next(model.parameters()).device
@@ -170,12 +170,32 @@ class VIVIDTrainer:
         self.global_step = 0
         self.best_val_loss = float("inf")
 
-    def _infer_num_visual_tokens(self) -> int:
-        projector = getattr(self.model, "projector", None)
-        vit = getattr(self.model, "vit", None)
-        if projector is not None and vit is not None and hasattr(vit, "get_num_tokens"):
-            return int(projector.num_prefix_tokens + vit.get_num_tokens())
-        return 0
+    def _build_answerability_state_patterns(self) -> List[Dict[str, Any]]:
+        tokenizer = getattr(self.model, "tokenizer", None)
+        if tokenizer is None:
+            return []
+
+        pattern_specs: List[Dict[str, Any]] = []
+        state_variants = ["null", "present", "absent", "uncertain"]
+        for state_name in state_variants:
+            value_piece = f" {state_name}" if state_name == "null" else f" \"{state_name}\""
+            pattern_text = f"\"state\":{value_piece}"
+            pattern_ids = tokenizer.encode(pattern_text, add_special_tokens=False)
+            value_ids = tokenizer.encode(value_piece, add_special_tokens=False)
+            if not pattern_ids or not value_ids:
+                continue
+            if len(value_ids) > len(pattern_ids):
+                continue
+            pattern_specs.append(
+                {
+                    "pattern_ids": [int(token_id) for token_id in pattern_ids],
+                    "pattern_len": len(pattern_ids),
+                    "value_len": len(value_ids),
+                }
+            )
+
+        pattern_specs.sort(key=lambda item: item["pattern_len"], reverse=True)
+        return pattern_specs
 
     def _build_answerability_mask_config(self, mask_cfg: Optional[Dict[str, Any]]) -> Dict[str, Any]:
         cfg = dict(mask_cfg or {})
@@ -440,16 +460,12 @@ class VIVIDTrainer:
         batch_size = labels.shape[0]
         if not isinstance(target_jsons, list) or len(target_jsons) != batch_size:
             return None
-
-        if self._num_visual_tokens <= 0:
-            return None
-
-        text_seq_len = labels.shape[1] - self._num_visual_tokens
-        if text_seq_len <= 0:
+        if not self._answerability_state_patterns:
             return None
 
         true_weight = self.answerability_mask["true_weight"]
         false_weight = self.answerability_mask["false_weight"]
+        keep_structural_tokens = self.answerability_mask["keep_structural_tokens"]
         token_weights = torch.full(
             labels.shape,
             fill_value=true_weight,
@@ -457,35 +473,47 @@ class VIVIDTrainer:
             device=labels.device,
         )
 
-        for sample_index, target_json in enumerate(target_jsons):
-            cache_entry = self._get_or_build_answerability_cache_entry(target_json)
-            if cache_entry is None:
-                continue
-
-            sample_seq_len = int(cache_entry["seq_len"])
-            pad_len = text_seq_len - sample_seq_len
-            if pad_len < 0:
-                continue
-
+        labels_cpu = labels.detach().cpu().tolist()
+        for sample_index in range(batch_size):
             answerable_row = answerable[sample_index]
             if answerable_row.device.type != "cpu":
                 answerable_row = answerable_row.cpu()
             answerable_row = answerable_row.tolist()
 
-            finding_names = cache_entry["finding_names"]
-            token_indices_by_finding = cache_entry["token_indices_by_finding"]
+            label_tokens = labels_cpu[sample_index]
+            state_ranges: List[tuple[int, int]] = []
+            cursor = 0
+            label_length = len(label_tokens)
+            while cursor < label_length:
+                matched = False
+                for spec in self._answerability_state_patterns:
+                    pattern_len = int(spec["pattern_len"])
+                    if cursor + pattern_len > label_length:
+                        continue
+                    window = label_tokens[cursor:cursor + pattern_len]
+                    if -100 in window:
+                        continue
+                    if window != spec["pattern_ids"]:
+                        continue
 
-            for finding_index, finding_name in enumerate(finding_names):
-                if finding_index >= len(answerable_row):
+                    if keep_structural_tokens:
+                        start_index = cursor + pattern_len - int(spec["value_len"])
+                    else:
+                        start_index = cursor
+                    state_ranges.append((start_index, cursor + pattern_len))
+                    cursor += pattern_len
+                    matched = True
                     break
-                if bool(answerable_row[finding_index]):
-                    continue
+                if not matched:
+                    cursor += 1
 
-                token_indices = token_indices_by_finding.get(finding_name, [])
-                for token_index in token_indices:
-                    label_index = self._num_visual_tokens + pad_len + int(token_index)
-                    if 0 <= label_index < labels.shape[1] and labels[sample_index, label_index] != -100:
-                        token_weights[sample_index, label_index] = false_weight
+            for finding_index, is_answerable in enumerate(answerable_row):
+                if finding_index >= len(state_ranges):
+                    break
+                if bool(is_answerable):
+                    continue
+                start_index, end_index = state_ranges[finding_index]
+                token_weights[sample_index, start_index:end_index] = false_weight
 
         return token_weights
 

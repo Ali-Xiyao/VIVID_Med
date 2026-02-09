@@ -42,9 +42,9 @@
 
 ## 5. 实验矩阵（最小可用）
 - `V3`：当前 best 配置（作为主对照）。
-- `V4-a`：`false_weight=0.0`。
-- `V4-b`：`false_weight=0.1`。
-- `V4-c`：`false_weight=0.2`（可选）。
+- `V4-a`：`false_weight=0.0`（已完成，结果失败）。
+- `V4-b`：`false_weight=0.1`（下一步）。
+- `V4-c`：`false_weight=0.2`（下一步，可选）。
 
 每组都输出：
 - `json_success_rate`
@@ -65,6 +65,14 @@
 - 若 `macro_f1` 无提升且 `pred_nan_rate` 不降：
 - 保留 V3，转入“伪标签 + calibration 标注”路线。
 
+## 7.1 V4-a 实测结果（2026-02-09，`false_weight=0.0`）
+- 配置文件：`configs/cxr_chexpert_v4.yaml`
+- 训练输出：`outputs/cxr_chexpert_v4/checkpoints/final.pt`
+- 评估输出：`outputs/cxr_chexpert_v4/checkpoints/best.metrics.full.json`
+- 指标：`json_success_rate=1.0`，`pred_nan_rate=1.0`，`macro_f1=0.0`，`micro_f1=0.2091`
+- 现象：14 个标签 `per-label f1` 全为 0，模型几乎全部输出 `state=null`
+- 结论：`false_weight=0.0` 过于激进，当前策略在本数据分布上不可用
+
 ## 8. 与伪标签/人工标注的衔接
 - V4 是低成本先手方案，不依赖新标注即可验证有效性。
 - 若 V4 提升有限，再接入：
@@ -78,3 +86,12 @@
 - 训练现状：`profle/10_训练结果记录.md`
 - 汇报提纲：`profle/13_汇报清单.md`
 - 数据覆盖：`profle/schema/coverage_table.md`
+
+## 11. V4.1 执行指令（先短程再全量）
+- 目标：先确认 `pred_nan_rate` 能否从 1.0 拉下来，再投入全量计算。
+- 配置建议：
+- `false_weight: 0.1`（第一轮）
+- `false_weight: 0.2`（第二轮）
+- 试验流程：
+- 每轮 1000-2000 step + full eval
+- 若 `macro_f1` 仍为 0 或 `pred_nan_rate` 仍接近 1.0，则停止该路线
