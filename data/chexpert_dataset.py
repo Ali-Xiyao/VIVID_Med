@@ -44,10 +44,13 @@ class CheXpertUMSDataset(Dataset):
         transform=None,
         is_train: bool = True,
         use_common_labels_only: bool = False,
+        selected_labels: Optional[List[str]] = None,
         max_samples: Optional[int] = None,
         json_include_all_labels: bool = False,
         json_missing_state: Optional[str] = None,
         json_null_state: Optional[str] = None,
+        dense_subset_top_k: Optional[int] = None,
+        dense_subset_min_answerable: Optional[int] = None,
     ):
         """
         Args:
@@ -56,14 +59,18 @@ class CheXpertUMSDataset(Dataset):
             transform: 图像变换
             is_train: 是否为训练模式
             use_common_labels_only: 是否只使用与 NIH 共同的标签子集
+            selected_labels: 指定自定义 findings 标签子集（优先级高于 use_common_labels_only）
             max_samples: 最大样本数（用于调试）
         """
         self.data_root = Path(data_root)
         self.is_train = is_train
         self.use_common_labels_only = use_common_labels_only
+        self.selected_labels = selected_labels
         self.json_include_all_labels = json_include_all_labels
         self.json_missing_state = json_missing_state
         self.json_null_state = json_null_state
+        self.dense_subset_top_k = dense_subset_top_k
+        self.dense_subset_min_answerable = dense_subset_min_answerable
 
         # 设置 transform
         if transform is None:
@@ -71,12 +78,36 @@ class CheXpertUMSDataset(Dataset):
         else:
             self.transform = transform
 
+        if selected_labels:
+            normalized_labels = []
+            seen = set()
+            for label in selected_labels:
+                if not isinstance(label, str):
+                    continue
+                if label in seen:
+                    continue
+                normalized_labels.append(label)
+                seen.add(label)
+            if not normalized_labels:
+                raise ValueError("selected_labels is provided but empty after normalization")
+            invalid_labels = [label for label in normalized_labels if label not in self.FINDING_NAMES]
+            if invalid_labels:
+                raise ValueError(
+                    f"selected_labels contains unknown labels: {invalid_labels}. "
+                    f"Supported labels: {self.FINDING_NAMES}"
+                )
+            self.label_names = normalized_labels
+        else:
+            self.label_names = self.COMMON_LABELS if use_common_labels_only else self.FINDING_NAMES
+        self.num_labels = len(self.label_names)
+
         # 加载 UMS 数据
         self.samples = self._load_ums_jsonl(ums_jsonl_path, max_samples)
-
-        # 确定使用的标签列表
-        self.label_names = self.COMMON_LABELS if use_common_labels_only else self.FINDING_NAMES
-        self.num_labels = len(self.label_names)
+        self.samples = self._apply_dense_subset(
+            samples=self.samples,
+            top_k=dense_subset_top_k,
+            min_answerable=dense_subset_min_answerable,
+        )
 
         print(f"Loaded {len(self.samples)} samples from {ums_jsonl_path}")
         print(f"Using {self.num_labels} labels: {self.label_names}")
@@ -91,6 +122,69 @@ class CheXpertUMSDataset(Dataset):
                 sample = json.loads(line.strip())
                 samples.append(sample)
         return samples
+
+    def _count_answerable_findings(self, sample: Dict[str, Any]) -> int:
+        answerability = sample.get("answerability", {})
+        findings = sample.get("findings", {})
+        count = 0
+
+        for name in self.label_names:
+            answerable_value = answerability.get(name)
+            if answerable_value is None:
+                finding = findings.get(name, {})
+                if isinstance(finding, dict) and finding.get("state") is not None:
+                    count += 1
+                continue
+
+            if bool(answerable_value):
+                count += 1
+
+        return count
+
+    def _apply_dense_subset(
+        self,
+        samples: List[Dict[str, Any]],
+        top_k: Optional[int] = None,
+        min_answerable: Optional[int] = None,
+    ) -> List[Dict[str, Any]]:
+        if not samples:
+            return samples
+
+        if min_answerable is None and top_k is None:
+            return samples
+
+        scored_samples = []
+        for sample in samples:
+            answerable_count = self._count_answerable_findings(sample)
+            scored_samples.append((answerable_count, sample))
+
+        if min_answerable is not None:
+            min_answerable = int(min_answerable)
+            scored_samples = [
+                (answerable_count, sample)
+                for answerable_count, sample in scored_samples
+                if answerable_count >= min_answerable
+            ]
+            print(
+                f"Applied dense subset min_answerable>={min_answerable}, "
+                f"remaining samples: {len(scored_samples)}"
+            )
+
+        if top_k is not None:
+            top_k = int(top_k)
+            scored_samples.sort(key=lambda item: item[0], reverse=True)
+            scored_samples = scored_samples[:top_k]
+            if scored_samples:
+                counts = [item[0] for item in scored_samples]
+                print(
+                    f"Applied dense subset top_k={top_k}, "
+                    f"answerable findings range: [{min(counts)}, {max(counts)}], "
+                    f"avg={sum(counts)/len(counts):.2f}"
+                )
+            else:
+                print(f"Applied dense subset top_k={top_k}, no samples left")
+
+        return [sample for _, sample in scored_samples]
 
     def _get_image_path(self, original_path: str) -> Path:
         """

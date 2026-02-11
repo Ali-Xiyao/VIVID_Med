@@ -189,6 +189,11 @@ def main():
     json_include_all_labels = data_cfg.get("json_include_all_labels", False)
     json_missing_state = data_cfg.get("json_missing_state")
     json_null_state = data_cfg.get("json_null_state")
+    eval_dense_top_k = data_cfg.get("eval_dense_top_k", data_cfg.get("val_dense_top_k"))
+    eval_dense_min_answerable = data_cfg.get(
+        "eval_dense_min_answerable",
+        data_cfg.get("val_dense_min_answerable"),
+    )
 
     requested_device = config.get("device", "cuda" if torch.cuda.is_available() else "cpu")
     if isinstance(requested_device, str) and requested_device.startswith("cuda"):
@@ -204,10 +209,13 @@ def main():
         transform=get_val_transforms(data_cfg["image_size"]),
         is_train=False,
         use_common_labels_only=data_cfg.get("use_common_labels_only", False),
+        selected_labels=data_cfg.get("selected_labels"),
         max_samples=args.max_samples or data_cfg.get("max_val_samples"),
         json_include_all_labels=json_include_all_labels,
         json_missing_state=json_missing_state,
         json_null_state=json_null_state,
+        dense_subset_top_k=eval_dense_top_k,
+        dense_subset_min_answerable=eval_dense_min_answerable,
     )
 
     batch_size = args.batch_size or config["training"]["batch_size"]

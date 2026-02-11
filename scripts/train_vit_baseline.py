@@ -56,6 +56,7 @@ def create_dataloaders(config: Dict[str, Any]) -> Tuple[DataLoader, DataLoader, 
     train_ums_path = data_cfg["train_ums_path"]
     val_ums_path = data_cfg.get("val_ums_path")
     use_common_labels_only = data_cfg.get("use_common_labels_only", False)
+    selected_labels = data_cfg.get("selected_labels")
     max_train_samples = data_cfg.get("max_train_samples")
     max_val_samples = data_cfg.get("max_val_samples", 1000)
 
@@ -65,6 +66,7 @@ def create_dataloaders(config: Dict[str, Any]) -> Tuple[DataLoader, DataLoader, 
         transform=get_train_transforms(image_size),
         is_train=True,
         use_common_labels_only=use_common_labels_only,
+        selected_labels=selected_labels,
         max_samples=max_train_samples,
     )
 
@@ -76,6 +78,7 @@ def create_dataloaders(config: Dict[str, Any]) -> Tuple[DataLoader, DataLoader, 
             transform=get_val_transforms(image_size),
             is_train=False,
             use_common_labels_only=use_common_labels_only,
+            selected_labels=selected_labels,
             max_samples=max_val_samples,
         )
     else:
@@ -94,6 +97,7 @@ def create_dataloaders(config: Dict[str, Any]) -> Tuple[DataLoader, DataLoader, 
                 transform=get_val_transforms(image_size),
                 is_train=False,
                 use_common_labels_only=use_common_labels_only,
+                selected_labels=selected_labels,
                 max_samples=val_pool_max_samples,
             )
             val_dataset = Subset(val_base_dataset, val_indices)

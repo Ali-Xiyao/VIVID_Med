@@ -52,11 +52,16 @@ def create_dataloaders(config: dict):
     train_ums_path = data_cfg["train_ums_path"]
     val_ums_path = data_cfg.get("val_ums_path")
     use_common_labels_only = data_cfg.get("use_common_labels_only", False)
+    selected_labels = data_cfg.get("selected_labels")
     max_train_samples = data_cfg.get("max_train_samples")
     max_val_samples = data_cfg.get("max_val_samples", 1000)
     json_include_all_labels = data_cfg.get("json_include_all_labels", False)
     json_missing_state = data_cfg.get("json_missing_state")
     json_null_state = data_cfg.get("json_null_state")
+    train_dense_top_k = data_cfg.get("train_dense_top_k")
+    train_dense_min_answerable = data_cfg.get("train_dense_min_answerable")
+    val_dense_top_k = data_cfg.get("val_dense_top_k")
+    val_dense_min_answerable = data_cfg.get("val_dense_min_answerable")
 
     # 训练数据集
     train_dataset = CheXpertUMSDataset(
@@ -65,10 +70,13 @@ def create_dataloaders(config: dict):
         transform=get_train_transforms(image_size),
         is_train=True,
         use_common_labels_only=use_common_labels_only,
+        selected_labels=selected_labels,
         max_samples=max_train_samples,
         json_include_all_labels=json_include_all_labels,
         json_missing_state=json_missing_state,
         json_null_state=json_null_state,
+        dense_subset_top_k=train_dense_top_k,
+        dense_subset_min_answerable=train_dense_min_answerable,
     )
 
     # 验证数据集
@@ -80,10 +88,13 @@ def create_dataloaders(config: dict):
             transform=get_val_transforms(image_size),
             is_train=False,
             use_common_labels_only=use_common_labels_only,
+            selected_labels=selected_labels,
             max_samples=max_val_samples,
             json_include_all_labels=json_include_all_labels,
             json_missing_state=json_missing_state,
             json_null_state=json_null_state,
+            dense_subset_top_k=val_dense_top_k,
+            dense_subset_min_answerable=val_dense_min_answerable,
         )
     else:
         if max_val_samples and max_val_samples < len(train_dataset):
@@ -101,10 +112,13 @@ def create_dataloaders(config: dict):
                 transform=get_val_transforms(image_size),
                 is_train=False,
                 use_common_labels_only=use_common_labels_only,
+                selected_labels=selected_labels,
                 max_samples=val_pool_max_samples,
                 json_include_all_labels=json_include_all_labels,
                 json_missing_state=json_missing_state,
                 json_null_state=json_null_state,
+                dense_subset_top_k=val_dense_top_k,
+                dense_subset_min_answerable=val_dense_min_answerable,
             )
             val_dataset = Subset(val_base_dataset, val_indices)
 

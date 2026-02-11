@@ -95,6 +95,7 @@ def main():
         transform=get_val_transforms(data_cfg["image_size"]),
         is_train=False,
         use_common_labels_only=data_cfg.get("use_common_labels_only", False),
+        selected_labels=data_cfg.get("selected_labels"),
         max_samples=args.num_samples,
         json_include_all_labels=json_include_all_labels,
         json_missing_state=json_missing_state,

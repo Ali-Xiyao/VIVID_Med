@@ -51,6 +51,7 @@ def create_val_loader(config: Dict[str, Any]):
         transform=get_val_transforms(image_size),
         is_train=False,
         use_common_labels_only=use_common_labels_only,
+        selected_labels=data_cfg.get("selected_labels"),
         max_samples=max_val_samples,
     )
 

@@ -95,6 +95,8 @@ class VIVIDTrainer:
         self.answerability_mask = self._build_answerability_mask_config(answerability_mask)
         self._answerability_span_cache: Dict[str, Dict[str, Any]] = {}
         self._answerability_state_patterns = self._build_answerability_state_patterns()
+        train_dataset = getattr(train_dataloader, "dataset", None)
+        self.label_names = list(getattr(train_dataset, "label_names", []))
 
         # 设备
         self.device = next(model.parameters()).device
@@ -204,6 +206,8 @@ class VIVIDTrainer:
         false_weight = float(cfg.get("false_weight", 0.0))
         scope = str(cfg.get("scope", "findings_only"))
         keep_structural_tokens = bool(cfg.get("keep_structural_tokens", True))
+        true_weight_by_label_raw = cfg.get("true_weight_by_label", {}) or {}
+        false_weight_by_label_raw = cfg.get("false_weight_by_label", {}) or {}
 
         if true_weight < 0.0:
             raise ValueError("answerability_mask.true_weight must be >= 0")
@@ -212,12 +216,34 @@ class VIVIDTrainer:
         if scope != "findings_only":
             raise ValueError("answerability_mask.scope currently only supports 'findings_only'")
 
+        true_weight_by_label = {}
+        if not isinstance(true_weight_by_label_raw, dict):
+            raise ValueError("answerability_mask.true_weight_by_label must be a mapping")
+        for key, value in true_weight_by_label_raw.items():
+            label_name = str(key)
+            label_weight = float(value)
+            if label_weight < 0.0:
+                raise ValueError(f"answerability_mask.true_weight_by_label[{label_name}] must be >= 0")
+            true_weight_by_label[label_name] = label_weight
+
+        false_weight_by_label = {}
+        if not isinstance(false_weight_by_label_raw, dict):
+            raise ValueError("answerability_mask.false_weight_by_label must be a mapping")
+        for key, value in false_weight_by_label_raw.items():
+            label_name = str(key)
+            label_weight = float(value)
+            if label_weight < 0.0:
+                raise ValueError(f"answerability_mask.false_weight_by_label[{label_name}] must be >= 0")
+            false_weight_by_label[label_name] = label_weight
+
         return {
             "enabled": enabled,
             "true_weight": true_weight,
             "false_weight": false_weight,
             "scope": scope,
             "keep_structural_tokens": keep_structural_tokens,
+            "true_weight_by_label": true_weight_by_label,
+            "false_weight_by_label": false_weight_by_label,
         }
 
     def _build_state_token_weights(
@@ -466,6 +492,8 @@ class VIVIDTrainer:
         true_weight = self.answerability_mask["true_weight"]
         false_weight = self.answerability_mask["false_weight"]
         keep_structural_tokens = self.answerability_mask["keep_structural_tokens"]
+        true_weight_by_label = self.answerability_mask.get("true_weight_by_label", {})
+        false_weight_by_label = self.answerability_mask.get("false_weight_by_label", {})
         token_weights = torch.full(
             labels.shape,
             fill_value=true_weight,
@@ -510,10 +538,19 @@ class VIVIDTrainer:
             for finding_index, is_answerable in enumerate(answerable_row):
                 if finding_index >= len(state_ranges):
                     break
+                label_name = None
+                if finding_index < len(self.label_names):
+                    label_name = self.label_names[finding_index]
                 if bool(is_answerable):
+                    if label_name is not None and label_name in true_weight_by_label:
+                        start_index, end_index = state_ranges[finding_index]
+                        token_weights[sample_index, start_index:end_index] = true_weight_by_label[label_name]
                     continue
                 start_index, end_index = state_ranges[finding_index]
-                token_weights[sample_index, start_index:end_index] = false_weight
+                label_false_weight = false_weight
+                if label_name is not None and label_name in false_weight_by_label:
+                    label_false_weight = false_weight_by_label[label_name]
+                token_weights[sample_index, start_index:end_index] = label_false_weight
 
         return token_weights
 
