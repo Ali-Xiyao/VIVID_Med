@@ -91,6 +91,7 @@ def evaluate(
     threshold: float,
     json_missing_state: Optional[str] = None,
     json_null_state: Optional[str] = None,
+    pred_unknown_policy: str = "negative",
 ):
     model.eval()
 
@@ -147,7 +148,10 @@ def evaluate(
     y_pred = apply_uncertain_policy(y_pred_raw, uncertain_policy)
 
     # NaN 预测按 0 处理（仅对 y_true 有效位置才参与评估）
-    y_pred = np.nan_to_num(y_pred, nan=0.0)
+    if pred_unknown_policy == "negative":
+        y_pred = np.nan_to_num(y_pred, nan=0.0)
+    elif pred_unknown_policy != "abstain":
+        raise ValueError(f"Unknown pred_unknown_policy: {pred_unknown_policy}")
 
     metrics = compute_classification_metrics(
         y_true=y_true,
@@ -159,11 +163,22 @@ def evaluate(
 
     json_success_rate = json_success / total_samples if total_samples > 0 else 0.0
     pred_nan_rate = np.isnan(y_pred_raw).mean()
+    valid_true_mask = ~np.isnan(y_true)
+    if valid_true_mask.any():
+        eval_coverage = (
+            np.isfinite(y_pred)[valid_true_mask].mean()
+            if np.issubdtype(y_pred.dtype, np.floating)
+            else 1.0
+        )
+    else:
+        eval_coverage = 0.0
 
     return {
         "num_samples": total_samples,
         "json_success_rate": json_success_rate,
         "pred_nan_rate": float(pred_nan_rate),
+        "pred_unknown_policy": pred_unknown_policy,
+        "eval_coverage": float(eval_coverage),
         "metrics": metrics,
     }
 
@@ -182,6 +197,13 @@ def main():
     parser.add_argument("--max_new_tokens", type=int, default=256)
     parser.add_argument("--temperature", type=float, default=0.1)
     parser.add_argument("--do_sample", action="store_true")
+    parser.add_argument(
+        "--pred_unknown_policy",
+        type=str,
+        default=None,
+        choices=["negative", "abstain"],
+        help="How to treat unknown prediction in metrics",
+    )
     args = parser.parse_args()
 
     config = load_config(args.config)
@@ -254,6 +276,7 @@ def main():
     eval_cfg = config.get("evaluation", {})
     uncertain_policy = eval_cfg.get("uncertain_policy", "ignore")
     threshold = float(eval_cfg.get("threshold", 0.5))
+    pred_unknown_policy = args.pred_unknown_policy or eval_cfg.get("pred_unknown_policy", "negative")
 
     result = evaluate(
         model=model,
@@ -268,6 +291,7 @@ def main():
         threshold=threshold,
         json_missing_state=json_missing_state,
         json_null_state=json_null_state,
+        pred_unknown_policy=pred_unknown_policy,
     )
 
     output_path = Path(args.output) if args.output else Path(args.checkpoint).with_suffix(".metrics.json")

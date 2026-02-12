@@ -59,6 +59,10 @@ def create_dataloaders(config: Dict[str, Any]) -> Tuple[DataLoader, DataLoader, 
     selected_labels = data_cfg.get("selected_labels")
     max_train_samples = data_cfg.get("max_train_samples")
     max_val_samples = data_cfg.get("max_val_samples", 1000)
+    train_dense_top_k = data_cfg.get("train_dense_top_k")
+    train_dense_min_answerable = data_cfg.get("train_dense_min_answerable")
+    val_dense_top_k = data_cfg.get("val_dense_top_k")
+    val_dense_min_answerable = data_cfg.get("val_dense_min_answerable")
 
     train_dataset = CheXpertUMSDataset(
         data_root=data_root,
@@ -68,6 +72,8 @@ def create_dataloaders(config: Dict[str, Any]) -> Tuple[DataLoader, DataLoader, 
         use_common_labels_only=use_common_labels_only,
         selected_labels=selected_labels,
         max_samples=max_train_samples,
+        dense_subset_top_k=train_dense_top_k,
+        dense_subset_min_answerable=train_dense_min_answerable,
     )
 
     val_dataset = None
@@ -80,6 +86,8 @@ def create_dataloaders(config: Dict[str, Any]) -> Tuple[DataLoader, DataLoader, 
             use_common_labels_only=use_common_labels_only,
             selected_labels=selected_labels,
             max_samples=max_val_samples,
+            dense_subset_top_k=val_dense_top_k,
+            dense_subset_min_answerable=val_dense_min_answerable,
         )
     else:
         if max_val_samples and max_val_samples < len(train_dataset):
@@ -99,6 +107,8 @@ def create_dataloaders(config: Dict[str, Any]) -> Tuple[DataLoader, DataLoader, 
                 use_common_labels_only=use_common_labels_only,
                 selected_labels=selected_labels,
                 max_samples=val_pool_max_samples,
+                dense_subset_top_k=val_dense_top_k,
+                dense_subset_min_answerable=val_dense_min_answerable,
             )
             val_dataset = Subset(val_base_dataset, val_indices)
 

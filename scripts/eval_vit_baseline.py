@@ -44,6 +44,11 @@ def create_val_loader(config: Dict[str, Any]):
     val_ums_path = data_cfg.get("val_ums_path") or data_cfg["train_ums_path"]
     use_common_labels_only = data_cfg.get("use_common_labels_only", False)
     max_val_samples = data_cfg.get("max_val_samples", 1000)
+    eval_dense_top_k = data_cfg.get("eval_dense_top_k", data_cfg.get("val_dense_top_k"))
+    eval_dense_min_answerable = data_cfg.get(
+        "eval_dense_min_answerable",
+        data_cfg.get("val_dense_min_answerable"),
+    )
 
     val_dataset = CheXpertUMSDataset(
         data_root=data_root,
@@ -53,6 +58,8 @@ def create_val_loader(config: Dict[str, Any]):
         use_common_labels_only=use_common_labels_only,
         selected_labels=data_cfg.get("selected_labels"),
         max_samples=max_val_samples,
+        dense_subset_top_k=eval_dense_top_k,
+        dense_subset_min_answerable=eval_dense_min_answerable,
     )
 
     val_loader = DataLoader(

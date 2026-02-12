@@ -59,6 +59,14 @@ def compute_classification_metrics(
 
         for i in valid_labels:
             mask = ~np.isnan(y_true[:, i])
+            if y_pred.ndim == 2 and np.issubdtype(y_pred.dtype, np.floating):
+                mask = mask & np.isfinite(y_pred[:, i])
+            elif y_pred.ndim == 1 and np.issubdtype(y_pred.dtype, np.floating):
+                mask = mask & np.isfinite(y_pred)
+
+            if mask.sum() == 0:
+                continue
+
             y_t = y_true[mask, i]
             y_p = (y_pred[mask, i] > threshold).astype(int) if y_pred.ndim == 2 else y_pred[mask]
 
@@ -76,8 +84,14 @@ def compute_classification_metrics(
             # AUC（需要概率）
             if y_prob is not None and len(np.unique(y_t)) > 1:
                 try:
-                    label_metrics["auc"] = roc_auc_score(y_t, y_prob[mask, i])
-                    aucs.append(label_metrics["auc"])
+                    prob_mask = mask
+                    if np.issubdtype(y_prob.dtype, np.floating):
+                        prob_mask = prob_mask & np.isfinite(y_prob[:, i])
+                    if prob_mask.sum() > 0:
+                        label_metrics["auc"] = roc_auc_score(y_true[prob_mask, i], y_prob[prob_mask, i])
+                        aucs.append(label_metrics["auc"])
+                    else:
+                        label_metrics["auc"] = None
                 except:
                     label_metrics["auc"] = None
 
@@ -89,6 +103,10 @@ def compute_classification_metrics(
         metrics["macro_auc"] = np.mean(aucs) if aucs else None
         # micro-F1 (ignore NaN)
         valid_mask = ~np.isnan(y_true)
+        if y_pred.ndim == 2 and np.issubdtype(y_pred.dtype, np.floating):
+            valid_mask = valid_mask & np.isfinite(y_pred)
+        elif y_pred.ndim == 1 and np.issubdtype(y_pred.dtype, np.floating):
+            valid_mask = valid_mask & np.isfinite(y_pred)[:, None]
         if valid_mask.any():
             y_true_flat = y_true[valid_mask].astype(int)
             if y_pred.ndim == 2:
