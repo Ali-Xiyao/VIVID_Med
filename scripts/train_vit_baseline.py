@@ -221,6 +221,68 @@ def save_json(path: Path, obj: Dict[str, Any]):
         json.dump(obj, f, ensure_ascii=False, indent=2)
 
 
+def create_optimizer_param_groups(
+    model: torch.nn.Module,
+    training_cfg: Dict[str, Any],
+) -> Tuple[list, Dict[str, Any]]:
+    base_lr = float(training_cfg["learning_rate"])
+    backbone_lr = float(training_cfg.get("backbone_learning_rate", base_lr))
+    head_lr = float(training_cfg.get("head_learning_rate", base_lr))
+    weight_decay = float(training_cfg["weight_decay"])
+
+    head_prefixes = ("head.", "fc_norm.")
+    backbone_params = []
+    head_params = []
+    backbone_numel = 0
+    head_numel = 0
+
+    for name, parameter in model.named_parameters():
+        if not parameter.requires_grad:
+            continue
+        if name.startswith(head_prefixes):
+            head_params.append(parameter)
+            head_numel += parameter.numel()
+        else:
+            backbone_params.append(parameter)
+            backbone_numel += parameter.numel()
+
+    # Fallback: if model has no explicit head prefix, keep single-group behavior.
+    if not head_params:
+        backbone_params = [parameter for parameter in model.parameters() if parameter.requires_grad]
+        backbone_numel = sum(parameter.numel() for parameter in backbone_params)
+        head_numel = 0
+
+    param_groups = []
+    if backbone_params:
+        param_groups.append(
+            {
+                "params": backbone_params,
+                "lr": backbone_lr,
+                "weight_decay": weight_decay,
+                "group_name": "backbone",
+            }
+        )
+    if head_params:
+        param_groups.append(
+            {
+                "params": head_params,
+                "lr": head_lr,
+                "weight_decay": weight_decay,
+                "group_name": "head",
+            }
+        )
+
+    group_info = {
+        "base_lr": base_lr,
+        "backbone_lr": backbone_lr,
+        "head_lr": head_lr,
+        "weight_decay": weight_decay,
+        "backbone_numel": backbone_numel,
+        "head_numel": head_numel,
+    }
+    return param_groups, group_info
+
+
 def _select_backbone_state_dict(raw_state: Dict[str, Any]) -> Dict[str, Any]:
     if not isinstance(raw_state, dict):
         raise ValueError("Checkpoint state must be a dict")
@@ -345,11 +407,14 @@ def main():
     uncertain_policy = eval_cfg.get("uncertain_policy", "ignore")
     threshold = float(eval_cfg.get("threshold", 0.5))
 
-    optimizer = AdamW(
-        model.parameters(),
-        lr=training_cfg["learning_rate"],
-        weight_decay=training_cfg["weight_decay"],
-    )
+    param_groups, group_info = create_optimizer_param_groups(model, training_cfg)
+    optimizer = AdamW(param_groups)
+
+    print("\nOptimizer groups:")
+    print(f"  base lr: {group_info['base_lr']:.2e}")
+    print(f"  backbone lr: {group_info['backbone_lr']:.2e}, params: {group_info['backbone_numel']:,}")
+    print(f"  head lr: {group_info['head_lr']:.2e}, params: {group_info['head_numel']:,}")
+    print(f"  weight decay: {group_info['weight_decay']:.4f}")
 
     warmup_steps = training_cfg["warmup_steps"]
     max_steps = training_cfg["max_steps"]
