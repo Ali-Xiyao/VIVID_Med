@@ -97,6 +97,7 @@ class VIVIDTrainer:
         self._answerability_state_patterns = self._build_answerability_state_patterns()
         train_dataset = getattr(train_dataloader, "dataset", None)
         self.label_names = list(getattr(train_dataset, "label_names", []))
+        self.label_name_to_index = {name: idx for idx, name in enumerate(self.label_names)}
 
         # 设备
         self.device = next(model.parameters()).device
@@ -508,6 +509,12 @@ class VIVIDTrainer:
                 answerable_row = answerable_row.cpu()
             answerable_row = answerable_row.tolist()
 
+            try:
+                findings = json.loads(target_jsons[sample_index]).get("findings", {})
+                finding_names = list(findings.keys()) if isinstance(findings, dict) else []
+            except Exception:
+                finding_names = []
+
             label_tokens = labels_cpu[sample_index]
             state_ranges: List[tuple[int, int]] = []
             cursor = 0
@@ -535,21 +542,23 @@ class VIVIDTrainer:
                 if not matched:
                     cursor += 1
 
-            for finding_index, is_answerable in enumerate(answerable_row):
-                if finding_index >= len(state_ranges):
-                    break
-                label_name = None
-                if finding_index < len(self.label_names):
-                    label_name = self.label_names[finding_index]
-                if bool(is_answerable):
-                    if label_name is not None and label_name in true_weight_by_label:
-                        start_index, end_index = state_ranges[finding_index]
-                        token_weights[sample_index, start_index:end_index] = true_weight_by_label[label_name]
+            range_count = min(len(state_ranges), len(finding_names))
+            for finding_index in range(range_count):
+                finding_name = finding_names[finding_index]
+                label_index = self.label_name_to_index.get(finding_name)
+                if label_index is None or label_index >= len(answerable_row):
                     continue
+
                 start_index, end_index = state_ranges[finding_index]
+                is_answerable = bool(answerable_row[label_index])
+                if is_answerable:
+                    if finding_name in true_weight_by_label:
+                        token_weights[sample_index, start_index:end_index] = true_weight_by_label[finding_name]
+                    continue
+
                 label_false_weight = false_weight
-                if label_name is not None and label_name in false_weight_by_label:
-                    label_false_weight = false_weight_by_label[label_name]
+                if finding_name in false_weight_by_label:
+                    label_false_weight = false_weight_by_label[finding_name]
                 token_weights[sample_index, start_index:end_index] = label_false_weight
 
         return token_weights
@@ -655,6 +664,16 @@ class VIVIDTrainer:
         images = batch["images"].to(self.device)
         target_jsons = batch["target_jsons"]
         answerable = batch.get("answerable")
+        prompt_texts = batch.get("prompt_texts")
+
+        prompt_payload: Any = self.prompt_template
+        if isinstance(prompt_texts, list) and len(prompt_texts) == len(target_jsons):
+            has_custom_prompt = any(isinstance(text, str) and len(text) > 0 for text in prompt_texts)
+            if has_custom_prompt:
+                prompt_payload = [
+                    text if isinstance(text, str) and len(text) > 0 else self.prompt_template
+                    for text in prompt_texts
+                ]
 
         # 混合精度上下文（仅 CUDA）
         use_amp = self.device.type == "cuda" and (self.bf16 or self.fp16)
@@ -671,7 +690,7 @@ class VIVIDTrainer:
             # 前向传播
             outputs = self.model(
                 images=images,
-                prompt_text=self.prompt_template,
+                prompt_text=prompt_payload,
                 target_text=target_jsons,
             )
 
@@ -718,10 +737,20 @@ class VIVIDTrainer:
             images = batch["images"].to(self.device)
             target_jsons = batch["target_jsons"]
             answerable = batch.get("answerable")
+            prompt_texts = batch.get("prompt_texts")
+
+            prompt_payload: Any = self.prompt_template
+            if isinstance(prompt_texts, list) and len(prompt_texts) == len(target_jsons):
+                has_custom_prompt = any(isinstance(text, str) and len(text) > 0 for text in prompt_texts)
+                if has_custom_prompt:
+                    prompt_payload = [
+                        text if isinstance(text, str) and len(text) > 0 else self.prompt_template
+                        for text in prompt_texts
+                    ]
 
             outputs = self.model(
                 images=images,
-                prompt_text=self.prompt_template,
+                prompt_text=prompt_payload,
                 target_text=target_jsons,
             )
 

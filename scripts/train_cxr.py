@@ -62,6 +62,7 @@ def create_dataloaders(config: dict):
     train_dense_min_answerable = data_cfg.get("train_dense_min_answerable")
     val_dense_top_k = data_cfg.get("val_dense_top_k")
     val_dense_min_answerable = data_cfg.get("val_dense_min_answerable")
+    field_query_training = data_cfg.get("field_query_training")
 
     # 训练数据集
     train_dataset = CheXpertUMSDataset(
@@ -77,6 +78,7 @@ def create_dataloaders(config: dict):
         json_null_state=json_null_state,
         dense_subset_top_k=train_dense_top_k,
         dense_subset_min_answerable=train_dense_min_answerable,
+        field_query_training=field_query_training,
     )
 
     # 验证数据集
@@ -95,6 +97,7 @@ def create_dataloaders(config: dict):
             json_null_state=json_null_state,
             dense_subset_top_k=val_dense_top_k,
             dense_subset_min_answerable=val_dense_min_answerable,
+            field_query_training=None,
         )
     else:
         if max_val_samples and max_val_samples < len(train_dataset):
@@ -119,6 +122,7 @@ def create_dataloaders(config: dict):
                 json_null_state=json_null_state,
                 dense_subset_top_k=val_dense_top_k,
                 dense_subset_min_answerable=val_dense_min_answerable,
+                field_query_training=None,
             )
             val_dataset = Subset(val_base_dataset, val_indices)
 

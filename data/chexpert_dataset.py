@@ -51,6 +51,7 @@ class CheXpertUMSDataset(Dataset):
         json_null_state: Optional[str] = None,
         dense_subset_top_k: Optional[int] = None,
         dense_subset_min_answerable: Optional[int] = None,
+        field_query_training: Optional[Dict[str, Any]] = None,
     ):
         """
         Args:
@@ -100,6 +101,8 @@ class CheXpertUMSDataset(Dataset):
         else:
             self.label_names = self.COMMON_LABELS if use_common_labels_only else self.FINDING_NAMES
         self.num_labels = len(self.label_names)
+        self._label_name_to_index = {name: idx for idx, name in enumerate(self.label_names)}
+        self.field_query_training_cfg = self._build_field_query_training_config(field_query_training)
 
         # 加载 UMS 数据
         self.samples = self._load_ums_jsonl(ums_jsonl_path, max_samples)
@@ -111,6 +114,12 @@ class CheXpertUMSDataset(Dataset):
 
         print(f"Loaded {len(self.samples)} samples from {ums_jsonl_path}")
         print(f"Using {self.num_labels} labels: {self.label_names}")
+        if self.field_query_training_cfg["enabled"]:
+            print(
+                "Field-query training enabled: "
+                f"K={self.field_query_training_cfg['k_min']}..{self.field_query_training_cfg['k_max']}, "
+                f"focus_labels={self.field_query_training_cfg['focus_labels']}"
+            )
 
     def _load_ums_jsonl(self, jsonl_path: str, max_samples: Optional[int] = None) -> List[Dict]:
         """加载 UMS JSONL 文件"""
@@ -242,7 +251,147 @@ class CheXpertUMSDataset(Dataset):
                 return self.json_null_state
         return state
 
-    def _create_ums_json_string(self, sample: Dict) -> str:
+    def _build_field_query_training_config(
+        self,
+        field_query_training: Optional[Dict[str, Any]],
+    ) -> Dict[str, Any]:
+        cfg = dict(field_query_training or {})
+        enabled = bool(cfg.get("enabled", False))
+
+        k_min = max(int(cfg.get("k_min", 2)), 1)
+        k_max = max(int(cfg.get("k_max", 3)), k_min)
+
+        focus_labels_raw = cfg.get("focus_labels", []) or []
+        focus_labels = [
+            name for name in focus_labels_raw if isinstance(name, str) and name in self._label_name_to_index
+        ]
+        focus_probability = float(cfg.get("focus_probability", 0.7))
+        focus_probability = min(max(focus_probability, 0.0), 1.0)
+
+        sampling_weights_raw = cfg.get("label_sampling_weights", {}) or {}
+        sampling_weights: Dict[str, float] = {}
+        if isinstance(sampling_weights_raw, dict):
+            for key, value in sampling_weights_raw.items():
+                if key not in self._label_name_to_index:
+                    continue
+                try:
+                    weight = float(value)
+                except (TypeError, ValueError):
+                    continue
+                if weight > 0.0:
+                    sampling_weights[key] = weight
+
+        prompt_template = str(
+            cfg.get(
+                "prompt_template",
+                (
+                    "You are a medical imaging AI assistant.\n"
+                    "Output ONLY one valid JSON object with keys: modality, findings, study_view.\n"
+                    "modality must be \"CXR\".\n"
+                    "findings must include ONLY these labels: {label_list}.\n"
+                    "For each finding, output {\"state\": present|absent|uncertain|null, \"score\": null}.\n"
+                    "Do not output any labels outside the list.\n"
+                    "study_view is AP, PA, LAT, or null."
+                ),
+            )
+        )
+
+        return {
+            "enabled": enabled,
+            "k_min": k_min,
+            "k_max": k_max,
+            "focus_labels": focus_labels,
+            "focus_probability": focus_probability,
+            "label_sampling_weights": sampling_weights,
+            "prompt_template": prompt_template,
+        }
+
+    def _sample_weighted_without_replacement(
+        self,
+        candidates: List[str],
+        count: int,
+        sampling_weights: Dict[str, float],
+    ) -> List[str]:
+        if count <= 0 or not candidates:
+            return []
+        if count >= len(candidates):
+            return list(candidates)
+
+        selected: List[str] = []
+        remaining = list(candidates)
+        for _ in range(count):
+            if not remaining:
+                break
+            weights = torch.tensor(
+                [sampling_weights.get(name, 1.0) for name in remaining], dtype=torch.float32
+            )
+            weights = torch.clamp(weights, min=1e-6)
+            chosen_idx = int(torch.multinomial(weights, num_samples=1, replacement=False).item())
+            selected_name = remaining.pop(chosen_idx)
+            selected.append(selected_name)
+        return selected
+
+    def _sample_field_query_labels(self, answerable: torch.Tensor) -> List[str]:
+        cfg = self.field_query_training_cfg
+        if not cfg["enabled"]:
+            return list(self.label_names)
+
+        answerable_flags = answerable.tolist()
+        candidates = [
+            name
+            for name in self.label_names
+            if self._label_name_to_index[name] < len(answerable_flags)
+            and bool(answerable_flags[self._label_name_to_index[name]])
+        ]
+        if not candidates:
+            candidates = list(self.label_names)
+
+        max_count = min(cfg["k_max"], len(candidates))
+        min_count = min(cfg["k_min"], max_count)
+        min_count = max(min_count, 1)
+        max_count = max(max_count, min_count)
+        query_count = int(torch.randint(min_count, max_count + 1, (1,)).item())
+
+        focus_candidates = [name for name in candidates if name in cfg["focus_labels"]]
+        selected: List[str] = []
+        remaining = list(candidates)
+
+        if focus_candidates and torch.rand(1).item() < cfg["focus_probability"]:
+            focus_pick = self._sample_weighted_without_replacement(
+                candidates=focus_candidates,
+                count=1,
+                sampling_weights=cfg["label_sampling_weights"],
+            )
+            if focus_pick:
+                selected.extend(focus_pick)
+                remaining = [name for name in remaining if name not in focus_pick]
+
+        need = query_count - len(selected)
+        if need > 0:
+            selected.extend(
+                self._sample_weighted_without_replacement(
+                    candidates=remaining,
+                    count=need,
+                    sampling_weights=cfg["label_sampling_weights"],
+                )
+            )
+        return selected
+
+    def _create_field_query_prompt(self, query_labels: List[str]) -> str:
+        label_list = ", ".join(f"\"{name}\"" for name in query_labels)
+        template = self.field_query_training_cfg["prompt_template"]
+        return (
+            template
+            .replace("{label_list}", label_list)
+            .replace("{num_fields}", str(len(query_labels)))
+        )
+
+    def _create_ums_json_string(
+        self,
+        sample: Dict,
+        include_labels: Optional[List[str]] = None,
+        include_missing_for_selected: bool = False,
+    ) -> str:
         """
         创建用于训练的 UMS JSON 字符串（简化版，只包含 findings）
         这是 LLM 需要生成的目标序列
@@ -255,12 +404,16 @@ class CheXpertUMSDataset(Dataset):
         }
 
         # 只包含使用的标签
-        for name in self.label_names:
+        target_labels = include_labels if include_labels is not None else self.label_names
+
+        for name in target_labels:
             if name in sample["findings"]:
                 item = dict(sample["findings"][name])
                 item["state"] = self._normalize_state(item.get("state"), missing=False)
                 output["findings"][name] = item
-            elif self.json_include_all_labels:
+            elif include_missing_for_selected or (
+                include_labels is None and self.json_include_all_labels
+            ):
                 output["findings"][name] = {
                     "state": self._normalize_state(None, missing=True),
                     "score": None,
@@ -292,7 +445,18 @@ class CheXpertUMSDataset(Dataset):
         answerable = self._parse_answerability(sample["answerability"])
 
         # 创建目标 JSON 字符串
-        target_json = self._create_ums_json_string(sample)
+        prompt_text = None
+        query_labels = None
+        if self.is_train and self.field_query_training_cfg["enabled"]:
+            query_labels = self._sample_field_query_labels(answerable)
+            target_json = self._create_ums_json_string(
+                sample=sample,
+                include_labels=query_labels,
+                include_missing_for_selected=False,
+            )
+            prompt_text = self._create_field_query_prompt(query_labels)
+        else:
+            target_json = self._create_ums_json_string(sample)
 
         # 获取 study_view
         study_view = sample.get("study_view")  # AP, PA, LAT, or None
@@ -305,6 +469,8 @@ class CheXpertUMSDataset(Dataset):
             "study_view": study_view,
             "sample_id": sample["extensions"]["sample_id"],
             "original_path": sample["extensions"]["original_path"],
+            "prompt_text": prompt_text,
+            "query_labels": query_labels,
         }
 
 
@@ -324,4 +490,6 @@ def collate_fn(batch: List[Dict]) -> Dict[str, Any]:
         "study_views": [item["study_view"] for item in batch],
         "sample_ids": [item["sample_id"] for item in batch],
         "original_paths": [item["original_path"] for item in batch],
+        "prompt_texts": [item.get("prompt_text") for item in batch],
+        "query_labels": [item.get("query_labels") for item in batch],
     }
