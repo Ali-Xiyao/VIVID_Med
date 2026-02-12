@@ -47,6 +47,9 @@ class VIVIDTrainer:
         weight_decay: float = 0.01,
         warmup_steps: int = 500,
         max_steps: int = 10000,
+        # 分组学习率（V8+：ViT 和 Projector 使用不同 lr）
+        vit_learning_rate: Optional[float] = None,
+        projector_learning_rate: Optional[float] = None,
         # 损失配置
         lambda_rank: float = 0.0,  # v1.0 先设为 0
         lambda_vdep: float = 0.0,  # v1.0 先设为 0
@@ -116,13 +119,40 @@ class VIVIDTrainer:
             print(f"  scope: {self.answerability_mask['scope']}")
             print(f"  keep_structural_tokens: {self.answerability_mask['keep_structural_tokens']}")
 
-        # 优化器（只优化可训练参数）
-        trainable_params = model.get_trainable_parameters()
-        self.optimizer = AdamW(
-            trainable_params,
-            lr=learning_rate,
-            weight_decay=weight_decay,
-        )
+        # 优化器（支持分组学习率）
+        use_grouped_lr = (vit_learning_rate is not None or projector_learning_rate is not None)
+        if use_grouped_lr and hasattr(model, "get_trainable_parameter_groups"):
+            param_groups_dict = model.get_trainable_parameter_groups()
+            vit_lr = vit_learning_rate if vit_learning_rate is not None else learning_rate
+            proj_lr = projector_learning_rate if projector_learning_rate is not None else learning_rate
+            param_groups = []
+            if "vit" in param_groups_dict and param_groups_dict["vit"]:
+                param_groups.append({
+                    "params": param_groups_dict["vit"],
+                    "lr": vit_lr,
+                    "weight_decay": weight_decay,
+                })
+            if "projector" in param_groups_dict and param_groups_dict["projector"]:
+                param_groups.append({
+                    "params": param_groups_dict["projector"],
+                    "lr": proj_lr,
+                    "weight_decay": weight_decay,
+                })
+            if "answerability_head" in param_groups_dict and param_groups_dict["answerability_head"]:
+                param_groups.append({
+                    "params": param_groups_dict["answerability_head"],
+                    "lr": proj_lr,
+                    "weight_decay": weight_decay,
+                })
+            self.optimizer = AdamW(param_groups)
+            print(f"Using grouped learning rates: ViT={vit_lr}, Projector={proj_lr}")
+        else:
+            trainable_params = model.get_trainable_parameters()
+            self.optimizer = AdamW(
+                trainable_params,
+                lr=learning_rate,
+                weight_decay=weight_decay,
+            )
 
         # 学习率调度器
         warmup_scheduler = LinearLR(

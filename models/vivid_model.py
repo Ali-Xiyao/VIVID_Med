@@ -38,6 +38,7 @@ class VIVIDModel(nn.Module):
         # Projector 配置
         num_prefix_tokens: int = 16,
         projector_dropout: float = 0.1,
+        projector_mlp_hidden_dim: Optional[int] = None,
         # LLM 配置
         llm_model_name: str = "Qwen/Qwen3-1.7B",
         llm_device: Optional[str] = None,
@@ -53,6 +54,7 @@ class VIVIDModel(nn.Module):
             vit_output_type: ViT 输出类型
             num_prefix_tokens: 可学习前缀 token 数量
             projector_dropout: Projector dropout
+            projector_mlp_hidden_dim: Projector MLP 隐藏层维度，None 则使用默认值 vit_embed_dim*4
             llm_model_name: HuggingFace LLM 模型名称
             llm_device: LLM 设备（默认与模型相同）
             load_llm: 是否加载 LLM（调试时可设为 False）
@@ -91,6 +93,7 @@ class VIVIDModel(nn.Module):
             vit_embed_dim=vit_embed_dim,
             llm_embed_dim=self.llm_embed_dim,
             num_prefix_tokens=num_prefix_tokens,
+            mlp_hidden_dim=projector_mlp_hidden_dim,
             dropout=projector_dropout,
         )
 
@@ -203,6 +206,16 @@ class VIVIDModel(nn.Module):
         if self.answerability_head is not None:
             params.extend(self.answerability_head.parameters())
         return params
+
+    def get_trainable_parameter_groups(self) -> Dict[str, List[nn.Parameter]]:
+        """获取分组的可训练参数，用于差异化学习率"""
+        groups = {
+            "vit": list(self.vit.parameters()),
+            "projector": list(self.projector.parameters()),
+        }
+        if self.answerability_head is not None:
+            groups["answerability_head"] = list(self.answerability_head.parameters())
+        return groups
 
     def get_num_trainable_parameters(self) -> int:
         """获取可训练参数数量"""
