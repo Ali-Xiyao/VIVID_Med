@@ -1,0 +1,140 @@
+# VIVID-Med V8-lite (GPU1): 消融对照
+# 只改 2 项 vs V7:
+#   1. vit_output_type: "all" (197 tokens)
+#   2. 分组学习率: ViT lr=2e-5, Projector lr=1e-4
+# 保持不变:
+#   - num_prefix_tokens: 16 (与 V7 一致)
+#   - projector_mlp_hidden_dim: 默认 3072 (与 V7 一致)
+#   - max_steps: 3500 (与 V7 一致)
+# 目的: 区分 "all tokens + 分组lr" vs "Projector 削弱" 的贡献
+
+data:
+  data_root: "./data/dataset"
+  train_ums_path: "./data/dataset/processed/chexpert_ums_train.jsonl"
+  val_ums_path: "./data/dataset/processed/chexpert_ums_val.jsonl"
+  image_size: 224
+  use_common_labels_only: false
+  selected_labels:
+    - "Pleural Effusion"
+    - "Support Devices"
+    - "Lung Opacity"
+    - "Edema"
+    - "Pneumothorax"
+    - "Consolidation"
+    - "Atelectasis"
+  max_train_samples: null
+  max_val_samples: 1000
+  num_workers: 4
+  json_include_all_labels: true
+  json_missing_state: null
+  json_null_state: null
+  train_dense_top_k: 10000
+  train_dense_min_answerable: null
+  val_dense_top_k: 1000
+  val_dense_min_answerable: null
+
+  field_query_training:
+    enabled: true
+    k_min: 2
+    k_max: 3
+    focus_labels:
+      - "Pleural Effusion"
+      - "Edema"
+      - "Pneumothorax"
+    focus_probability: 0.8
+    label_sampling_weights:
+      "Pleural Effusion": 3.0
+      "Edema": 2.5
+      "Pneumothorax": 2.5
+      "Consolidation": 1.6
+      "Atelectasis": 1.6
+      "Lung Opacity": 1.2
+      "Support Devices": 1.0
+    prompt_template: |
+      You are a medical imaging AI assistant.
+      Output ONLY one valid JSON object with keys:
+      modality, findings, study_view.
+      modality must be "CXR".
+      findings must include ONLY these labels: {label_list}.
+      For each finding, output {"state": present|absent|uncertain|null, "score": null}.
+      Do not output any labels outside this label list.
+      study_view is AP, PA, LAT, or null.
+
+model:
+  vit_model_name: "vit_base_patch16_224"
+  vit_pretrained: true
+  vit_output_type: "all"              # 改动1: 输出全部 197 tokens
+  num_prefix_tokens: 16               # 保持 V7 不变
+  projector_dropout: 0.1
+  # projector_mlp_hidden_dim 不设置，使用默认 3072 (与 V7 一致)
+  llm_model_name: "Qwen/Qwen2.5-1.5B-Instruct"
+  use_flash_attention: true
+  max_text_length: 448
+
+training:
+  learning_rate: 8.0e-5
+  vit_learning_rate: 2.0e-5           # 改动2: 分组学习率
+  projector_learning_rate: 1.0e-4     # 改动2: 分组学习率
+  weight_decay: 0.01
+  warmup_steps: 300
+  max_steps: 3500                     # 保持 V7 不变
+  lambda_rank: 0.0
+  lambda_vdep: 0.0
+  lambda_ans: 0.0
+  batch_size: 4
+  gradient_accumulation_steps: 8
+  max_grad_norm: 1.0
+  fp16: false
+  bf16: true
+  log_interval: 10
+  eval_interval: 250
+  save_interval: 500
+  output_dir: "./outputs/cxr_chexpert_v8lite_top7_gpu1"
+
+  token_weighting:
+    enabled: true
+    default_weight: 1.0
+    label_smoothing: 0.0
+    state_weights:
+      present: 6.0
+      uncertain: 3.0
+      absent: 1.4
+      null: 0.0
+
+  answerability_mask:
+    enabled: true
+    true_weight: 1.0
+    true_weight_by_label:
+      Pleural Effusion: 2.0
+      Edema: 1.8
+      Pneumothorax: 1.8
+      Consolidation: 1.4
+      Atelectasis: 1.4
+    false_weight: 0.0
+    scope: "findings_only"
+    keep_structural_tokens: false
+
+prompt:
+  template: |
+    You are a medical imaging AI assistant.
+    Output ONLY one valid JSON object with keys:
+    modality, findings, study_view.
+    modality must be "CXR".
+    findings must include ONLY these 7 labels:
+    "Pleural Effusion", "Support Devices", "Lung Opacity", "Edema",
+    "Pneumothorax", "Consolidation", "Atelectasis".
+    For each finding, output {"state": present|absent|uncertain|null, "score": null}.
+    study_view is AP, PA, LAT, or null.
+
+evaluation:
+  threshold: 0.5
+  uncertain_policy: "ignore"
+  pred_unknown_policy: "negative"
+
+wandb:
+  enabled: false
+  project: "vivid-med"
+  run_name: null
+
+seed: 42
+device: "cuda:1"
