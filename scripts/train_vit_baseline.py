@@ -221,12 +221,70 @@ def save_json(path: Path, obj: Dict[str, Any]):
         json.dump(obj, f, ensure_ascii=False, indent=2)
 
 
+def _select_backbone_state_dict(raw_state: Dict[str, Any]) -> Dict[str, Any]:
+    if not isinstance(raw_state, dict):
+        raise ValueError("Checkpoint state must be a dict")
+
+    # VIVID checkpoint stores ViT under key 'vit'
+    if "vit" in raw_state and isinstance(raw_state["vit"], dict):
+        candidate = raw_state["vit"]
+    # Baseline/full-model checkpoints may store weights under key 'model'
+    elif "model" in raw_state and isinstance(raw_state["model"], dict):
+        candidate = raw_state["model"]
+    else:
+        candidate = raw_state
+
+    # ViTEncoder wraps timm model as self.vit, strip prefix for timm model loading
+    if candidate and all(isinstance(key, str) and key.startswith("vit.") for key in candidate.keys()):
+        normalized = {key[len("vit."):]: value for key, value in candidate.items()}
+    else:
+        normalized = candidate
+
+    return normalized
+
+
+def load_vit_backbone_from_checkpoint(model: torch.nn.Module, checkpoint_path: str, device: str) -> None:
+    checkpoint_path = str(Path(checkpoint_path))
+    state = torch.load(checkpoint_path, map_location=device)
+    source_state = _select_backbone_state_dict(state)
+
+    model_state = model.state_dict()
+    filtered_state = {}
+    ignored_prefixes = ("head.", "fc_norm.")
+
+    for key, value in source_state.items():
+        if not isinstance(key, str):
+            continue
+        if key.startswith(ignored_prefixes):
+            continue
+        if key not in model_state:
+            continue
+        if getattr(model_state[key], "shape", None) != getattr(value, "shape", None):
+            continue
+        filtered_state[key] = value
+
+    load_result = model.load_state_dict(filtered_state, strict=False)
+    loaded_count = len(filtered_state)
+    print(f"Loaded ViT backbone from {checkpoint_path}")
+    print(f"  Loaded params: {loaded_count}")
+    if load_result.missing_keys:
+        print(f"  Missing keys (first 10): {load_result.missing_keys[:10]}")
+    if load_result.unexpected_keys:
+        print(f"  Unexpected keys (first 10): {load_result.unexpected_keys[:10]}")
+
+
 def main():
     parser = argparse.ArgumentParser(description="Train ViT baseline for CheXpert")
     parser.add_argument(
         "--config",
         type=str,
         default=str(Path(__file__).parent.parent / "configs" / "baseline_vit_chexpert.yaml"),
+    )
+    parser.add_argument(
+        "--init_vit_checkpoint",
+        type=str,
+        default=None,
+        help="Initialize ViT backbone from VIVID/baseline checkpoint",
     )
     parser.add_argument("--debug", action="store_true", help="Debug mode")
     args = parser.parse_args()
@@ -276,6 +334,11 @@ def main():
         drop_rate=model_cfg.get("drop_rate", 0.0),
         drop_path_rate=model_cfg.get("drop_path_rate", 0.1),
     ).to(device)
+
+    transfer_cfg = config.get("transfer", {})
+    init_vit_checkpoint = args.init_vit_checkpoint or transfer_cfg.get("init_vit_checkpoint")
+    if init_vit_checkpoint:
+        load_vit_backbone_from_checkpoint(model, init_vit_checkpoint, device)
 
     training_cfg = config["training"]
     eval_cfg = config.get("evaluation", {})

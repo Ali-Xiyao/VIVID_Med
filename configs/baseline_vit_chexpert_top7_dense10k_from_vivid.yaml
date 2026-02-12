@@ -1,0 +1,56 @@
+# ViT baseline transfer run:
+# initialize ViT backbone from VIVID pretraining checkpoint, then train BCE head on Top7 dense10k
+
+data:
+  data_root: "./data/dataset"
+  train_ums_path: "./data/dataset/processed/chexpert_ums_train.jsonl"
+  val_ums_path: "./data/dataset/processed/chexpert_ums_val.jsonl"
+  image_size: 224
+  use_common_labels_only: false
+  selected_labels:
+    - "Pleural Effusion"
+    - "Support Devices"
+    - "Lung Opacity"
+    - "Edema"
+    - "Pneumothorax"
+    - "Consolidation"
+    - "Atelectasis"
+  max_train_samples: null
+  max_val_samples: 1000
+  num_workers: 4
+  train_dense_top_k: 10000
+  train_dense_min_answerable: null
+  val_dense_top_k: 1000
+  val_dense_min_answerable: null
+
+model:
+  vit_model_name: "vit_base_patch16_224"
+  vit_pretrained: true
+  drop_rate: 0.0
+  drop_path_rate: 0.1
+
+transfer:
+  # Set this to your finished VIVID checkpoint path before running final comparison.
+  init_vit_checkpoint: "./outputs/cxr_chexpert_v7_top7_gpu0_run2/checkpoints/best.pt"
+
+training:
+  learning_rate: 1.0e-4
+  weight_decay: 0.01
+  warmup_steps: 400
+  max_steps: 4500
+  batch_size: 16
+  gradient_accumulation_steps: 2
+  max_grad_norm: 1.0
+  fp16: false
+  bf16: true
+  log_interval: 10
+  eval_interval: 300
+  save_interval: 600
+  output_dir: "./outputs/baseline_vit_top7_dense10k_from_vivid"
+
+evaluation:
+  threshold: 0.5
+  uncertain_policy: "ignore"
+
+seed: 42
+device: "cuda"
