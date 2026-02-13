@@ -1,0 +1,34 @@
+# V9 SVRL → NIH External Test
+# 用 CheXpert 训练的分类头直接在 NIH 上测试（7 label 交集）
+
+data:
+  data_root: "./data/dataset"
+  # 使用 CheXpert 训练的模型，在 NIH 上测试
+  test_ums_path: "./data/dataset/processed/nih_external_test_ums.jsonl"
+  image_size: 224
+  # NIH-CheXpert 共同标签子集
+  selected_labels:
+    - "Atelectasis"
+    - "Cardiomegaly"
+    - "Consolidation"
+    - "Edema"
+    - "Pleural Effusion"
+    - "Pneumonia"
+    - "Pneumothorax"
+
+model:
+  vit_model_name: "vit_base_patch16_224"
+  vit_pretrained: true
+  drop_rate: 0.0
+  drop_path_rate: 0.1
+
+transfer:
+  # 使用 CheXpert transfer 训练好的完整模型
+  init_checkpoint: "./outputs/transfer_cls_v9_chexpert/checkpoints/best.pt"
+
+evaluation:
+  threshold: 0.5
+  output_dir: "./outputs/transfer_cls_v9_nih"
+
+seed: 42
+device: "cuda"

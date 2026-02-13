@@ -1,0 +1,43 @@
+# V9 SVRL → KiTS21 Segmentation Transfer
+# 从 V9 SVRL checkpoint 提取 ViT backbone，接 SegHead fine-tune
+
+data:
+  data_root: "./data/dataset"
+  train_ums_path: "./data/dataset/processed/kits_ums_train.jsonl"
+  val_ums_path: "./data/dataset/processed/kits_ums_val.jsonl"
+  image_size: 224
+  num_workers: 4
+  # Low-data subsets: 设为 null 使用全量，或 0.1/0.25/0.5
+  subset_fraction: null
+
+model:
+  vit_model_name: "vit_base_patch16_224"
+  vit_pretrained: true
+  num_seg_classes: 4  # background + kidney + tumor + cyst
+
+transfer:
+  init_vit_checkpoint: "./outputs/v9_svrl/checkpoints/best.pt"
+
+training:
+  learning_rate: 1.0e-4
+  backbone_learning_rate: 1.0e-5
+  head_learning_rate: 1.0e-3
+  weight_decay: 0.01
+  warmup_steps: 200
+  max_steps: 3000
+  batch_size: 8
+  gradient_accumulation_steps: 2
+  max_grad_norm: 1.0
+  fp16: false
+  bf16: true
+  log_interval: 10
+  eval_interval: 200
+  save_interval: 500
+  output_dir: "./outputs/transfer_seg_v9_kits"
+
+evaluation:
+  # Dice + HD95
+  metrics: ["dice", "hd95"]
+
+seed: 42
+device: "cuda"

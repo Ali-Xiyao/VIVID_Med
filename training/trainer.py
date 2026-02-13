@@ -24,6 +24,7 @@ except ImportError:
     WANDB_AVAILABLE = False
 
 from .losses import StructuredLoss
+from models.consistency import AugmentationConsistencyLoss
 
 
 class VIVIDTrainer:
@@ -72,6 +73,10 @@ class VIVIDTrainer:
         wandb_run_name: Optional[str] = None,
         # Prompt 配置
         prompt_template: str = "Generate a structured medical report in JSON format for this chest X-ray image:\n",
+        # GFTM 配置
+        gftm_config: Optional[Dict[str, Any]] = None,
+        # Consistency loss 配置
+        consistency_config: Optional[Dict[str, Any]] = None,
     ):
         self.model = model
         self.train_dataloader = train_dataloader
@@ -202,6 +207,27 @@ class VIVIDTrainer:
         # 训练状态
         self.global_step = 0
         self.best_val_loss = float("inf")
+
+        # GFTM 配置
+        gftm_cfg = gftm_config or {}
+        self.gftm_enabled = bool(gftm_cfg.get("enabled", False))
+        self.gftm_initial_mask_ratio = float(gftm_cfg.get("initial_mask_ratio", 0.5))
+        self.gftm_final_mask_ratio = float(gftm_cfg.get("final_mask_ratio", 0.75))
+        self.gftm_mask_mode = str(gftm_cfg.get("mask_mode", "gftm"))
+        self.gftm_warmup_steps = int(gftm_cfg.get("warmup_steps", 2000))
+        if self.gftm_enabled:
+            print(f"GFTM enabled: ratio {self.gftm_initial_mask_ratio}→{self.gftm_final_mask_ratio}, "
+                  f"mode={self.gftm_mask_mode}, warmup={self.gftm_warmup_steps}")
+
+        # Consistency loss 配置
+        cons_cfg = consistency_config or {}
+        self.consistency_enabled = bool(cons_cfg.get("enabled", False))
+        self.consistency_weight = float(cons_cfg.get("weight", 0.1))
+        self.consistency_warmup_steps = int(cons_cfg.get("warmup_steps", 2000))
+        self.consistency_loss_fn = AugmentationConsistencyLoss() if self.consistency_enabled else None
+        if self.consistency_enabled:
+            print(f"Consistency loss enabled: weight={self.consistency_weight}, "
+                  f"warmup={self.consistency_warmup_steps}")
 
     def _build_answerability_state_patterns(self) -> List[Dict[str, Any]]:
         tokenizer = getattr(self.model, "tokenizer", None)
@@ -593,6 +619,23 @@ class VIVIDTrainer:
 
         return token_weights
 
+    def _get_current_mask_ratio(self) -> float:
+        """计算当前 step 的 GFTM mask ratio (线性递增)"""
+        if not self.gftm_enabled:
+            return 0.0
+        if self.global_step >= self.gftm_warmup_steps:
+            return self.gftm_final_mask_ratio
+        progress = self.global_step / max(self.gftm_warmup_steps, 1)
+        return self.gftm_initial_mask_ratio + progress * (self.gftm_final_mask_ratio - self.gftm_initial_mask_ratio)
+
+    def _get_consistency_weight(self) -> float:
+        """计算当前 step 的 consistency loss 权重"""
+        if not self.consistency_enabled:
+            return 0.0
+        if self.global_step < self.consistency_warmup_steps:
+            return 0.0
+        return self.consistency_weight
+
     def train(self):
         """主训练循环"""
         print(f"Starting training...")
@@ -657,6 +700,10 @@ class VIVIDTrainer:
                         "train/lr": lr,
                         "train/step": self.global_step,
                     }
+                    if self.gftm_enabled:
+                        log_dict["train/mask_ratio"] = self._get_current_mask_ratio()
+                    if self.consistency_enabled:
+                        log_dict["train/consistency_weight"] = self._get_consistency_weight()
 
                     progress_bar.set_postfix(loss=f"{avg_loss:.4f}", lr=f"{lr:.2e}")
 
@@ -717,11 +764,19 @@ class VIVIDTrainer:
             autocast_ctx = contextlib.nullcontext()
 
         with autocast_ctx:
-            # 前向传播
+            # 计算当前 GFTM mask ratio
+            mask_ratio = self._get_current_mask_ratio()
+            cons_weight = self._get_consistency_weight()
+
+            # 前向传播 (with GFTM + optional hidden states for consistency)
+            need_hidden = cons_weight > 0
             outputs = self.model(
                 images=images,
                 prompt_text=prompt_payload,
                 target_text=target_jsons,
+                mask_ratio=mask_ratio,
+                mask_mode=self.gftm_mask_mode,
+                output_hidden_states=need_hidden,
             )
 
             # 计算损失
@@ -744,7 +799,28 @@ class VIVIDTrainer:
                 )
             else:
                 total_loss = outputs["loss"]
+
             loss_dict = {"total": total_loss}
+
+            # Consistency loss (FSA): 对 augmented view 做第二次 forward
+            if cons_weight > 0 and self.consistency_loss_fn is not None:
+                hidden_1 = outputs.get("last_hidden_state")
+                if hidden_1 is not None:
+                    # 第二次 forward (不同的 GFTM mask，相当于不同的 augmented view)
+                    outputs_2 = self.model(
+                        images=images,
+                        prompt_text=prompt_payload,
+                        target_text=target_jsons,
+                        mask_ratio=mask_ratio,
+                        mask_mode=self.gftm_mask_mode,
+                        output_hidden_states=True,
+                    )
+                    hidden_2 = outputs_2.get("last_hidden_state")
+                    if hidden_2 is not None:
+                        cons_loss = self.consistency_loss_fn(hidden_1, hidden_2)
+                        loss_dict["consistency"] = cons_loss
+                        total_loss = total_loss + cons_weight * cons_loss
+                        loss_dict["total"] = total_loss
 
         # 反向传播
         loss = loss_dict["total"] / self.gradient_accumulation_steps

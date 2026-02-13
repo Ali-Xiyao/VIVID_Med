@@ -1,0 +1,55 @@
+# V9 SVRL → CheXpert Classification Transfer
+# 从 V9 SVRL checkpoint 提取 ViT backbone，接分类头 fine-tune
+
+data:
+  data_root: "./data/dataset"
+  train_ums_path: "./data/dataset/processed/chexpert_ums_train.jsonl"
+  val_ums_path: "./data/dataset/processed/chexpert_ums_val.jsonl"
+  image_size: 224
+  use_common_labels_only: false
+  selected_labels:
+    - "Pleural Effusion"
+    - "Support Devices"
+    - "Lung Opacity"
+    - "Edema"
+    - "Pneumothorax"
+    - "Consolidation"
+    - "Atelectasis"
+  max_train_samples: null
+  max_val_samples: 1000
+  num_workers: 4
+  train_dense_top_k: 10000
+  val_dense_top_k: 1000
+
+model:
+  vit_model_name: "vit_base_patch16_224"
+  vit_pretrained: true
+  drop_rate: 0.0
+  drop_path_rate: 0.1
+
+transfer:
+  init_vit_checkpoint: "./outputs/v9_svrl/checkpoints/best.pt"
+
+training:
+  learning_rate: 1.0e-4
+  backbone_learning_rate: 1.0e-5
+  head_learning_rate: 1.0e-3
+  weight_decay: 0.01
+  warmup_steps: 400
+  max_steps: 4500
+  batch_size: 16
+  gradient_accumulation_steps: 2
+  max_grad_norm: 1.0
+  fp16: false
+  bf16: true
+  log_interval: 10
+  eval_interval: 300
+  save_interval: 600
+  output_dir: "./outputs/transfer_cls_v9_chexpert"
+
+evaluation:
+  threshold: 0.5
+  uncertain_policy: "ignore"
+
+seed: 42
+device: "cuda"

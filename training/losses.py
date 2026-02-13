@@ -331,7 +331,7 @@ class VIVIDLoss(nn.Module):
     """
     VIVID 总损失
 
-    L = L_tok + λ_rank * L_rank + λ_vdep * L_vdep + λ_ans * L_ans
+    L = L_tok + λ_rank * L_rank + λ_vdep * L_vdep + λ_ans * L_ans + λ_cons * L_cons
     """
 
     def __init__(
@@ -339,6 +339,7 @@ class VIVIDLoss(nn.Module):
         lambda_rank: float = 0.1,
         lambda_vdep: float = 0.1,
         lambda_ans: float = 0.1,
+        lambda_consistency: float = 0.0,
         num_fields: int = 14,
         label_smoothing: float = 0.0,
     ):
@@ -355,6 +356,7 @@ class VIVIDLoss(nn.Module):
         self.lambda_rank = lambda_rank
         self.lambda_vdep = lambda_vdep
         self.lambda_ans = lambda_ans
+        self.lambda_consistency = lambda_consistency
 
         self.l_tok = StructuredLoss(label_smoothing=label_smoothing)
         self.l_rank = RankingLoss()

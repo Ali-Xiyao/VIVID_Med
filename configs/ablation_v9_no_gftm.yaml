@@ -1,0 +1,46 @@
+# 消融: 去掉 GFTM (只有 Consistency + CT)
+data:
+  data_root: "./data/dataset"
+  cxr_train_ums_path: "./data/dataset/processed/chexpert_ums_train.jsonl"
+  cxr_val_ums_path: "./data/dataset/processed/chexpert_ums_val.jsonl"
+  ct_train_ums_path: "./data/dataset/processed/amos_ums_train.jsonl"
+  cxr_ratio: 0.7
+  ct_ratio: 0.3
+  train_dense_top_k: null
+  selected_labels: ["Pleural Effusion", "Support Devices", "Lung Opacity", "Edema", "Pneumothorax", "Consolidation", "Atelectasis"]
+  image_size: 224
+  max_val_samples: 1000
+  num_workers: 4
+
+model:
+  vit_model_name: "vit_base_patch16_224"
+  vit_pretrained: true
+  vit_output_type: "all"
+  num_prefix_tokens: 4
+  projector_mlp_hidden_dim: 1536
+  llm_model_name: "Qwen/Qwen2.5-1.5B-Instruct"
+  gftm:
+    enabled: false
+  consistency:
+    enabled: true
+    weight: 0.1
+    warmup_steps: 2000
+
+training:
+  learning_rate: 1.0e-4
+  vit_learning_rate: 2.0e-5
+  projector_learning_rate: 1.0e-4
+  weight_decay: 0.01
+  warmup_steps: 500
+  max_steps: 10000
+  batch_size: 4
+  gradient_accumulation_steps: 4
+  max_grad_norm: 1.0
+  bf16: true
+  log_interval: 10
+  eval_interval: 500
+  save_interval: 1000
+  output_dir: "./outputs/ablation_v9_no_gftm"
+
+seed: 42
+device: "cuda"

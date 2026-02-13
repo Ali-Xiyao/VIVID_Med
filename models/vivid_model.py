@@ -43,6 +43,8 @@ class VIVIDModel(nn.Module):
         llm_model_name: str = "Qwen/Qwen3-1.7B",
         llm_device: Optional[str] = None,
         load_llm: bool = True,
+        # GFTM 配置
+        gftm_enabled: bool = False,
         # 其他
         use_flash_attention: bool = True,
         max_text_length: int = 512,
@@ -58,6 +60,7 @@ class VIVIDModel(nn.Module):
             llm_model_name: HuggingFace LLM 模型名称
             llm_device: LLM 设备（默认与模型相同）
             load_llm: 是否加载 LLM（调试时可设为 False）
+            gftm_enabled: 是否启用 GFTM (Gradient-Focused Token Masking)
             use_flash_attention: 是否使用 Flash Attention
             max_text_length: 文本最大长度（token）
         """
@@ -69,11 +72,12 @@ class VIVIDModel(nn.Module):
         self.llm_device = llm_device
         self.max_text_length = max_text_length
 
-        # 1. 创建 ViT 编码器（可训练）
+        # 1. 创建 ViT 编码器（可训练，支持 GFTM）
         self.vit = ViTEncoder(
             model_name=vit_model_name,
             pretrained=vit_pretrained,
             output_type=vit_output_type,
+            gftm_enabled=gftm_enabled,
         )
         vit_embed_dim = self.vit.get_embed_dim()
 
@@ -227,18 +231,25 @@ class VIVIDModel(nn.Module):
             return 0
         return sum(p.numel() for p in self.llm.parameters())
 
-    def encode_image(self, images: torch.Tensor) -> torch.Tensor:
+    def encode_image(
+        self,
+        images: torch.Tensor,
+        mask_ratio: float = 0.0,
+        mask_mode: str = "gftm",
+    ) -> torch.Tensor:
         """
         编码图像为视觉 tokens
 
         Args:
             images: (B, C, H, W)
+            mask_ratio: GFTM token masking 比例
+            mask_mode: "gftm" or "random"
 
         Returns:
             visual_embeds: (B, num_visual_tokens, llm_embed_dim)
         """
-        # ViT 编码
-        vit_features = self.vit(images)  # (B, N, vit_embed_dim) or (B, vit_embed_dim)
+        # ViT 编码 (with optional GFTM)
+        vit_features = self.vit(images, mask_ratio=mask_ratio, mask_mode=mask_mode)
 
         # Projector 投影
         visual_embeds = self.projector(vit_features)  # (B, num_prefix + N, llm_embed_dim)
@@ -255,6 +266,8 @@ class VIVIDModel(nn.Module):
         images: torch.Tensor,
         prompt_text: Union[str, List[str]],
         target_text: Optional[Union[str, List[str]]] = None,
+        mask_ratio: float = 0.0,
+        mask_mode: str = "gftm",
     ) -> Dict[str, torch.Tensor]:
         """
         准备生成所需的输入
@@ -286,7 +299,7 @@ class VIVIDModel(nn.Module):
             prompt_texts = [prompt_text] * batch_size
 
         # 1. 编码图像
-        visual_embeds = self.encode_image(images)  # (B, num_visual_tokens, llm_embed_dim)
+        visual_embeds = self.encode_image(images, mask_ratio=mask_ratio, mask_mode=mask_mode)  # (B, num_visual_tokens, llm_embed_dim)
         num_visual_tokens = visual_embeds.shape[1]
 
         # 2. 编码文本
@@ -372,6 +385,9 @@ class VIVIDModel(nn.Module):
         prompt_text: Optional[Union[str, List[str]]] = None,
         target_text: Optional[Union[str, List[str]]] = None,
         return_dict: bool = True,
+        mask_ratio: float = 0.0,
+        mask_mode: str = "gftm",
+        output_hidden_states: bool = False,
     ) -> Dict[str, torch.Tensor]:
         """
         前向传播
@@ -398,7 +414,8 @@ class VIVIDModel(nn.Module):
         # 如果提供了 prompt_text，使用自动处理
         if prompt_text is not None:
             prepared = self.prepare_inputs_for_generation(
-                images, prompt_text, target_text
+                images, prompt_text, target_text,
+                mask_ratio=mask_ratio, mask_mode=mask_mode,
             )
             inputs_embeds = prepared["inputs_embeds"]
             attention_mask = prepared["attention_mask"]
@@ -406,7 +423,7 @@ class VIVIDModel(nn.Module):
         else:
             # 手动处理
             # 1. 编码图像
-            visual_embeds = self.encode_image(images)
+            visual_embeds = self.encode_image(images, mask_ratio=mask_ratio, mask_mode=mask_mode)
             batch_size = images.shape[0]
             num_visual_tokens = visual_embeds.shape[1]
             device = images.device
@@ -437,15 +454,22 @@ class VIVIDModel(nn.Module):
             attention_mask=attention_mask,
             labels=labels,
             return_dict=True,
+            output_hidden_states=output_hidden_states,
         )
 
+        result = {
+            "loss": outputs.loss,
+            "logits": outputs.logits,
+            "labels": labels,
+        }
+        if output_hidden_states and hasattr(outputs, "hidden_states") and outputs.hidden_states is not None:
+            # 取最后一层 hidden states
+            result["last_hidden_state"] = outputs.hidden_states[-1]
+        else:
+            result["last_hidden_state"] = None
+
         if return_dict:
-            return {
-                "loss": outputs.loss,
-                "logits": outputs.logits,
-                "hidden_states": outputs.hidden_states if hasattr(outputs, "hidden_states") else None,
-                "labels": labels,
-            }
+            return result
         else:
             return outputs
 
