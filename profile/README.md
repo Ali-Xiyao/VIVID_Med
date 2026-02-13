@@ -1,29 +1,16 @@
-# VIVID-Med（方案库）
+# VIVID-Med 方案库（V9 SVRL）
 
-本目录用于把你此前的讨论内容整理成"可写论文 / 可落地实现"的方案文档集合，并支持按版本迭代。
+## 文件说明
 
-## 入口与阅读顺序（v1.0）
+| 文件 | 内容 |
+|------|------|
+| `01_方案与方法.md` | 定位、贡献、方法（GFTM/FSA/CMSA）、模型配置、ViTP 对比 |
+| `02_数据与实验.md` | 数据集、消融矩阵、评估协议、baselines |
+| `03_写作参考.md` | 论文结构、Related Work 草稿、图表清单、常见 QA |
+| `汇报清单.md` | V1-V9 项目进展与训练结果记录 |
 
-1. `00_方案总览.md`
-2. `01_研究问题与贡献.md`
-3. `02_方法.md`
-4. `03_数据集.md`
-5. `04_模型.md`
-6. `05_UMS_与Verifier_与FailureTaxonomy.md`
-7. `06_训练目标与SamplePolicy.md`
-8. `07_实验矩阵与评估协议.md`
-9. **`08_训练计划.md`** ← 新增：CXR 训练具体配置与执行步骤
-10. `09_写作大纲与图表清单.md`
-11. `10_训练结果记录.md`
-12. `13_汇报清单.md`
-13. `14_V4_AnswerabilityMaskedTraining.md`（V4：answerability mask 训练规范）
-14. `11_待确认与留空项.md`
-15. `12_QA.md`
+## 辅助材料
 
-## 关键产物（工程对齐）
-
-- UMS schema / coverage / examples：`schema/`
-
-## 原始对话材料（不改动）
-
-- `对话历史/`：现有导出均来自 ChatGPT（与 Claude 无关）
+- `schema/` — UMS schema JSON、coverage table、示例模板
+- `Li 等 - 2025 - ViTP.pdf` — ViTP 参考论文
+- `archive/` — 历史文件归档
