@@ -58,7 +58,7 @@ training:
   warmup_steps: 500
   max_steps: 10000
   batch_size: 4
-  gradient_accumulation_steps: 4
+  gradient_accumulation_steps: 8  # 单卡 3090: effective batch = 4 * 8 = 32
   max_grad_norm: 1.0
   fp16: false
   bf16: true

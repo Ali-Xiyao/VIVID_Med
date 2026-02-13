@@ -36,7 +36,7 @@ training:
   warmup_steps: 500
   max_steps: 10000
   batch_size: 4
-  gradient_accumulation_steps: 4
+  gradient_accumulation_steps: 8
   max_grad_norm: 1.0
   bf16: true
   log_interval: 10

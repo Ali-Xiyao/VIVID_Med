@@ -1,8 +1,8 @@
 # 消融: 只用 CXR，不混 CT (GFTM + Consistency，无 CMSA)
 data:
   data_root: "./data/dataset"
-  cxr_train_ums_path: "./data/dataset/processed/chexpert_ums_train.jsonl"
-  cxr_val_ums_path: "./data/dataset/processed/chexpert_ums_val.jsonl"
+  train_ums_path: "./data/dataset/processed/chexpert_ums_train.jsonl"
+  val_ums_path: "./data/dataset/processed/chexpert_ums_val.jsonl"
   # 不加载 CT 数据
   train_dense_top_k: null
   selected_labels: ["Pleural Effusion", "Support Devices", "Lung Opacity", "Edema", "Pneumothorax", "Consolidation", "Atelectasis"]
@@ -36,7 +36,7 @@ training:
   warmup_steps: 500
   max_steps: 10000
   batch_size: 4
-  gradient_accumulation_steps: 4
+  gradient_accumulation_steps: 8
   max_grad_norm: 1.0
   bf16: true
   log_interval: 10

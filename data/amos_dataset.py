@@ -23,6 +23,8 @@ class AMOS2DDataset(Dataset):
     - 标签：processed/amos_ums_{train,val}.jsonl
     """
 
+    CT_PROMPT = "Analyze this CT slice and generate a structured medical report:\n"
+
     ORGAN_NAMES = [
         "spleen", "right_kidney", "left_kidney", "gall_bladder",
         "esophagus", "liver", "stomach", "aorta", "postcava",
@@ -108,6 +110,6 @@ class AMOS2DDataset(Dataset):
             "study_view": sample.get("study_view"),
             "sample_id": sample["extensions"]["sample_id"],
             "original_path": f"AMOS22/processed_2d/{'train' if self.is_train else 'val'}/{slice_filename}",
-            "prompt_text": None,
+            "prompt_text": self.CT_PROMPT,
             "query_labels": None,
         }
