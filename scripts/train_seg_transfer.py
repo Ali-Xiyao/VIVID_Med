@@ -18,6 +18,7 @@ from typing import Dict, Any
 import numpy as np
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import yaml
 import timm
 from torch.utils.data import DataLoader
@@ -56,6 +57,61 @@ def seg_collate_fn(batch):
     images = torch.stack([b["image"] for b in batch])
     masks = torch.stack([b["mask"] for b in batch])
     return {"images": images, "masks": masks}
+
+
+class DiceLoss(nn.Module):
+    """Per-class Dice Loss for segmentation"""
+
+    def __init__(self, num_classes: int, smooth: float = 1.0, ignore_index: int = 255):
+        super().__init__()
+        self.num_classes = num_classes
+        self.smooth = smooth
+        self.ignore_index = ignore_index
+
+    def forward(self, logits: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
+        # logits: (B, C, H, W), targets: (B, H, W)
+        probs = F.softmax(logits, dim=1)  # (B, C, H, W)
+        valid_mask = (targets != self.ignore_index)  # (B, H, W)
+        targets_clean = targets.clone()
+        targets_clean[~valid_mask] = 0
+        one_hot = F.one_hot(targets_clean, self.num_classes)  # (B, H, W, C)
+        one_hot = one_hot.permute(0, 3, 1, 2).float()  # (B, C, H, W)
+        valid_mask = valid_mask.unsqueeze(1).float()  # (B, 1, H, W)
+
+        probs = probs * valid_mask
+        one_hot = one_hot * valid_mask
+
+        dims = (0, 2, 3)  # sum over batch, H, W
+        intersection = (probs * one_hot).sum(dims)
+        cardinality = probs.sum(dims) + one_hot.sum(dims)
+        dice_per_class = (2.0 * intersection + self.smooth) / (cardinality + self.smooth)
+
+        # Exclude background (class 0) from dice loss
+        return 1.0 - dice_per_class[1:].mean()
+
+
+class CombinedSegLoss(nn.Module):
+    """CE + Dice Loss with optional class weights"""
+
+    def __init__(self, num_classes: int, class_weights: list = None,
+                 dice_weight: float = 0.5, ce_weight: float = 0.5):
+        super().__init__()
+        self.dice_weight = dice_weight
+        self.ce_weight = ce_weight
+        weight_tensor = torch.tensor(class_weights, dtype=torch.float32) if class_weights else None
+        self.ce_loss = nn.CrossEntropyLoss(weight=weight_tensor, ignore_index=255)
+        self.dice_loss = DiceLoss(num_classes=num_classes)
+
+    def to(self, device):
+        super().to(device)
+        if self.ce_loss.weight is not None:
+            self.ce_loss.weight = self.ce_loss.weight.to(device)
+        return self
+
+    def forward(self, logits: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
+        ce = self.ce_loss(logits, targets)
+        dice = self.dice_loss(logits, targets)
+        return self.ce_weight * ce + self.dice_weight * dice
 
 
 def create_dataloaders(config: Dict[str, Any]):
@@ -319,11 +375,24 @@ def main():
     cosine_scheduler = CosineAnnealingLR(optimizer, T_max=max_steps - warmup_steps, eta_min=1e-6)
     scheduler = SequentialLR(optimizer, schedulers=[warmup_scheduler, cosine_scheduler], milestones=[warmup_steps])
 
-    use_amp = device == "cuda" and (training_cfg.get("bf16", False) or training_cfg.get("fp16", False))
-    use_bf16 = training_cfg.get("bf16", False) and device == "cuda"
-    scaler = torch.cuda.amp.GradScaler() if training_cfg.get("fp16", False) and device == "cuda" else None
+    use_amp = device.startswith("cuda") and (training_cfg.get("bf16", False) or training_cfg.get("fp16", False))
+    use_bf16 = training_cfg.get("bf16", False) and device.startswith("cuda")
+    scaler = torch.cuda.amp.GradScaler() if training_cfg.get("fp16", False) and device.startswith("cuda") else None
 
-    ce_loss_fn = nn.CrossEntropyLoss(ignore_index=255)
+    # Loss: CE + Dice with class weights
+    # KiTS class distribution: bg=100%, kidney=100%, tumor=41.7%, cyst=12.2%
+    # Inverse frequency weights (normalized): bg=1.0, kidney=1.0, tumor=2.4, cyst=8.2
+    loss_cfg = config.get("loss", {})
+    class_weights = loss_cfg.get("class_weights", [1.0, 1.0, 2.5, 8.0])
+    dice_weight = loss_cfg.get("dice_weight", 0.5)
+    ce_weight = loss_cfg.get("ce_weight", 0.5)
+    loss_fn = CombinedSegLoss(
+        num_classes=num_seg_classes,
+        class_weights=class_weights,
+        dice_weight=dice_weight,
+        ce_weight=ce_weight,
+    ).to(device)
+    print(f"  Loss: CE(w={ce_weight}) + Dice(w={dice_weight}), class_weights={class_weights}")
 
     output_dir = Path(training_cfg["output_dir"])
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -362,7 +431,7 @@ def main():
                 masks = torch.nn.functional.interpolate(
                     masks.unsqueeze(1).float(), size=logits.shape[-2:], mode="nearest"
                 ).squeeze(1).long()
-            loss = ce_loss_fn(logits, masks)
+            loss = loss_fn(logits, masks)
 
         loss = loss / training_cfg["gradient_accumulation_steps"]
 

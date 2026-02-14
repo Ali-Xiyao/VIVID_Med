@@ -1,4 +1,4 @@
-# Baseline: ImageNet ViT → KiTS21 Segmentation Transfer
+# Baseline: ImageNet ViT → KiTS21 Segmentation Transfer (v2: Dice+CE, class weights, 15k steps)
 # 与 transfer_seg_v9_kits.yaml 完全相同，仅去掉 SVRL checkpoint（使用 ImageNet 初始化）
 
 data:
@@ -16,22 +16,27 @@ model:
 
 # 不指定 transfer.init_vit_checkpoint → 使用 ImageNet 预训练权重
 
+loss:
+  class_weights: [1.0, 1.0, 2.5, 8.0]  # bg, kidney, tumor, cyst
+  dice_weight: 0.5
+  ce_weight: 0.5
+
 training:
   learning_rate: 1.0e-4
   backbone_learning_rate: 1.0e-5
   head_learning_rate: 1.0e-3
   weight_decay: 0.01
-  warmup_steps: 200
-  max_steps: 3000
+  warmup_steps: 500
+  max_steps: 15000
   batch_size: 8
   gradient_accumulation_steps: 2
   max_grad_norm: 1.0
   fp16: false
   bf16: true
-  log_interval: 10
-  eval_interval: 200
-  save_interval: 500
-  output_dir: "./outputs/baseline_seg_kits_imagenet"
+  log_interval: 50
+  eval_interval: 500
+  save_interval: 2500
+  output_dir: "./outputs/baseline_seg_kits_imagenet_v2"
 
 evaluation:
   metrics: ["dice", "hd95"]
