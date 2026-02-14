@@ -1,5 +1,5 @@
-# V9 SVRL → KiTS21 Segmentation Transfer
-# 从 V9 SVRL checkpoint 提取 ViT backbone，接 SegHead fine-tune
+# Baseline: ImageNet ViT → KiTS21 Segmentation Transfer
+# 与 transfer_seg_v9_kits.yaml 完全相同，仅去掉 SVRL checkpoint（使用 ImageNet 初始化）
 
 data:
   data_root: "./data/dataset"
@@ -7,7 +7,6 @@ data:
   val_ums_path: "./data/dataset/processed/kits_ums_val.jsonl"
   image_size: 224
   num_workers: 4
-  # Low-data subsets: 设为 null 使用全量，或 0.1/0.25/0.5
   subset_fraction: null
 
 model:
@@ -15,8 +14,7 @@ model:
   vit_pretrained: true
   num_seg_classes: 4  # background + kidney + tumor + cyst
 
-transfer:
-  init_vit_checkpoint: "./outputs/v9_svrl/checkpoints/best.pt"
+# 不指定 transfer.init_vit_checkpoint → 使用 ImageNet 预训练权重
 
 training:
   learning_rate: 1.0e-4
@@ -33,10 +31,9 @@ training:
   log_interval: 10
   eval_interval: 200
   save_interval: 500
-  output_dir: "./outputs/transfer_seg_v9_kits"
+  output_dir: "./outputs/baseline_seg_kits_imagenet"
 
 evaluation:
-  # Dice + HD95
   metrics: ["dice", "hd95"]
 
 seed: 42

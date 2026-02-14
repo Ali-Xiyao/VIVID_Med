@@ -265,8 +265,10 @@ def main():
 
     requested_device = config.get("device", "cuda" if torch.cuda.is_available() else "cpu")
     if isinstance(requested_device, str) and requested_device.startswith("cuda"):
-        device = "cuda" if torch.cuda.is_available() else "cpu"
-        if device == "cpu":
+        if torch.cuda.is_available():
+            device = requested_device
+        else:
+            device = "cpu"
             print("CUDA not available, falling back to CPU")
     else:
         device = requested_device
