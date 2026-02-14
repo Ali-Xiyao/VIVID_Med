@@ -257,6 +257,7 @@ def main():
         vit_output_type=model_cfg.get("vit_output_type", "cls"),
         num_prefix_tokens=model_cfg["num_prefix_tokens"],
         projector_dropout=model_cfg.get("projector_dropout", 0.1),
+        projector_mlp_hidden_dim=model_cfg.get("projector_mlp_hidden_dim"),
         llm_model_name=model_cfg["llm_model_name"],
         use_flash_attention=model_cfg.get("use_flash_attention", True),
         max_text_length=model_cfg.get("max_text_length", 512),

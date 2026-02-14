@@ -647,7 +647,8 @@ class VIVIDTrainer:
         self.model.train()
         train_iter = iter(self.train_dataloader)
 
-        progress_bar = tqdm(total=self.max_steps, desc="Training")
+        remaining_steps = self.max_steps - self.global_step
+        progress_bar = tqdm(total=remaining_steps, desc="Training", initial=0)
 
         accumulated_loss = 0.0
         num_accumulated = 0
