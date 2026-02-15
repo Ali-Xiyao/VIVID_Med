@@ -242,6 +242,22 @@ def create_model(config: dict, device: str):
     gftm_cfg = config.get("model", {}).get("gftm", {})
     gftm_enabled = bool(gftm_cfg.get("enabled", False))
 
+    # SAR 配置 (V10)
+    sar_cfg = config.get("model", {}).get("sar", {})
+    sar_enabled = bool(sar_cfg.get("enabled", False))
+    sar_alpha = float(sar_cfg.get("alpha", 1.0))
+
+    # HFP 配置 (V10)
+    hfp_cfg = config.get("model", {}).get("hfp", {})
+    hfp_enabled = bool(hfp_cfg.get("enabled", False))
+    hfp_layers = hfp_cfg.get("layers", None)
+
+    # SPD 配置 (V10.1)
+    spd_cfg = config.get("model", {}).get("spd", {})
+    spd_enabled = bool(spd_cfg.get("enabled", False))
+    spd_num_groups = int(spd_cfg.get("num_groups", 3))
+    spd_tokens_per_group = int(spd_cfg.get("tokens_per_group", 2))
+
     model = VIVIDModel(
         vit_model_name=model_cfg["vit_model_name"],
         vit_pretrained=model_cfg["vit_pretrained"],
@@ -254,6 +270,13 @@ def create_model(config: dict, device: str):
         max_text_length=model_cfg.get("max_text_length", 512),
         load_llm=True,
         gftm_enabled=gftm_enabled,
+        sar_enabled=sar_enabled,
+        sar_alpha=sar_alpha,
+        hfp_enabled=hfp_enabled,
+        hfp_layers=hfp_layers,
+        spd_enabled=spd_enabled,
+        spd_num_groups=spd_num_groups,
+        spd_tokens_per_group=spd_tokens_per_group,
     )
 
     model = model.to(device)
@@ -372,6 +395,7 @@ def main():
         prompt_template=prompt_cfg.get("template", "Generate a structured medical report:\n"),
         gftm_config=config.get("model", {}).get("gftm"),
         consistency_config=config.get("model", {}).get("consistency"),
+        spd_config=config.get("model", {}).get("spd"),
     )
 
     # 恢复训练

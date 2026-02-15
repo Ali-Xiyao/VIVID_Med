@@ -251,6 +251,21 @@ def main():
     )
 
     model_cfg = config["model"]
+
+    # SAR/HFP/SPD 配置（需与训练时一致，否则 state_dict 不匹配）
+    sar_cfg = model_cfg.get("sar", {})
+    sar_enabled = bool(sar_cfg.get("enabled", False))
+    sar_alpha = float(sar_cfg.get("alpha", 1.0))
+
+    hfp_cfg = model_cfg.get("hfp", {})
+    hfp_enabled = bool(hfp_cfg.get("enabled", False))
+    hfp_layers = hfp_cfg.get("layers", None)
+
+    spd_cfg = model_cfg.get("spd", {})
+    spd_enabled = bool(spd_cfg.get("enabled", False))
+    spd_num_groups = int(spd_cfg.get("num_groups", 3))
+    spd_tokens_per_group = int(spd_cfg.get("tokens_per_group", 2))
+
     model = VIVIDModel(
         vit_model_name=model_cfg["vit_model_name"],
         vit_pretrained=model_cfg["vit_pretrained"],
@@ -262,6 +277,13 @@ def main():
         use_flash_attention=model_cfg.get("use_flash_attention", True),
         max_text_length=model_cfg.get("max_text_length", 512),
         load_llm=True,
+        sar_enabled=sar_enabled,
+        sar_alpha=sar_alpha,
+        hfp_enabled=hfp_enabled,
+        hfp_layers=hfp_layers,
+        spd_enabled=spd_enabled,
+        spd_num_groups=spd_num_groups,
+        spd_tokens_per_group=spd_tokens_per_group,
     ).to(device)
 
     # 加载 checkpoint（只含 vit/projector）

@@ -77,6 +77,8 @@ class VIVIDTrainer:
         gftm_config: Optional[Dict[str, Any]] = None,
         # Consistency loss 配置
         consistency_config: Optional[Dict[str, Any]] = None,
+        # SPD 配置
+        spd_config: Optional[Dict[str, Any]] = None,
     ):
         self.model = model
         self.train_dataloader = train_dataloader
@@ -228,6 +230,13 @@ class VIVIDTrainer:
         if self.consistency_enabled:
             print(f"Consistency loss enabled: weight={self.consistency_weight}, "
                   f"warmup={self.consistency_warmup_steps}")
+
+        # SPD 配置
+        spd_cfg = spd_config or {}
+        self.spd_enabled = bool(spd_cfg.get("enabled", False))
+        self.spd_ortho_weight = float(spd_cfg.get("ortho_weight", 0.01))
+        if self.spd_enabled:
+            print(f"SPD enabled: ortho_weight={self.spd_ortho_weight}")
 
     def _build_answerability_state_patterns(self) -> List[Dict[str, Any]]:
         tokenizer = getattr(self.model, "tokenizer", None)
@@ -705,6 +714,8 @@ class VIVIDTrainer:
                         log_dict["train/mask_ratio"] = self._get_current_mask_ratio()
                     if self.consistency_enabled:
                         log_dict["train/consistency_weight"] = self._get_consistency_weight()
+                    if self.spd_enabled:
+                        log_dict["train/spd_ortho_weight"] = self.spd_ortho_weight
 
                     progress_bar.set_postfix(loss=f"{avg_loss:.4f}", lr=f"{lr:.2e}")
 
@@ -802,6 +813,16 @@ class VIVIDTrainer:
                 total_loss = outputs["loss"]
 
             loss_dict = {"total": total_loss}
+
+            # SPD orthogonality loss
+            if self.spd_enabled and self.spd_ortho_weight > 0:
+                from models.spd import SPDProjector
+                projector = getattr(self.model, "projector", None)
+                if isinstance(projector, SPDProjector):
+                    ortho_loss = projector.get_orthogonality_loss()
+                    loss_dict["ortho"] = ortho_loss
+                    total_loss = total_loss + self.spd_ortho_weight * ortho_loss
+                    loss_dict["total"] = total_loss
 
             # Consistency loss (FSA): 对 augmented view 做第二次 forward
             if cons_weight > 0 and self.consistency_loss_fn is not None:

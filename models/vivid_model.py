@@ -18,7 +18,8 @@ import torch.nn as nn
 from typing import Optional, Dict, Any, Tuple, List, Union
 
 from .vit import ViTEncoder, get_vit_config
-from .projector import VisionProjector
+from .projector import VisionProjector, HierarchicalProjector
+from .spd import SPDProjector
 
 
 class VIVIDModel(nn.Module):
@@ -45,6 +46,16 @@ class VIVIDModel(nn.Module):
         load_llm: bool = True,
         # GFTM 配置
         gftm_enabled: bool = False,
+        # SAR 配置 (V10)
+        sar_enabled: bool = False,
+        sar_alpha: float = 1.0,
+        # HFP 配置 (V10)
+        hfp_enabled: bool = False,
+        hfp_layers: Optional[list] = None,
+        # SPD 配置 (V10.1)
+        spd_enabled: bool = False,
+        spd_num_groups: int = 3,
+        spd_tokens_per_group: int = 2,
         # 其他
         use_flash_attention: bool = True,
         max_text_length: int = 512,
@@ -71,13 +82,19 @@ class VIVIDModel(nn.Module):
         self.vit_output_type = vit_output_type
         self.llm_device = llm_device
         self.max_text_length = max_text_length
+        self.hfp_enabled = hfp_enabled
+        self.spd_enabled = spd_enabled
 
-        # 1. 创建 ViT 编码器（可训练，支持 GFTM）
+        # 1. 创建 ViT 编码器（可训练，支持 GFTM / SAR / HFP）
         self.vit = ViTEncoder(
             model_name=vit_model_name,
             pretrained=vit_pretrained,
             output_type=vit_output_type,
             gftm_enabled=gftm_enabled,
+            sar_enabled=sar_enabled,
+            sar_alpha=sar_alpha,
+            hfp_enabled=hfp_enabled,
+            hfp_layers=hfp_layers,
         )
         vit_embed_dim = self.vit.get_embed_dim()
 
@@ -93,13 +110,33 @@ class VIVIDModel(nn.Module):
             self.llm_embed_dim = 1536
 
         # 3. 创建 Projector（可训练）
-        self.projector = VisionProjector(
-            vit_embed_dim=vit_embed_dim,
-            llm_embed_dim=self.llm_embed_dim,
-            num_prefix_tokens=num_prefix_tokens,
-            mlp_hidden_dim=projector_mlp_hidden_dim,
-            dropout=projector_dropout,
-        )
+        if spd_enabled:
+            self.projector = SPDProjector(
+                vit_embed_dim=vit_embed_dim,
+                llm_embed_dim=self.llm_embed_dim,
+                num_groups=spd_num_groups,
+                tokens_per_group=spd_tokens_per_group,
+                mlp_hidden_dim=projector_mlp_hidden_dim,
+                dropout=projector_dropout,
+            )
+        elif hfp_enabled:
+            num_hfp_layers = len(hfp_layers) if hfp_layers else 3
+            self.projector = HierarchicalProjector(
+                vit_embed_dim=vit_embed_dim,
+                llm_embed_dim=self.llm_embed_dim,
+                num_prefix_tokens=num_prefix_tokens,
+                num_layers=num_hfp_layers,
+                mlp_hidden_dim=projector_mlp_hidden_dim,
+                dropout=projector_dropout,
+            )
+        else:
+            self.projector = VisionProjector(
+                vit_embed_dim=vit_embed_dim,
+                llm_embed_dim=self.llm_embed_dim,
+                num_prefix_tokens=num_prefix_tokens,
+                mlp_hidden_dim=projector_mlp_hidden_dim,
+                dropout=projector_dropout,
+            )
 
         # 4. Answerability Head（可选，用于预测字段可答性）
         self.answerability_head = None
@@ -248,11 +285,20 @@ class VIVIDModel(nn.Module):
         Returns:
             visual_embeds: (B, num_visual_tokens, llm_embed_dim)
         """
-        # ViT 编码 (with optional GFTM)
+        # ViT 编码 (with optional GFTM / SAR)
         vit_features = self.vit(images, mask_ratio=mask_ratio, mask_mode=mask_mode)
 
-        # Projector 投影
-        visual_embeds = self.projector(vit_features)  # (B, num_prefix + N, llm_embed_dim)
+        # Projector 投影 (with optional HFP multi-layer features)
+        if self.hfp_enabled and isinstance(self.projector, HierarchicalProjector):
+            hfp_features = self.vit.get_hfp_features()
+            # Fix: 当 SAR 启用时，最后一层 hook 特征没有经过 SAR 加权，
+            # 用 SAR-modified 的 vit_features 替换最后一层，确保 SAR 不被旁路
+            if self.vit.sar_enabled and hfp_features:
+                last_layer_idx = max(hfp_features.keys())
+                hfp_features[last_layer_idx] = vit_features
+            visual_embeds = self.projector(vit_features, hfp_features=hfp_features)
+        else:
+            visual_embeds = self.projector(vit_features)
 
         # 转换为 LLM 的数据类型（通常是 bfloat16）
         if self.llm is not None:

@@ -1,0 +1,45 @@
+# No mask + No consistency 消融 → CheXpert Classification Transfer — ALL 14 labels
+# GFTM disabled, Consistency disabled, CXR only
+
+data:
+  data_root: "./data/dataset"
+  train_ums_path: "./data/dataset/processed/chexpert_ums_train.jsonl"
+  val_ums_path: "./data/dataset/processed/chexpert_ums_val.jsonl"
+  image_size: 224
+  use_common_labels_only: false
+  max_train_samples: null
+  max_val_samples: 1000
+  num_workers: 4
+
+model:
+  vit_model_name: "vit_base_patch16_224"
+  vit_pretrained: true
+  drop_rate: 0.0
+  drop_path_rate: 0.1
+
+transfer:
+  init_vit_checkpoint: "./outputs/ablation_v9_no_mask_no_consistency/checkpoints/best.pt"
+
+training:
+  learning_rate: 1.0e-4
+  backbone_learning_rate: 1.0e-5
+  head_learning_rate: 1.0e-3
+  weight_decay: 0.01
+  warmup_steps: 500
+  max_steps: 6000
+  batch_size: 16
+  gradient_accumulation_steps: 2
+  max_grad_norm: 1.0
+  fp16: false
+  bf16: true
+  log_interval: 10
+  eval_interval: 300
+  save_interval: 600
+  output_dir: "./outputs/transfer_cls_ablation_no_mask_no_consistency_full14"
+
+evaluation:
+  threshold: 0.5
+  uncertain_policy: "ignore"
+
+seed: 42
+device: "cuda:0"

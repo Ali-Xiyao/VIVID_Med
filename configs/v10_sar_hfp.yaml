@@ -1,0 +1,70 @@
+# V10: SAR + HFP (Soft Attention Reweighting + Hierarchical Feature Projection)
+# 基于 No mask+No consistency 的纯框架基础上，加入两个轻量级模块
+# 不使用 GFTM (hard masking)、不使用 Consistency loss、仅 CXR 数据
+
+data:
+  data_root: "./data/dataset"
+  train_ums_path: "./data/dataset/processed/chexpert_ums_train.jsonl"
+  val_ums_path: "./data/dataset/processed/chexpert_ums_val.jsonl"
+  selected_labels:
+    - "Pleural Effusion"
+    - "Support Devices"
+    - "Lung Opacity"
+    - "Edema"
+    - "Pneumothorax"
+    - "Consolidation"
+    - "Atelectasis"
+  image_size: 224
+  max_val_samples: 1000
+  num_workers: 4
+
+model:
+  vit_model_name: "vit_base_patch16_224"
+  vit_pretrained: true
+  vit_output_type: "all"
+  num_prefix_tokens: 4
+  projector_mlp_hidden_dim: 1536
+  projector_dropout: 0.1
+  llm_model_name: "Qwen/Qwen2.5-1.5B-Instruct"
+
+  # GFTM 禁用
+  gftm:
+    enabled: false
+
+  # Consistency 禁用
+  consistency:
+    enabled: false
+
+  # SAR (Soft Attention Reweighting) — V10 Novelty 1
+  sar:
+    enabled: true
+    alpha: 1.0  # 可学习参数初始值
+
+  # HFP (Hierarchical Feature Projection) — V10 Novelty 2
+  hfp:
+    enabled: true
+    layers: [3, 7, 11]  # ViT-B/16 的 layer 4, 8, 12 (0-indexed)
+
+training:
+  learning_rate: 1.0e-4
+  vit_learning_rate: 2.0e-5
+  projector_learning_rate: 1.0e-4
+  weight_decay: 0.01
+  warmup_steps: 500
+  max_steps: 10000
+  batch_size: 4
+  gradient_accumulation_steps: 8
+  max_grad_norm: 1.0
+  fp16: false
+  bf16: true
+  log_interval: 10
+  eval_interval: 500
+  save_interval: 1000
+  output_dir: "./outputs/v10_sar_hfp"
+
+evaluation:
+  threshold: 0.5
+  uncertain_policy: "ignore"
+
+seed: 42
+device: "cuda:0"
