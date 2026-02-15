@@ -28,7 +28,7 @@ training:
   projector_learning_rate: 1.0e-4
   weight_decay: 0.01
   warmup_steps: 500
-  max_steps: 10000
+  max_steps: 5000
   batch_size: 4
   gradient_accumulation_steps: 8
   max_grad_norm: 1.0
@@ -39,4 +39,4 @@ training:
   output_dir: "./outputs/ablation_v9_no_mask_no_consistency"
 
 seed: 42
-device: "cuda"
+device: "cuda:0"
