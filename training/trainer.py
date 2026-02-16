@@ -238,6 +238,21 @@ class VIVIDTrainer:
         if self.spd_enabled:
             print(f"SPD enabled: ortho_weight={self.spd_ortho_weight}")
 
+        # Label-balanced loss 配置 (V11)
+        lb_cfg = spd_cfg.get("label_balance") or {}
+        self.label_balance_enabled = bool(lb_cfg.get("enabled", False))
+        self.label_balance_method = str(lb_cfg.get("method", "inverse_freq"))
+        self.label_balance_cap = float(lb_cfg.get("cap", 5.0))
+        self.label_balance_floor = float(lb_cfg.get("floor", 0.5))
+        self._label_freq_weights: Optional[Dict[str, float]] = None
+        if self.label_balance_enabled:
+            self._label_freq_weights = self._compute_label_freq_weights(lb_cfg)
+            print(f"Label-balanced loss enabled: method={self.label_balance_method}, "
+                  f"cap={self.label_balance_cap}, floor={self.label_balance_floor}")
+            if self._label_freq_weights:
+                for name, w in sorted(self._label_freq_weights.items(), key=lambda x: -x[1]):
+                    print(f"  {name:30s}: weight={w:.3f}")
+
     def _build_answerability_state_patterns(self) -> List[Dict[str, Any]]:
         tokenizer = getattr(self.model, "tokenizer", None)
         if tokenizer is None:
@@ -383,6 +398,119 @@ class VIVIDTrainer:
             token_sequence_weights=token_sequence_weights,
             default_token_weight=default_weight,
         )
+
+    def _compute_label_freq_weights(self, lb_cfg: Dict[str, Any]) -> Dict[str, float]:
+        """
+        V11: 从训练数据集统计各 finding 的出现频率，计算逆频率权重。
+        低频标签获得更高权重，让 SPD query tokens 获得更充分的梯度信号。
+        """
+        # 尝试从数据集获取标签频率
+        train_dataset = getattr(self.train_dataloader, "dataset", None)
+        label_names = list(getattr(train_dataset, "label_names", []))
+        if not label_names:
+            print("Warning: label_balance enabled but no label_names found in dataset")
+            return {}
+
+        # 手动指定的权重优先
+        manual_weights = lb_cfg.get("weights", {})
+        if manual_weights:
+            return {str(k): float(v) for k, v in manual_weights.items()}
+
+        # 从数据集统计频率
+        label_counts = getattr(train_dataset, "label_counts", None)
+        if label_counts is None:
+            # 尝试从 UMS JSONL 统计
+            label_counts = self._count_label_freq_from_dataset(train_dataset, label_names)
+
+        if not label_counts:
+            print("Warning: could not compute label frequencies, using uniform weights")
+            return {name: 1.0 for name in label_names}
+
+        # 计算逆频率权重
+        total = sum(label_counts.values())
+        num_labels = len(label_counts)
+        cap = self.label_balance_cap
+        floor = self.label_balance_floor
+
+        weights = {}
+        for name in label_names:
+            count = label_counts.get(name, 1)
+            if self.label_balance_method == "inverse_freq":
+                # w_i = (total / (num_labels * count_i))
+                w = total / (num_labels * max(count, 1))
+            elif self.label_balance_method == "inverse_sqrt":
+                # w_i = sqrt(total / (num_labels * count_i))
+                import math
+                w = math.sqrt(total / (num_labels * max(count, 1)))
+            else:
+                w = 1.0
+            weights[name] = max(floor, min(cap, w))
+
+        return weights
+
+    def _count_label_freq_from_dataset(self, dataset, label_names) -> Dict[str, int]:
+        """统计数据集中各 finding 的 present 出现次数"""
+        counts = {name: 0 for name in label_names}
+        samples = getattr(dataset, "samples", None)
+        if samples is None:
+            # 尝试 multi-modal dataset
+            datasets = getattr(dataset, "datasets", None)
+            if datasets:
+                all_samples = []
+                for ds in datasets:
+                    all_samples.extend(getattr(ds, "samples", []))
+                samples = all_samples
+        if not samples:
+            return counts
+
+        for sample in samples:
+            findings = sample.get("findings", {})
+            if not isinstance(findings, dict):
+                continue
+            for name in label_names:
+                if name in findings:
+                    finding = findings[name]
+                    if isinstance(finding, dict) and finding.get("state") == "present":
+                        counts[name] += 1
+        return counts
+
+    def _build_label_balance_token_weights(
+        self,
+        target_jsons: List[str],
+        labels: torch.Tensor,
+    ) -> Optional[torch.Tensor]:
+        """
+        V11: 构建基于标签频率的 per-token 权重。
+        对每个 finding 对应的 token span 施加逆频率权重。
+        """
+        if not self.label_balance_enabled or not self._label_freq_weights:
+            return None
+        if labels is None or labels.dim() != 2:
+            return None
+
+        batch_size = labels.shape[0]
+        if not isinstance(target_jsons, list) or len(target_jsons) != batch_size:
+            return None
+
+        token_weights = torch.ones(
+            labels.shape, dtype=torch.float32, device=labels.device,
+        )
+
+        for sample_index in range(batch_size):
+            cache_entry = self._get_or_build_answerability_cache_entry(
+                target_jsons[sample_index]
+            )
+            if cache_entry is None:
+                continue
+
+            token_indices_by_finding = cache_entry.get("token_indices_by_finding", {})
+            for finding_name, token_indices in token_indices_by_finding.items():
+                weight = self._label_freq_weights.get(finding_name, 1.0)
+                for idx in token_indices:
+                    if idx < labels.shape[1]:
+                        token_weights[sample_index, idx] = weight
+
+        return token_weights
 
     def _find_matching_brace(self, text: str, open_brace_index: int) -> int:
         if open_brace_index < 0 or open_brace_index >= len(text) or text[open_brace_index] != "{":
@@ -716,6 +844,8 @@ class VIVIDTrainer:
                         log_dict["train/consistency_weight"] = self._get_consistency_weight()
                     if self.spd_enabled:
                         log_dict["train/spd_ortho_weight"] = self.spd_ortho_weight
+                    if self.label_balance_enabled:
+                        log_dict["train/label_balance"] = True
 
                     progress_bar.set_postfix(loss=f"{avg_loss:.4f}", lr=f"{lr:.2e}")
 
@@ -800,14 +930,31 @@ class VIVIDTrainer:
                     labels=outputs["labels"],
                 )
 
+            # V11: label-balanced token weights
+            label_balance_weights = None
+            if outputs.get("labels") is not None:
+                label_balance_weights = self._build_label_balance_token_weights(
+                    target_jsons=target_jsons,
+                    labels=outputs["labels"],
+                )
+
+            # 合并 answerability + label-balance 权重
+            combined_weights = None
+            if answerability_token_weights is not None and label_balance_weights is not None:
+                combined_weights = answerability_token_weights * label_balance_weights
+            elif answerability_token_weights is not None:
+                combined_weights = answerability_token_weights
+            elif label_balance_weights is not None:
+                combined_weights = label_balance_weights
+
             if outputs.get("labels") is not None and (
-                self.token_loss is not None or answerability_token_weights is not None
+                self.token_loss is not None or combined_weights is not None
             ):
                 token_loss_fn = self.token_loss if self.token_loss is not None else self.base_token_loss
                 total_loss = token_loss_fn(
                     outputs["logits"],
                     outputs["labels"],
-                    extra_token_weights=answerability_token_weights,
+                    extra_token_weights=combined_weights,
                 )
             else:
                 total_loss = outputs["loss"]
@@ -890,14 +1037,30 @@ class VIVIDTrainer:
                     labels=outputs["labels"],
                 )
 
+            # V11: label-balanced token weights (val 也用，保持一致)
+            label_balance_weights = None
+            if outputs.get("labels") is not None:
+                label_balance_weights = self._build_label_balance_token_weights(
+                    target_jsons=target_jsons,
+                    labels=outputs["labels"],
+                )
+
+            combined_weights = None
+            if answerability_token_weights is not None and label_balance_weights is not None:
+                combined_weights = answerability_token_weights * label_balance_weights
+            elif answerability_token_weights is not None:
+                combined_weights = answerability_token_weights
+            elif label_balance_weights is not None:
+                combined_weights = label_balance_weights
+
             if outputs.get("labels") is not None and (
-                self.token_loss is not None or answerability_token_weights is not None
+                self.token_loss is not None or combined_weights is not None
             ):
                 token_loss_fn = self.token_loss if self.token_loss is not None else self.base_token_loss
                 val_loss = token_loss_fn(
                     outputs["logits"],
                     outputs["labels"],
-                    extra_token_weights=answerability_token_weights,
+                    extra_token_weights=combined_weights,
                 )
             else:
                 val_loss = outputs["loss"]

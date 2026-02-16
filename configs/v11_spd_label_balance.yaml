@@ -1,0 +1,72 @@
+# V11: SPD + Label-Balanced Loss
+# 在 V10.1 SPD 基础上增加逆频率 token 加权
+# 低频标签（如 Pleural Other, Fracture）获得更高 loss 权重
+# 目标：改善低频标签的 AUC，同时保持高频标签的 F1
+
+data:
+  data_root: "./data/dataset"
+  train_ums_path: "./data/dataset/processed/chexpert_ums_train.jsonl"
+  val_ums_path: "./data/dataset/processed/chexpert_ums_val.jsonl"
+  selected_labels:
+    - "Pleural Effusion"
+    - "Support Devices"
+    - "Lung Opacity"
+    - "Edema"
+    - "Pneumothorax"
+    - "Consolidation"
+    - "Atelectasis"
+  image_size: 224
+  max_val_samples: 1000
+  num_workers: 4
+
+model:
+  vit_model_name: "vit_base_patch16_224"
+  vit_pretrained: true
+  vit_output_type: "all"
+  num_prefix_tokens: 4
+  projector_mlp_hidden_dim: 1536
+  projector_dropout: 0.1
+  llm_model_name: "Qwen/Qwen2.5-1.5B-Instruct"
+
+  gftm:
+    enabled: false
+  consistency:
+    enabled: false
+  sar:
+    enabled: false
+  hfp:
+    enabled: false
+  spd:
+    enabled: true
+    num_groups: 3
+    tokens_per_group: 2
+    ortho_weight: 0.01
+    label_balance:
+      enabled: true
+      method: "inverse_sqrt"   # inverse_sqrt 比 inverse_freq 更温和
+      cap: 3.0                 # 最大权重上限
+      floor: 0.5               # 最小权重下限
+
+training:
+  learning_rate: 1.0e-4
+  vit_learning_rate: 2.0e-5
+  projector_learning_rate: 1.0e-4
+  weight_decay: 0.01
+  warmup_steps: 500
+  max_steps: 10000
+  batch_size: 4
+  gradient_accumulation_steps: 8
+  max_grad_norm: 1.0
+  fp16: false
+  bf16: true
+  log_interval: 10
+  eval_interval: 500
+  save_interval: 1000
+  output_dir: "./outputs/v11_spd_label_balance"
+
+evaluation:
+  threshold: 0.5
+  uncertain_policy: "ignore"
+
+seed: 42
+device: "cuda:0"
