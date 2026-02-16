@@ -297,8 +297,13 @@ def _select_backbone_state_dict(raw_state: Dict[str, Any]) -> Dict[str, Any]:
         candidate = raw_state
 
     # ViTEncoder wraps timm model as self.vit, strip prefix for timm model loading
-    if candidate and all(isinstance(key, str) and key.startswith("vit.") for key in candidate.keys()):
-        normalized = {key[len("vit."):]: value for key, value in candidate.items()}
+    vit_prefixed = [k for k in candidate.keys() if isinstance(k, str) and k.startswith("vit.")]
+    if candidate and len(vit_prefixed) > len(candidate) // 2:
+        normalized = {}
+        for key, value in candidate.items():
+            if isinstance(key, str) and key.startswith("vit."):
+                normalized[key[len("vit."):]] = value
+            # Skip non-vit keys (e.g. sar_alpha) — not part of timm model
     else:
         normalized = candidate
 
@@ -401,6 +406,18 @@ def main():
     init_vit_checkpoint = args.init_vit_checkpoint or transfer_cfg.get("init_vit_checkpoint")
     if init_vit_checkpoint:
         load_vit_backbone_from_checkpoint(model, init_vit_checkpoint, device)
+
+    # Linear probe: freeze backbone, only train head
+    freeze_backbone = config.get("transfer", {}).get("freeze_backbone", False)
+    if freeze_backbone:
+        head_prefixes = ("head.", "fc_norm.")
+        frozen_count = 0
+        for name, param in model.named_parameters():
+            if not name.startswith(head_prefixes):
+                param.requires_grad = False
+                frozen_count += 1
+        trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
+        print(f"\nLinear probe mode: froze {frozen_count} params, trainable: {trainable:,}")
 
     training_cfg = config["training"]
     eval_cfg = config.get("evaluation", {})
