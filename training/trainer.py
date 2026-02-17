@@ -963,9 +963,9 @@ class VIVIDTrainer:
 
             # SPD orthogonality loss
             if self.spd_enabled and self.spd_ortho_weight > 0:
-                from models.spd import SPDProjector
+                from models.spd import SPDProjector, SPDHFPProjector
                 projector = getattr(self.model, "projector", None)
-                if isinstance(projector, SPDProjector):
+                if isinstance(projector, (SPDProjector, SPDHFPProjector)):
                     ortho_loss = projector.get_orthogonality_loss()
                     loss_dict["ortho"] = ortho_loss
                     total_loss = total_loss + self.spd_ortho_weight * ortho_loss

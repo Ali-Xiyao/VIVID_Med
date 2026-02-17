@@ -19,7 +19,7 @@ from typing import Optional, Dict, Any, Tuple, List, Union
 
 from .vit import ViTEncoder, get_vit_config
 from .projector import VisionProjector, HierarchicalProjector
-from .spd import SPDProjector
+from .spd import SPDProjector, SPDHFPProjector
 
 
 class VIVIDModel(nn.Module):
@@ -110,7 +110,18 @@ class VIVIDModel(nn.Module):
             self.llm_embed_dim = 1536
 
         # 3. 创建 Projector（可训练）
-        if spd_enabled:
+        if spd_enabled and hfp_enabled:
+            num_hfp_layers = len(hfp_layers) if hfp_layers else 3
+            self.projector = SPDHFPProjector(
+                vit_embed_dim=vit_embed_dim,
+                llm_embed_dim=self.llm_embed_dim,
+                num_groups=spd_num_groups,
+                tokens_per_group=spd_tokens_per_group,
+                num_hfp_layers=num_hfp_layers,
+                mlp_hidden_dim=projector_mlp_hidden_dim,
+                dropout=projector_dropout,
+            )
+        elif spd_enabled:
             self.projector = SPDProjector(
                 vit_embed_dim=vit_embed_dim,
                 llm_embed_dim=self.llm_embed_dim,
@@ -289,7 +300,7 @@ class VIVIDModel(nn.Module):
         vit_features = self.vit(images, mask_ratio=mask_ratio, mask_mode=mask_mode)
 
         # Projector 投影 (with optional HFP multi-layer features)
-        if self.hfp_enabled and isinstance(self.projector, HierarchicalProjector):
+        if self.hfp_enabled and isinstance(self.projector, (HierarchicalProjector, SPDHFPProjector)):
             hfp_features = self.vit.get_hfp_features()
             # Fix: 当 SAR 启用时，最后一层 hook 特征没有经过 SAR 加权，
             # 用 SAR-modified 的 vit_features 替换最后一层，确保 SAR 不被旁路
