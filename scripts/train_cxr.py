@@ -63,6 +63,7 @@ def create_dataloaders(config: dict):
     val_dense_top_k = data_cfg.get("val_dense_top_k")
     val_dense_min_answerable = data_cfg.get("val_dense_min_answerable")
     field_query_training = data_cfg.get("field_query_training")
+    target_format = data_cfg.get("target_format", "json")
 
     # 训练数据集
     train_dataset = CheXpertUMSDataset(
@@ -79,6 +80,7 @@ def create_dataloaders(config: dict):
         dense_subset_top_k=train_dense_top_k,
         dense_subset_min_answerable=train_dense_min_answerable,
         field_query_training=field_query_training,
+        target_format=target_format,
     )
 
     # 验证数据集
@@ -98,6 +100,7 @@ def create_dataloaders(config: dict):
             dense_subset_top_k=val_dense_top_k,
             dense_subset_min_answerable=val_dense_min_answerable,
             field_query_training=None,
+            target_format=target_format,
         )
     else:
         if max_val_samples and max_val_samples < len(train_dataset):
@@ -123,6 +126,7 @@ def create_dataloaders(config: dict):
                 dense_subset_top_k=val_dense_top_k,
                 dense_subset_min_answerable=val_dense_min_answerable,
                 field_query_training=None,
+                target_format=target_format,
             )
             val_dataset = Subset(val_base_dataset, val_indices)
 
@@ -156,6 +160,7 @@ def create_multi_modal_dataloaders(config: dict):
     data_cfg = config["data"]
     image_size = data_cfg["image_size"]
     data_root = data_cfg["data_root"]
+    target_format = data_cfg.get("target_format", "json")
 
     datasets = {}
 
@@ -170,6 +175,7 @@ def create_multi_modal_dataloaders(config: dict):
             selected_labels=data_cfg.get("selected_labels"),
             dense_subset_top_k=data_cfg.get("train_dense_top_k"),
             field_query_training=data_cfg.get("field_query_training"),
+            target_format=target_format,
         )
         datasets["cxr"] = cxr_train
 
@@ -216,6 +222,7 @@ def create_multi_modal_dataloaders(config: dict):
             is_train=False,
             selected_labels=data_cfg.get("selected_labels"),
             max_samples=data_cfg.get("max_val_samples", 1000),
+            target_format=target_format,
         )
         val_loader = DataLoader(
             val_dataset,
@@ -392,7 +399,12 @@ def main():
         use_wandb=wandb_cfg.get("enabled", False),
         wandb_project=wandb_cfg.get("project", "vivid-med"),
         wandb_run_name=wandb_cfg.get("run_name"),
-        prompt_template=prompt_cfg.get("template", "Generate a structured medical report:\n"),
+        prompt_template=prompt_cfg.get(
+            "template",
+            "Describe the findings in this chest X-ray:\n"
+            if config["data"].get("target_format", "json") == "text"
+            else "Generate a structured medical report:\n",
+        ),
         gftm_config=config.get("model", {}).get("gftm"),
         consistency_config=config.get("model", {}).get("consistency"),
         spd_config=config.get("model", {}).get("spd"),

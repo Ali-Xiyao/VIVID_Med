@@ -52,6 +52,7 @@ class CheXpertUMSDataset(Dataset):
         dense_subset_top_k: Optional[int] = None,
         dense_subset_min_answerable: Optional[int] = None,
         field_query_training: Optional[Dict[str, Any]] = None,
+        target_format: str = "json",  # "json" (UMS) or "text" (free-text)
     ):
         """
         Args:
@@ -103,6 +104,12 @@ class CheXpertUMSDataset(Dataset):
         self.num_labels = len(self.label_names)
         self._label_name_to_index = {name: idx for idx, name in enumerate(self.label_names)}
         self.field_query_training_cfg = self._build_field_query_training_config(field_query_training)
+        _valid_formats = ("json", "text")
+        if target_format not in _valid_formats:
+            raise ValueError(
+                f"target_format must be one of {_valid_formats}, got '{target_format}'"
+            )
+        self.target_format = target_format
 
         # 加载 UMS 数据
         self.samples = self._load_ums_jsonl(ums_jsonl_path, max_samples)
@@ -421,6 +428,33 @@ class CheXpertUMSDataset(Dataset):
 
         return json.dumps(output, ensure_ascii=False)
 
+    def _create_freetext_string(
+        self,
+        sample: Dict,
+        include_labels: Optional[List[str]] = None,
+    ) -> str:
+        """
+        创建自由文本格式的 target（用于消融实验：对比结构化 JSON vs 自由文本）
+        例如: "Atelectasis is present. Edema is absent. Pneumothorax is not observed."
+        """
+        target_labels = include_labels if include_labels is not None else self.label_names
+        parts = []
+        for name in target_labels:
+            if name in sample["findings"]:
+                item = sample["findings"][name]
+                state = self._normalize_state(item.get("state"), missing=False)
+                if state == "present":
+                    parts.append(f"{name} is present.")
+                elif state == "absent":
+                    parts.append(f"{name} is absent.")
+                elif state == "uncertain":
+                    parts.append(f"{name} is uncertain.")
+                else:
+                    parts.append(f"{name} is not observed.")
+            else:
+                parts.append(f"{name} is not observed.")
+        return " ".join(parts)
+
     def __len__(self) -> int:
         return len(self.samples)
 
@@ -444,19 +478,27 @@ class CheXpertUMSDataset(Dataset):
         labels = self._parse_findings_to_labels(sample["findings"])
         answerable = self._parse_answerability(sample["answerability"])
 
-        # 创建目标 JSON 字符串
+        # 创建目标字符串（JSON 或自由文本）
         prompt_text = None
         query_labels = None
         if self.is_train and self.field_query_training_cfg["enabled"]:
             query_labels = self._sample_field_query_labels(answerable)
-            target_json = self._create_ums_json_string(
-                sample=sample,
-                include_labels=query_labels,
-                include_missing_for_selected=False,
-            )
+            if self.target_format == "text":
+                target_json = self._create_freetext_string(
+                    sample=sample, include_labels=query_labels,
+                )
+            else:
+                target_json = self._create_ums_json_string(
+                    sample=sample,
+                    include_labels=query_labels,
+                    include_missing_for_selected=False,
+                )
             prompt_text = self._create_field_query_prompt(query_labels)
         else:
-            target_json = self._create_ums_json_string(sample)
+            if self.target_format == "text":
+                target_json = self._create_freetext_string(sample)
+            else:
+                target_json = self._create_ums_json_string(sample)
 
         # 获取 study_view
         study_view = sample.get("study_view")  # AP, PA, LAT, or None
