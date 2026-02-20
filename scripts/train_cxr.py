@@ -22,7 +22,7 @@ from torch.utils.data import DataLoader, Subset
 # 添加项目根目录到 path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from data import CheXpertUMSDataset, AMOS2DDataset, MultiModalDataset, MultiModalSampler, multi_modal_collate_fn, get_train_transforms, get_val_transforms
+from data import CheXpertUMSDataset, get_train_transforms, get_val_transforms
 from data.chexpert_dataset import collate_fn
 from models import VIVIDModel
 from training import VIVIDTrainer
@@ -155,87 +155,6 @@ def create_dataloaders(config: dict):
     return train_loader, val_loader
 
 
-def create_multi_modal_dataloaders(config: dict):
-    """创建多模态数据加载器 (CXR + CT)"""
-    data_cfg = config["data"]
-    image_size = data_cfg["image_size"]
-    data_root = data_cfg["data_root"]
-    target_format = data_cfg.get("target_format", "json")
-
-    datasets = {}
-
-    # CXR dataset
-    cxr_train_path = data_cfg.get("cxr_train_ums_path") or data_cfg.get("train_ums_path")
-    if cxr_train_path:
-        cxr_train = CheXpertUMSDataset(
-            data_root=data_root,
-            ums_jsonl_path=cxr_train_path,
-            transform=get_train_transforms(image_size),
-            is_train=True,
-            selected_labels=data_cfg.get("selected_labels"),
-            dense_subset_top_k=data_cfg.get("train_dense_top_k"),
-            field_query_training=data_cfg.get("field_query_training"),
-            target_format=target_format,
-        )
-        datasets["cxr"] = cxr_train
-
-    # CT dataset (AMOS)
-    ct_train_path = data_cfg.get("ct_train_ums_path")
-    if ct_train_path:
-        ct_train = AMOS2DDataset(
-            data_root=data_root,
-            ums_jsonl_path=ct_train_path,
-            transform=get_train_transforms(image_size),
-            is_train=True,
-        )
-        datasets["ct"] = ct_train
-
-    if not datasets:
-        raise ValueError("No datasets configured")
-
-    # Multi-modal dataset + sampler
-    mm_dataset = MultiModalDataset(datasets)
-    ratios = {
-        "cxr": data_cfg.get("cxr_ratio", 0.7),
-        "ct": data_cfg.get("ct_ratio", 0.3),
-    }
-    sampler = MultiModalSampler(mm_dataset, ratios, seed=config.get("seed", 42))
-
-    train_loader = DataLoader(
-        mm_dataset,
-        batch_size=config["training"]["batch_size"],
-        sampler=sampler,
-        num_workers=data_cfg.get("num_workers", 4),
-        collate_fn=multi_modal_collate_fn,
-        pin_memory=True,
-        drop_last=True,
-    )
-
-    # Val loader (CXR only for now)
-    val_loader = None
-    cxr_val_path = data_cfg.get("cxr_val_ums_path") or data_cfg.get("val_ums_path")
-    if cxr_val_path:
-        val_dataset = CheXpertUMSDataset(
-            data_root=data_root,
-            ums_jsonl_path=cxr_val_path,
-            transform=get_val_transforms(image_size),
-            is_train=False,
-            selected_labels=data_cfg.get("selected_labels"),
-            max_samples=data_cfg.get("max_val_samples", 1000),
-            target_format=target_format,
-        )
-        val_loader = DataLoader(
-            val_dataset,
-            batch_size=config["training"]["batch_size"],
-            shuffle=False,
-            num_workers=data_cfg.get("num_workers", 4),
-            collate_fn=collate_fn,
-            pin_memory=True,
-        )
-
-    return train_loader, val_loader
-
-
 def create_model(config: dict, device: str):
     """创建模型"""
     model_cfg = config["model"]
@@ -245,21 +164,7 @@ def create_model(config: dict, device: str):
     print(f"  LLM: {model_cfg['llm_model_name']}")
     print(f"  Prefix tokens: {model_cfg['num_prefix_tokens']}")
 
-    # GFTM 配置
-    gftm_cfg = config.get("model", {}).get("gftm", {})
-    gftm_enabled = bool(gftm_cfg.get("enabled", False))
-
-    # SAR 配置 (V10)
-    sar_cfg = config.get("model", {}).get("sar", {})
-    sar_enabled = bool(sar_cfg.get("enabled", False))
-    sar_alpha = float(sar_cfg.get("alpha", 1.0))
-
-    # HFP 配置 (V10)
-    hfp_cfg = config.get("model", {}).get("hfp", {})
-    hfp_enabled = bool(hfp_cfg.get("enabled", False))
-    hfp_layers = hfp_cfg.get("layers", None)
-
-    # SPD 配置 (V10.1)
+    # SPD 配置
     spd_cfg = config.get("model", {}).get("spd", {})
     spd_enabled = bool(spd_cfg.get("enabled", False))
     spd_num_groups = int(spd_cfg.get("num_groups", 3))
@@ -276,11 +181,6 @@ def create_model(config: dict, device: str):
         use_flash_attention=model_cfg.get("use_flash_attention", True),
         max_text_length=model_cfg.get("max_text_length", 512),
         load_llm=True,
-        gftm_enabled=gftm_enabled,
-        sar_enabled=sar_enabled,
-        sar_alpha=sar_alpha,
-        hfp_enabled=hfp_enabled,
-        hfp_layers=hfp_layers,
         spd_enabled=spd_enabled,
         spd_num_groups=spd_num_groups,
         spd_tokens_per_group=spd_tokens_per_group,
@@ -305,11 +205,25 @@ def main():
     )
     parser.add_argument("--resume", type=str, default=None, help="Resume from checkpoint")
     parser.add_argument("--debug", action="store_true", help="Debug mode (fewer samples)")
+    parser.add_argument("--seed", type=int, default=None, help="Override seed (also appends _seed{N} to output_dir)")
     args = parser.parse_args()
 
     # 加载配置
     print(f"Loading config from {args.config}")
     config = load_config(args.config)
+
+    # --seed override: update config and append suffix to output_dir
+    if args.seed is not None:
+        config["seed"] = args.seed
+        base_dir = config["training"]["output_dir"].rstrip("/")
+        config["training"]["output_dir"] = f"{base_dir}_seed{args.seed}"
+
+    # Safety check: refuse to overwrite a completed run
+    out_dir = config["training"]["output_dir"]
+    if os.path.exists(os.path.join(out_dir, "metrics_final.json")):
+        print(f"ERROR: {out_dir}/metrics_final.json already exists. "
+              f"This run appears completed. Delete it manually to re-run.")
+        sys.exit(1)
 
     # Debug 模式
     if args.debug:
@@ -353,12 +267,7 @@ def main():
 
     # 创建数据加载器
     print("\nCreating dataloaders...")
-    is_multi_modal = config["data"].get("ct_train_ums_path") is not None
-    if is_multi_modal:
-        print("Multi-modal mode: CXR + CT")
-        train_loader, val_loader = create_multi_modal_dataloaders(config)
-    else:
-        train_loader, val_loader = create_dataloaders(config)
+    train_loader, val_loader = create_dataloaders(config)
     print(f"  Train batches: {len(train_loader)}")
     if val_loader:
         print(f"  Val batches: {len(val_loader)}")
@@ -405,8 +314,6 @@ def main():
             if config["data"].get("target_format", "json") == "text"
             else "Generate a structured medical report:\n",
         ),
-        gftm_config=config.get("model", {}).get("gftm"),
-        consistency_config=config.get("model", {}).get("consistency"),
         spd_config=config.get("model", {}).get("spd"),
     )
 

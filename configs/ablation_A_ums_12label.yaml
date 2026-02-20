@@ -33,17 +33,6 @@ model:
   projector_dropout: 0.1
   llm_model_name: "Qwen/Qwen2.5-1.5B-Instruct"
 
-  gftm:
-    enabled: false
-  consistency:
-    enabled: false
-  sar:
-    enabled: false
-  hfp:
-    enabled: false
-  spd:
-    enabled: false
-
 training:
   learning_rate: 1.0e-4
   vit_learning_rate: 2.0e-5

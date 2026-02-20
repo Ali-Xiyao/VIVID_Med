@@ -7,7 +7,9 @@ ViT Baseline (CheXpert multi-label classification)
 
 import argparse
 import json
+import os
 import random
+import sys
 import contextlib
 from pathlib import Path
 from typing import Dict, Any, Tuple
@@ -354,9 +356,23 @@ def main():
         help="Initialize ViT backbone from VIVID/baseline checkpoint",
     )
     parser.add_argument("--debug", action="store_true", help="Debug mode")
+    parser.add_argument("--seed", type=int, default=None, help="Override seed (also appends _seed{N} to output_dir)")
     args = parser.parse_args()
 
     config = load_config(args.config)
+
+    # --seed override: update config and append suffix to output_dir
+    if args.seed is not None:
+        config["seed"] = args.seed
+        base_dir = config["training"]["output_dir"].rstrip("/")
+        config["training"]["output_dir"] = f"{base_dir}_seed{args.seed}"
+
+    # Safety check: refuse to overwrite a completed run
+    out_dir = config["training"]["output_dir"]
+    if os.path.exists(os.path.join(out_dir, "metrics_final.json")):
+        print(f"ERROR: {out_dir}/metrics_final.json already exists. "
+              f"This run appears completed. Delete it manually to re-run.")
+        sys.exit(1)
 
     if args.debug:
         print("Debug mode enabled")

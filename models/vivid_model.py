@@ -15,11 +15,11 @@ import os
 import json
 import torch
 import torch.nn as nn
-from typing import Optional, Dict, Any, Tuple, List, Union
+from typing import Optional, Dict, List, Union
 
 from .vit import ViTEncoder, get_vit_config
-from .projector import VisionProjector, HierarchicalProjector
-from .spd import SPDProjector, SPDHFPProjector
+from .projector import VisionProjector
+from .spd import SPDProjector
 
 
 class VIVIDModel(nn.Module):
@@ -44,15 +44,7 @@ class VIVIDModel(nn.Module):
         llm_model_name: str = "Qwen/Qwen3-1.7B",
         llm_device: Optional[str] = None,
         load_llm: bool = True,
-        # GFTM 配置
-        gftm_enabled: bool = False,
-        # SAR 配置 (V10)
-        sar_enabled: bool = False,
-        sar_alpha: float = 1.0,
-        # HFP 配置 (V10)
-        hfp_enabled: bool = False,
-        hfp_layers: Optional[list] = None,
-        # SPD 配置 (V10.1)
+        # SPD 配置
         spd_enabled: bool = False,
         spd_num_groups: int = 3,
         spd_tokens_per_group: int = 2,
@@ -71,7 +63,6 @@ class VIVIDModel(nn.Module):
             llm_model_name: HuggingFace LLM 模型名称
             llm_device: LLM 设备（默认与模型相同）
             load_llm: 是否加载 LLM（调试时可设为 False）
-            gftm_enabled: 是否启用 GFTM (Gradient-Focused Token Masking)
             use_flash_attention: 是否使用 Flash Attention
             max_text_length: 文本最大长度（token）
         """
@@ -82,19 +73,13 @@ class VIVIDModel(nn.Module):
         self.vit_output_type = vit_output_type
         self.llm_device = llm_device
         self.max_text_length = max_text_length
-        self.hfp_enabled = hfp_enabled
         self.spd_enabled = spd_enabled
 
-        # 1. 创建 ViT 编码器（可训练，支持 GFTM / SAR / HFP）
+        # 1. 创建 ViT 编码器（可训练）
         self.vit = ViTEncoder(
             model_name=vit_model_name,
             pretrained=vit_pretrained,
             output_type=vit_output_type,
-            gftm_enabled=gftm_enabled,
-            sar_enabled=sar_enabled,
-            sar_alpha=sar_alpha,
-            hfp_enabled=hfp_enabled,
-            hfp_layers=hfp_layers,
         )
         vit_embed_dim = self.vit.get_embed_dim()
 
@@ -110,33 +95,12 @@ class VIVIDModel(nn.Module):
             self.llm_embed_dim = 1536
 
         # 3. 创建 Projector（可训练）
-        if spd_enabled and hfp_enabled:
-            num_hfp_layers = len(hfp_layers) if hfp_layers else 3
-            self.projector = SPDHFPProjector(
-                vit_embed_dim=vit_embed_dim,
-                llm_embed_dim=self.llm_embed_dim,
-                num_groups=spd_num_groups,
-                tokens_per_group=spd_tokens_per_group,
-                num_hfp_layers=num_hfp_layers,
-                mlp_hidden_dim=projector_mlp_hidden_dim,
-                dropout=projector_dropout,
-            )
-        elif spd_enabled:
+        if spd_enabled:
             self.projector = SPDProjector(
                 vit_embed_dim=vit_embed_dim,
                 llm_embed_dim=self.llm_embed_dim,
                 num_groups=spd_num_groups,
                 tokens_per_group=spd_tokens_per_group,
-                mlp_hidden_dim=projector_mlp_hidden_dim,
-                dropout=projector_dropout,
-            )
-        elif hfp_enabled:
-            num_hfp_layers = len(hfp_layers) if hfp_layers else 3
-            self.projector = HierarchicalProjector(
-                vit_embed_dim=vit_embed_dim,
-                llm_embed_dim=self.llm_embed_dim,
-                num_prefix_tokens=num_prefix_tokens,
-                num_layers=num_hfp_layers,
                 mlp_hidden_dim=projector_mlp_hidden_dim,
                 dropout=projector_dropout,
             )
@@ -282,34 +246,21 @@ class VIVIDModel(nn.Module):
     def encode_image(
         self,
         images: torch.Tensor,
-        mask_ratio: float = 0.0,
-        mask_mode: str = "gftm",
     ) -> torch.Tensor:
         """
         编码图像为视觉 tokens
 
         Args:
             images: (B, C, H, W)
-            mask_ratio: GFTM token masking 比例
-            mask_mode: "gftm" or "random"
 
         Returns:
             visual_embeds: (B, num_visual_tokens, llm_embed_dim)
         """
-        # ViT 编码 (with optional GFTM / SAR)
-        vit_features = self.vit(images, mask_ratio=mask_ratio, mask_mode=mask_mode)
+        # ViT 编码
+        vit_features = self.vit(images)
 
-        # Projector 投影 (with optional HFP multi-layer features)
-        if self.hfp_enabled and isinstance(self.projector, (HierarchicalProjector, SPDHFPProjector)):
-            hfp_features = self.vit.get_hfp_features()
-            # Fix: 当 SAR 启用时，最后一层 hook 特征没有经过 SAR 加权，
-            # 用 SAR-modified 的 vit_features 替换最后一层，确保 SAR 不被旁路
-            if self.vit.sar_enabled and hfp_features:
-                last_layer_idx = max(hfp_features.keys())
-                hfp_features[last_layer_idx] = vit_features
-            visual_embeds = self.projector(vit_features, hfp_features=hfp_features)
-        else:
-            visual_embeds = self.projector(vit_features)
+        # Projector 投影
+        visual_embeds = self.projector(vit_features)
 
         # 转换为 LLM 的数据类型（通常是 bfloat16）
         if self.llm is not None:
@@ -323,8 +274,6 @@ class VIVIDModel(nn.Module):
         images: torch.Tensor,
         prompt_text: Union[str, List[str]],
         target_text: Optional[Union[str, List[str]]] = None,
-        mask_ratio: float = 0.0,
-        mask_mode: str = "gftm",
     ) -> Dict[str, torch.Tensor]:
         """
         准备生成所需的输入
@@ -356,7 +305,7 @@ class VIVIDModel(nn.Module):
             prompt_texts = [prompt_text] * batch_size
 
         # 1. 编码图像
-        visual_embeds = self.encode_image(images, mask_ratio=mask_ratio, mask_mode=mask_mode)  # (B, num_visual_tokens, llm_embed_dim)
+        visual_embeds = self.encode_image(images)  # (B, num_visual_tokens, llm_embed_dim)
         num_visual_tokens = visual_embeds.shape[1]
 
         # 2. 编码文本
@@ -442,8 +391,6 @@ class VIVIDModel(nn.Module):
         prompt_text: Optional[Union[str, List[str]]] = None,
         target_text: Optional[Union[str, List[str]]] = None,
         return_dict: bool = True,
-        mask_ratio: float = 0.0,
-        mask_mode: str = "gftm",
         output_hidden_states: bool = False,
     ) -> Dict[str, torch.Tensor]:
         """
@@ -472,7 +419,6 @@ class VIVIDModel(nn.Module):
         if prompt_text is not None:
             prepared = self.prepare_inputs_for_generation(
                 images, prompt_text, target_text,
-                mask_ratio=mask_ratio, mask_mode=mask_mode,
             )
             inputs_embeds = prepared["inputs_embeds"]
             attention_mask = prepared["attention_mask"]
@@ -480,7 +426,7 @@ class VIVIDModel(nn.Module):
         else:
             # 手动处理
             # 1. 编码图像
-            visual_embeds = self.encode_image(images, mask_ratio=mask_ratio, mask_mode=mask_mode)
+            visual_embeds = self.encode_image(images)
             batch_size = images.shape[0]
             num_visual_tokens = visual_embeds.shape[1]
             device = images.device

@@ -4,12 +4,11 @@ Vision Projector
 
 架构：
 - VisionProjector: 2-layer MLP + learnable prefix tokens (V9)
-- HierarchicalProjector: 多层 ViT 特征融合 + MLP + prefix tokens (V10 HFP)
 """
 
 import torch
 import torch.nn as nn
-from typing import Optional, Dict
+from typing import Optional
 
 
 class VisionProjector(nn.Module):
@@ -153,112 +152,3 @@ class SimpleProjector(nn.Module):
         return self.mlp(vit_features)
 
 
-class HierarchicalProjector(nn.Module):
-    """
-    V10 HFP: Hierarchical Feature Projection
-    融合 ViT 多层特征（浅层纹理 + 中层结构 + 深层语义），
-    让 frozen LLM supervision 的梯度传到所有层。
-
-    每层一个轻量 MLP projector → concat → fusion layer → prefix tokens
-    """
-
-    def __init__(
-        self,
-        vit_embed_dim: int = 768,
-        llm_embed_dim: int = 1536,
-        num_prefix_tokens: int = 4,
-        num_layers: int = 3,
-        mlp_hidden_dim: Optional[int] = None,
-        dropout: float = 0.1,
-    ):
-        super().__init__()
-
-        self.vit_embed_dim = vit_embed_dim
-        self.llm_embed_dim = llm_embed_dim
-        self.num_prefix_tokens = num_prefix_tokens
-        self.num_layers = num_layers
-
-        if mlp_hidden_dim is None:
-            mlp_hidden_dim = vit_embed_dim * 2
-
-        # 每层一个轻量 MLP projector: vit_dim → llm_dim
-        self.layer_projectors = nn.ModuleList([
-            nn.Sequential(
-                nn.Linear(vit_embed_dim, mlp_hidden_dim),
-                nn.GELU(),
-                nn.Dropout(dropout),
-                nn.Linear(mlp_hidden_dim, llm_embed_dim),
-            )
-            for _ in range(num_layers)
-        ])
-
-        # Fusion: 将 num_layers 个 llm_dim 特征融合为 1 个
-        self.fusion = nn.Sequential(
-            nn.Linear(llm_embed_dim * num_layers, llm_embed_dim),
-            nn.GELU(),
-            nn.Dropout(dropout),
-        )
-
-        self.layer_norm = nn.LayerNorm(llm_embed_dim)
-
-        # 可学习 prefix tokens
-        self.prefix_tokens = nn.Parameter(
-            torch.randn(1, num_prefix_tokens, llm_embed_dim) * 0.02
-        )
-
-        self._init_weights()
-
-    def _init_weights(self):
-        for proj in self.layer_projectors:
-            for module in proj.modules():
-                if isinstance(module, nn.Linear):
-                    nn.init.xavier_uniform_(module.weight)
-                    if module.bias is not None:
-                        nn.init.zeros_(module.bias)
-        for module in self.fusion.modules():
-            if isinstance(module, nn.Linear):
-                nn.init.xavier_uniform_(module.weight)
-                if module.bias is not None:
-                    nn.init.zeros_(module.bias)
-
-    def forward(
-        self,
-        vit_features: torch.Tensor,
-        hfp_features: Optional[Dict[int, torch.Tensor]] = None,
-    ) -> torch.Tensor:
-        """
-        Args:
-            vit_features: 最后一层输出 (B, N, vit_embed_dim)，用作 fallback
-            hfp_features: {layer_idx: (B, N, vit_embed_dim)} 中间层特征
-
-        Returns:
-            (B, num_prefix + N, llm_embed_dim)
-        """
-        batch_size = vit_features.shape[0]
-
-        if vit_features.dim() == 2:
-            vit_features = vit_features.unsqueeze(1)
-
-        # 收集各层特征
-        if hfp_features and len(hfp_features) == self.num_layers:
-            sorted_keys = sorted(hfp_features.keys())
-            layer_feats = [hfp_features[k] for k in sorted_keys]
-        else:
-            # Fallback: 全部用最后一层
-            layer_feats = [vit_features] * self.num_layers
-
-        # 各层独立投影
-        projected = []
-        for i, feat in enumerate(layer_feats):
-            if feat.dim() == 2:
-                feat = feat.unsqueeze(1)
-            projected.append(self.layer_projectors[i](feat))  # (B, N, llm_dim)
-
-        # Concat + Fusion: (B, N, llm_dim * num_layers) → (B, N, llm_dim)
-        concat = torch.cat(projected, dim=-1)
-        fused = self.fusion(concat)
-        fused = self.layer_norm(fused)
-
-        # Prefix tokens
-        prefix = self.prefix_tokens.expand(batch_size, -1, -1)
-        return torch.cat([prefix, fused], dim=1)
