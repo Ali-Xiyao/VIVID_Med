@@ -5,6 +5,7 @@ CheXpert UMS Dataset
 
 import json
 import os
+import random
 from pathlib import Path
 from typing import Optional, Dict, Any, List
 
@@ -428,31 +429,75 @@ class CheXpertUMSDataset(Dataset):
 
         return json.dumps(output, ensure_ascii=False)
 
+    # --- free-text 模板 ---------------------------------------------------
+    _FREETEXT_PRESENT = [
+        "{name} is present.",
+        "{name} is observed.",
+        "{name} is identified.",
+        "There is evidence of {name}.",
+        "Findings consistent with {name}.",
+        "The image shows {name}.",
+    ]
+    _FREETEXT_ABSENT = [
+        "{name} is absent.",
+        "No {name} is seen.",
+        "No evidence of {name}.",
+        "{name} is not identified.",
+        "The image is negative for {name}.",
+    ]
+    _FREETEXT_UNCERTAIN = [
+        "{name} is uncertain.",
+        "{name} is equivocal.",
+        "Possible {name}.",
+        "{name} cannot be excluded.",
+    ]
+    _FREETEXT_MISSING = [
+        "{name} is not observed.",
+        "{name} is not assessed.",
+        "No comment on {name}.",
+    ]
+
     def _create_freetext_string(
         self,
         sample: Dict,
         include_labels: Optional[List[str]] = None,
     ) -> str:
         """
-        创建自由文本格式的 target（用于消融实验：对比结构化 JSON vs 自由文本）
-        例如: "Atelectasis is present. Edema is absent. Pneumothorax is not observed."
+        创建自由文本格式的 target（用于消融实验：对比结构化 JSON vs 自由文本）。
+        引入随机句式、随机顺序、随机省略 absent findings，
+        使 LLM 预测不确定性高于结构化 JSON，从而产生更噪的梯度信号。
         """
-        target_labels = include_labels if include_labels is not None else self.label_names
+        target_labels = list(
+            include_labels if include_labels is not None else self.label_names
+        )
+        # 随机打乱 finding 顺序
+        random.shuffle(target_labels)
+
         parts = []
         for name in target_labels:
             if name in sample["findings"]:
                 item = sample["findings"][name]
                 state = self._normalize_state(item.get("state"), missing=False)
                 if state == "present":
-                    parts.append(f"{name} is present.")
+                    tpl = random.choice(self._FREETEXT_PRESENT)
                 elif state == "absent":
-                    parts.append(f"{name} is absent.")
+                    # 50% 概率省略 absent finding（真实报告不会列出所有阴性）
+                    if random.random() < 0.5:
+                        continue
+                    tpl = random.choice(self._FREETEXT_ABSENT)
                 elif state == "uncertain":
-                    parts.append(f"{name} is uncertain.")
+                    tpl = random.choice(self._FREETEXT_UNCERTAIN)
                 else:
-                    parts.append(f"{name} is not observed.")
+                    tpl = random.choice(self._FREETEXT_MISSING)
             else:
-                parts.append(f"{name} is not observed.")
+                # missing finding: 70% 概率省略
+                if random.random() < 0.7:
+                    continue
+                tpl = random.choice(self._FREETEXT_MISSING)
+            parts.append(tpl.format(name=name))
+
+        if not parts:
+            parts.append("No significant findings.")
         return " ".join(parts)
 
     def __len__(self) -> int:
