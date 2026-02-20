@@ -246,18 +246,20 @@ class VIVIDModel(nn.Module):
     def encode_image(
         self,
         images: torch.Tensor,
+        mask_ratio: float = 0.0,
     ) -> torch.Tensor:
         """
         编码图像为视觉 tokens
 
         Args:
             images: (B, C, H, W)
+            mask_ratio: 随机 mask 比例（0.0 = 不 mask）
 
         Returns:
             visual_embeds: (B, num_visual_tokens, llm_embed_dim)
         """
         # ViT 编码
-        vit_features = self.vit(images)
+        vit_features = self.vit(images, mask_ratio=mask_ratio)
 
         # Projector 投影
         visual_embeds = self.projector(vit_features)
@@ -274,6 +276,7 @@ class VIVIDModel(nn.Module):
         images: torch.Tensor,
         prompt_text: Union[str, List[str]],
         target_text: Optional[Union[str, List[str]]] = None,
+        mask_ratio: float = 0.0,
     ) -> Dict[str, torch.Tensor]:
         """
         准备生成所需的输入
@@ -305,7 +308,7 @@ class VIVIDModel(nn.Module):
             prompt_texts = [prompt_text] * batch_size
 
         # 1. 编码图像
-        visual_embeds = self.encode_image(images)  # (B, num_visual_tokens, llm_embed_dim)
+        visual_embeds = self.encode_image(images, mask_ratio=mask_ratio)  # (B, num_visual_tokens, llm_embed_dim)
         num_visual_tokens = visual_embeds.shape[1]
 
         # 2. 编码文本
@@ -392,6 +395,7 @@ class VIVIDModel(nn.Module):
         target_text: Optional[Union[str, List[str]]] = None,
         return_dict: bool = True,
         output_hidden_states: bool = False,
+        mask_ratio: float = 0.0,
     ) -> Dict[str, torch.Tensor]:
         """
         前向传播
@@ -418,7 +422,7 @@ class VIVIDModel(nn.Module):
         # 如果提供了 prompt_text，使用自动处理
         if prompt_text is not None:
             prepared = self.prepare_inputs_for_generation(
-                images, prompt_text, target_text,
+                images, prompt_text, target_text, mask_ratio=mask_ratio,
             )
             inputs_embeds = prepared["inputs_embeds"]
             attention_mask = prepared["attention_mask"]
@@ -426,7 +430,7 @@ class VIVIDModel(nn.Module):
         else:
             # 手动处理
             # 1. 编码图像
-            visual_embeds = self.encode_image(images)
+            visual_embeds = self.encode_image(images, mask_ratio=mask_ratio)
             batch_size = images.shape[0]
             num_visual_tokens = visual_embeds.shape[1]
             device = images.device

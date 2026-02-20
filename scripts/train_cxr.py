@@ -315,6 +315,7 @@ def main():
             else "Generate a structured medical report:\n",
         ),
         spd_config=config.get("model", {}).get("spd"),
+        mask_ratio=float(config.get("model", {}).get("mask_ratio", 0.0)),
     )
 
     # 恢复训练

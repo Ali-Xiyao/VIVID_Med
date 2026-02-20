@@ -74,6 +74,8 @@ class VIVIDTrainer:
         prompt_template: str = "Generate a structured medical report in JSON format for this chest X-ray image:\n",
         # SPD 配置
         spd_config: Optional[Dict[str, Any]] = None,
+        # Random mask 配置
+        mask_ratio: float = 0.0,
     ):
         self.model = model
         self.train_dataloader = train_dataloader
@@ -211,6 +213,11 @@ class VIVIDTrainer:
         self.spd_ortho_weight = float(spd_cfg.get("ortho_weight", 0.01))
         if self.spd_enabled:
             print(f"SPD enabled: ortho_weight={self.spd_ortho_weight}")
+
+        # Random mask 配置（训练时对 ViT patch tokens 随机 mask）
+        self.mask_ratio = float(mask_ratio)
+        if self.mask_ratio > 0:
+            print(f"Random mask enabled: mask_ratio={self.mask_ratio}")
 
     def _build_answerability_state_patterns(self) -> List[Dict[str, Any]]:
         tokenizer = getattr(self.model, "tokenizer", None)
@@ -734,6 +741,7 @@ class VIVIDTrainer:
                 images=images,
                 prompt_text=prompt_payload,
                 target_text=target_jsons,
+                mask_ratio=self.mask_ratio,
             )
 
             # 计算损失

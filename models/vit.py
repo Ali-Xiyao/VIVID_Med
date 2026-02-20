@@ -88,12 +88,13 @@ class ViTEncoder(nn.Module):
         self.embed_dim = self.vit.embed_dim
         self.num_patches = self.vit.patch_embed.num_patches
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, mask_ratio: float = 0.0) -> torch.Tensor:
         """
         前向传播
 
         Args:
             x: 输入图像 (B, C, H, W)
+            mask_ratio: 随机 mask 比例（0.0 = 不 mask，0.75 = 保留 25% patch tokens）
 
         Returns:
             features: 视觉特征
@@ -103,12 +104,43 @@ class ViTEncoder(nn.Module):
         """
         features = self.vit.forward_features(x)  # (B, num_tokens, embed_dim)
 
+        # Random token masking（训练时使用）
+        if mask_ratio > 0.0 and self.output_type == "all" and features.shape[1] > 1:
+            features = self._apply_random_mask(features, mask_ratio)
+
         if self.output_type == "cls":
             return features[:, 0]  # (B, embed_dim)
         elif self.output_type == "mean":
             return features[:, 1:].mean(dim=1)  # (B, embed_dim)
         else:  # "all"
             return features  # (B, num_tokens, embed_dim)
+
+    def _apply_random_mask(self, features: torch.Tensor, mask_ratio: float) -> torch.Tensor:
+        """
+        随机 mask patch tokens，保留 CLS token
+
+        Args:
+            features: (B, 1+num_patches, D)
+            mask_ratio: 要 mask 掉的比例
+        Returns:
+            (B, 1+num_keep, D)
+        """
+        B, N, D = features.shape
+        num_patches = N - 1
+        num_keep = max(1, int(num_patches * (1 - mask_ratio)))
+
+        cls_token = features[:, :1, :]  # (B, 1, D)
+        patch_tokens = features[:, 1:, :]  # (B, num_patches, D)
+
+        # 每个样本独立随机选择
+        noise = torch.rand(B, num_patches, device=features.device)
+        keep_indices = noise.argsort(dim=1)[:, :num_keep]  # (B, num_keep)
+        keep_indices, _ = keep_indices.sort(dim=1)
+
+        keep_indices_expanded = keep_indices.unsqueeze(-1).expand(-1, -1, D)
+        selected_patches = torch.gather(patch_tokens, 1, keep_indices_expanded)
+
+        return torch.cat([cls_token, selected_patches], dim=1)
 
     def get_num_tokens(self) -> int:
         """获取输出 token 数量"""
