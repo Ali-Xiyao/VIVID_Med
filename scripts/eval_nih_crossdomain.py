@@ -160,6 +160,8 @@ def main():
     parser.add_argument("--output", type=str, default=None)
     parser.add_argument("--label", type=str, default="unknown",
                         help="Experiment label for display")
+    parser.add_argument("--vit_model_name", type=str, default="vit_base_patch16_224",
+                        help="timm model name (e.g. vit_base_patch16_dinov3)")
     args = parser.parse_args()
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -169,7 +171,7 @@ def main():
 
     # Load model (14-label head, same as training)
     model = timm.create_model(
-        "vit_base_patch16_224", pretrained=False,
+        args.vit_model_name, pretrained=False,
         num_classes=len(CHEXPERT_14_LABELS),
         drop_rate=0.0, drop_path_rate=0.0,
     ).to(device)
