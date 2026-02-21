@@ -1,6 +1,7 @@
 vivid_env/
 data/dataset/
 outputs/
+pretrained/*.pth
 
 __pycache__/
 *.py[cod]
