@@ -10,6 +10,7 @@ import os
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.patches import Ellipse
 from pathlib import Path
 from torch.utils.data import DataLoader
 from tqdm import tqdm
@@ -85,6 +86,8 @@ def main():
     models_cfg = [
         ("ImageNet sup.", "./outputs/linear_probe_imagenet_full14/best.pt", "vit_base_patch16_224"),
         ("BiomedCLIP", "./outputs/lp_biomedclip_baseline_seed0/best.pt", "vit_base_patch16_224"),
+        ("MAE", "./outputs/lp_mae_baseline_seed0/best.pt", "vit_base_patch16_224"),
+        ("DINOv3", "./outputs/lp_dinov3_baseline_seed0/best.pt", "vit_base_patch16_dinov3"),
         ("VIVID-Med (SPD)", "./outputs/lp_A_ums_spd_12label/best.pt", "vit_base_patch16_224"),
     ]
 
@@ -120,40 +123,53 @@ def main():
     sizes = [e.shape[0] for e in embeddings_list]
     coords_split = np.split(coords, np.cumsum(sizes)[:-1])
 
-    # --- Plot: one subplot per model, colored by dominant finding ---
+    # --- High-contrast palette (tab10) + plotting config ---
+    cmap = plt.cm.get_cmap("tab10", 10)
+
+    # Times New Roman, white background
+    plt.rcParams["font.family"] = "serif"
+    plt.rcParams["font.serif"] = ["Times New Roman"]
+    plt.rcParams["font.size"] = 10
+    plt.style.use("default")
+
     label_names = dataset.label_names
-    fig, axes = plt.subplots(1, len(names), figsize=(6 * len(names), 5.5), dpi=150)
+    out_dir = os.path.dirname(args.output) or "."
+    os.makedirs(out_dir, exist_ok=True)
+
+    fig, axes = plt.subplots(1, len(names), figsize=(5 * len(names), 5), dpi=150)
+    fig.patch.set_facecolor("white")
     if len(names) == 1:
         axes = [axes]
 
-    # Color by dominant positive finding (first positive label index)
-    cmap = plt.cm.get_cmap("tab10", 10)
-
     for ax, name, c2d, lab in zip(axes, names, coords_split, labels_list):
-        # Assign color: dominant finding index (first positive)
+        ax.set_facecolor("white")
+
+        # Assign dominant finding index
         dominant = np.full(lab.shape[0], -1)
         for i in range(lab.shape[0]):
             pos = np.where(lab[i] == 1)[0]
             if len(pos) > 0:
                 dominant[i] = pos[0] % 10
-        mask_pos = dominant >= 0
-        mask_neg = ~mask_pos
+        mask_neg = dominant < 0
 
-        ax.scatter(c2d[mask_neg, 0], c2d[mask_neg, 1], c="lightgray", s=8, alpha=0.3, label="No finding")
+        ax.scatter(c2d[mask_neg, 0], c2d[mask_neg, 1],
+                   c="lightgray", s=8, alpha=0.3)
         for ci in range(10):
             m = dominant == ci
             if m.sum() > 0:
-                ax.scatter(c2d[m, 0], c2d[m, 1], c=[cmap(ci)], s=10, alpha=0.5)
-        ax.set_title(name, fontsize=13, fontweight="bold")
+                ax.scatter(c2d[m, 0], c2d[m, 1],
+                           c=[cmap(ci)], s=10, alpha=0.5)
+
         ax.set_xticks([])
         ax.set_yticks([])
+        ax.set_xlabel(name, fontsize=10, fontfamily="serif")
+        for spine in ax.spines.values():
+            spine.set_linewidth(0.5)
+            spine.set_color("#AAAAAA")
 
-    plt.suptitle("t-SNE of CLS Embeddings (colored by dominant finding)", fontsize=14, y=1.02)
     plt.tight_layout()
-    os.makedirs(os.path.dirname(args.output) or ".", exist_ok=True)
-    fig.savefig(args.output, dpi=200, bbox_inches="tight")
-    print(f"\nSaved to {args.output}")
-    plt.close()
+    fig.savefig(args.output, dpi=200, bbox_inches="tight", facecolor="white")
+    print(f"Saved: {args.output}")
 
 
 if __name__ == "__main__":
