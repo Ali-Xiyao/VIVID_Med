@@ -74,45 +74,44 @@ def extract_attention_maps(model, images, device):
     return attn_weights, vit_features
 
 
-def visualize_sample(images, attn_weights, sample_idx, output_path,
-                     num_groups=3, grid_size=14):
-    """Visualize attention maps for one sample across all SPD groups."""
+def visualize_sample_separate(images, attn_weights, sample_idx, output_dir,
+                              num_groups=3, grid_size=14):
+    """Save original image and each group attention map as separate files."""
     img = images[sample_idx].cpu()
-    # Denormalize for display
     mean = torch.tensor([0.485, 0.456, 0.406]).view(3, 1, 1)
     std = torch.tensor([0.229, 0.224, 0.225]).view(3, 1, 1)
     img = (img * std + mean).clamp(0, 1).permute(1, 2, 0).numpy()
 
-    fig, axes = plt.subplots(1, num_groups + 1, figsize=(4 * (num_groups + 1), 4))
+    plt.rcParams["font.family"] = "serif"
+    plt.rcParams["font.serif"] = ["Times New Roman"]
 
-    # Original image
-    axes[0].imshow(img, cmap="gray" if img.shape[2] == 1 else None)
-    axes[0].set_title("Input", fontsize=12)
-    axes[0].axis("off")
+    # Save original image
+    fig, ax = plt.subplots(figsize=(4, 4), dpi=200)
+    ax.imshow(img, cmap="gray" if img.shape[2] == 1 else None)
+    ax.axis("off")
+    p = os.path.join(output_dir, f"sample{sample_idx}_input.png")
+    fig.savefig(p, dpi=200, bbox_inches="tight", pad_inches=0.02, facecolor="white")
+    plt.close(fig)
+    print(f"Saved: {p}")
 
+    # Save each group attention map
     for g in range(num_groups):
-        # Average across query tokens: (B, N) -> take sample
-        attn = attn_weights[g][sample_idx].mean(dim=0)  # (N,)
-        # Skip CLS token, reshape to spatial grid
+        attn = attn_weights[g][sample_idx].mean(dim=0)
         attn_spatial = attn[1:].reshape(grid_size, grid_size).cpu().numpy()
-        # Upsample to image size for overlay
         attn_up = np.array(
             interpolate(
                 torch.tensor(attn_spatial).unsqueeze(0).unsqueeze(0).float(),
                 size=(224, 224), mode="bilinear", align_corners=False,
             ).squeeze()
         )
-
-        axes[g + 1].imshow(img, cmap="gray" if img.shape[2] == 1 else None)
-        axes[g + 1].imshow(attn_up, cmap="jet", alpha=0.5, vmin=0)
-        axes[g + 1].set_title(f"Group {g + 1}", fontsize=12, fontweight="bold")
-        axes[g + 1].axis("off")
-
-    plt.suptitle("SPD Cross-Attention Maps", fontsize=14, y=1.02)
-    plt.tight_layout()
-    fig.savefig(output_path, dpi=200, bbox_inches="tight")
-    plt.close()
-    print(f"Saved: {output_path}")
+        fig, ax = plt.subplots(figsize=(4, 4), dpi=200)
+        ax.imshow(img, cmap="gray" if img.shape[2] == 1 else None)
+        ax.imshow(attn_up, cmap="jet", alpha=0.5, vmin=0)
+        ax.axis("off")
+        p = os.path.join(output_dir, f"sample{sample_idx}_group{g+1}.png")
+        fig.savefig(p, dpi=200, bbox_inches="tight", pad_inches=0.02, facecolor="white")
+        plt.close(fig)
+        print(f"Saved: {p}")
 
 
 def compute_orthogonality(attn_weights):

@@ -132,16 +132,12 @@ def main():
     plt.rcParams["font.size"] = 10
     plt.style.use("default")
 
-    label_names = dataset.label_names
     out_dir = os.path.dirname(args.output) or "."
     os.makedirs(out_dir, exist_ok=True)
 
-    fig, axes = plt.subplots(1, len(names), figsize=(5 * len(names), 5), dpi=150)
-    fig.patch.set_facecolor("white")
-    if len(names) == 1:
-        axes = [axes]
-
-    for ax, name, c2d, lab in zip(axes, names, coords_split, labels_list):
+    for name, c2d, lab in zip(names, coords_split, labels_list):
+        fig, ax = plt.subplots(figsize=(5, 5), dpi=150)
+        fig.patch.set_facecolor("white")
         ax.set_facecolor("white")
 
         # Assign dominant finding index
@@ -167,9 +163,12 @@ def main():
             spine.set_linewidth(0.5)
             spine.set_color("#AAAAAA")
 
-    plt.tight_layout()
-    fig.savefig(args.output, dpi=200, bbox_inches="tight", facecolor="white")
-    print(f"Saved: {args.output}")
+        plt.tight_layout()
+        safe_name = name.replace(" ", "_").replace("(", "").replace(")", "")
+        out_path = os.path.join(out_dir, f"tsne_{safe_name}.png")
+        fig.savefig(out_path, dpi=200, bbox_inches="tight", facecolor="white")
+        plt.close(fig)
+        print(f"Saved: {out_path}")
 
 
 if __name__ == "__main__":
