@@ -90,7 +90,7 @@ def visualize_sample_separate(images, attn_weights, sample_idx, output_dir,
     ax.imshow(img, cmap="gray" if img.shape[2] == 1 else None)
     ax.axis("off")
     p = os.path.join(output_dir, f"sample{sample_idx}_input.png")
-    fig.savefig(p, dpi=200, bbox_inches="tight", pad_inches=0.02, facecolor="white")
+    fig.savefig(p, dpi=200, bbox_inches="tight", pad_inches=0)
     plt.close(fig)
     print(f"Saved: {p}")
 
@@ -109,7 +109,7 @@ def visualize_sample_separate(images, attn_weights, sample_idx, output_dir,
         ax.imshow(attn_up, cmap="jet", alpha=0.5, vmin=0)
         ax.axis("off")
         p = os.path.join(output_dir, f"sample{sample_idx}_group{g+1}.png")
-        fig.savefig(p, dpi=200, bbox_inches="tight", pad_inches=0.02, facecolor="white")
+        fig.savefig(p, dpi=200, bbox_inches="tight", pad_inches=0)
         plt.close(fig)
         print(f"Saved: {p}")
 
@@ -139,7 +139,9 @@ def main():
     parser.add_argument("--num_samples", type=int, default=8,
                         help="Number of samples to visualize")
     parser.add_argument("--output_dir", type=str,
-                        default="outputs/attention_maps")
+                        default="profile/paper/newattentionmap")
+    parser.add_argument("--sample_indices", type=int, nargs="+", default=[0, 3],
+                        help="Which sample indices to visualize")
     args = parser.parse_args()
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -170,10 +172,12 @@ def main():
     # Extract attention maps
     attn_weights, _ = extract_attention_maps(model, images, device)
 
-    # Visualize each sample
-    for i in range(min(args.num_samples, images.shape[0])):
-        out_path = os.path.join(args.output_dir, f"attn_sample_{i}.png")
-        visualize_sample(images, attn_weights, i, out_path, num_groups)
+    # Visualize selected samples
+    for i in args.sample_indices:
+        if i < images.shape[0]:
+            visualize_sample_separate(images, attn_weights, i, args.output_dir, num_groups)
+        else:
+            print(f"SKIP sample {i}: only {images.shape[0]} samples loaded")
 
     # Compute orthogonality
     sims = compute_orthogonality(attn_weights)
