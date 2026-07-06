@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import argparse
 import csv
 from pathlib import Path
 from typing import Any
@@ -11,8 +12,6 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 FINAL_DIR = ROOT / "outputs" / "final_tables"
-TRAIN_MANIFEST = FINAL_DIR / "cvcp_ccsh_training_manifest.csv"
-LP_CONFIG_DIR = ROOT / "configs" / "qwen3vl_instruction" / "cvcp_ccsh_lp"
 OUT_ROOT = Path("F:/Xiyao_Wang/021_260129VIVID_cvcp_ccsh_outputs")
 
 
@@ -83,22 +82,33 @@ def lp_config_for(row: dict[str, str]) -> dict[str, Any]:
     }
 
 
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--train-manifest", type=Path, default=FINAL_DIR / "cvcp_ccsh_training_manifest.csv")
+    parser.add_argument("--lp-config-dir", type=Path, default=ROOT / "configs" / "qwen3vl_instruction" / "cvcp_ccsh_lp")
+    parser.add_argument("--output-csv", type=Path, default=FINAL_DIR / "cvcp_ccsh_postprocess_manifest.csv")
+    parser.add_argument("--output-md", type=Path, default=FINAL_DIR / "cvcp_ccsh_postprocess_manifest.md")
+    return parser.parse_args()
+
+
 def main() -> None:
-    train_rows = read_csv(TRAIN_MANIFEST)
-    LP_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+    args = parse_args()
+    train_rows = read_csv(args.train_manifest)
+    args.lp_config_dir.mkdir(parents=True, exist_ok=True)
     rows: list[dict[str, Any]] = []
     for row in train_rows:
         run_id = row["id"]
         lp_cfg = lp_config_for(row)
-        lp_path = LP_CONFIG_DIR / f"lp_{run_id}_chexpert_1k.yaml"
+        lp_path = args.lp_config_dir / f"lp_{run_id}_chexpert_1k.yaml"
         lp_path.write_text(yaml.safe_dump(lp_cfg, sort_keys=False, allow_unicode=True), encoding="utf-8")
         diag_root = OUT_ROOT / "diagnostics"
         ab_root = OUT_ROOT / "ab_swap"
+        family = row.get("family") or row.get("base_id") or row.get("run_id", "").split("-seed")[0] or row["id"]
         rows.append(
             {
                 "id": run_id,
                 "run_id": row["run_id"],
-                "family": row["family"],
+                "family": family,
                 "seed": row.get("seed", "42"),
                 "steps": row.get("steps", ""),
                 "train_records": row.get("train_records", ""),
@@ -138,13 +148,12 @@ def main() -> None:
         "counterfactual_output",
         "paraphrase_output",
         "ab_swap_input",
-        "ab_swap_config",
-        "ab_swap_output",
+            "ab_swap_config",
+            "ab_swap_output",
     ]
-    out_csv = FINAL_DIR / "cvcp_ccsh_postprocess_manifest.csv"
-    write_csv(out_csv, rows, columns)
-    write_md_table(FINAL_DIR / "cvcp_ccsh_postprocess_manifest.md", "CVCP/CCSH Postprocess Manifest", rows, columns)
-    print(f"wrote_rows={len(rows)} manifest={out_csv}")
+    write_csv(args.output_csv, rows, columns)
+    write_md_table(args.output_md, "CVCP/CCSH Postprocess Manifest", rows, columns)
+    print(f"wrote_rows={len(rows)} manifest={args.output_csv}")
 
 
 if __name__ == "__main__":

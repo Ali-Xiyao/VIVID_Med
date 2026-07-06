@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import argparse
 import csv
 import json
 import math
@@ -11,8 +12,6 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 FINAL_DIR = ROOT / "outputs" / "final_tables"
-TRAIN_MANIFEST = FINAL_DIR / "cvcp_ccsh_training_manifest.csv"
-POST_MANIFEST = FINAL_DIR / "cvcp_ccsh_postprocess_manifest.csv"
 
 
 def read_csv(path: Path) -> list[dict[str, str]]:
@@ -127,9 +126,18 @@ def status_for(paths: list[str]) -> str:
     return "pending"
 
 
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--train-manifest", type=Path, default=FINAL_DIR / "cvcp_ccsh_training_manifest.csv")
+    parser.add_argument("--post-manifest", type=Path, default=FINAL_DIR / "cvcp_ccsh_postprocess_manifest.csv")
+    parser.add_argument("--result-prefix", default="cvcp")
+    return parser.parse_args()
+
+
 def main() -> None:
-    train_rows = {row["id"]: row for row in read_csv(TRAIN_MANIFEST)}
-    post_rows = {row["id"]: row for row in read_csv(POST_MANIFEST)}
+    args = parse_args()
+    train_rows = {row["id"]: row for row in read_csv(args.train_manifest)}
+    post_rows = {row["id"]: row for row in read_csv(args.post_manifest)}
     rows: list[dict[str, Any]] = []
     status_rows: list[dict[str, Any]] = []
 
@@ -215,12 +223,14 @@ def main() -> None:
         "train_elapsed_seconds",
         "status",
     ]
-    write_csv(FINAL_DIR / "cvcp_training_results.csv", rows, result_columns)
-    write_md_table(FINAL_DIR / "cvcp_training_results.md", "CVCP Training Results", rows, result_columns)
+    result_base = FINAL_DIR / f"{args.result_prefix}_training_results"
+    write_csv(result_base.with_suffix(".csv"), rows, result_columns)
+    write_md_table(result_base.with_suffix(".md"), "CVCP Training Results", rows, result_columns)
 
     status_columns = ["run_id", "family", "status", "training", "lp", "nih_appendix", "visual", "counterfactual", "ab_swap", "paraphrase"]
-    write_csv(FINAL_DIR / "cvcp_ccsh_postprocess_status.csv", status_rows, status_columns)
-    write_md_table(FINAL_DIR / "cvcp_ccsh_postprocess_status.md", "CVCP/CCSH Postprocess Status", status_rows, status_columns)
+    status_base = FINAL_DIR / f"{args.result_prefix}_ccsh_postprocess_status"
+    write_csv(status_base.with_suffix(".csv"), status_rows, status_columns)
+    write_md_table(status_base.with_suffix(".md"), "CVCP/CCSH Postprocess Status", status_rows, status_columns)
 
     external_rows = [
         {"dataset": "VinDr-CXR", "status": "partial_image_only", "run_id": "", "macro_auc": "", "macro_auprc": "", "notes": "Image package exists, but no label/bbox CSV is available locally; cannot be main external."},
@@ -240,15 +250,19 @@ def main() -> None:
                 }
             )
     external_columns = ["dataset", "status", "run_id", "macro_auc", "macro_auprc", "notes"]
-    write_csv(FINAL_DIR / "external_eval_results.csv", external_rows, external_columns)
-    write_md_table(FINAL_DIR / "external_eval_results.md", "External Evaluation Results", external_rows, external_columns)
+    external_base = FINAL_DIR / f"{args.result_prefix}_external_eval_results"
+    write_csv(external_base.with_suffix(".csv"), external_rows, external_columns)
+    write_md_table(external_base.with_suffix(".md"), "External Evaluation Results", external_rows, external_columns)
 
-    write_csv(FINAL_DIR / "cvcp_hard_shuffle_results.csv", rows, ["run_id", "family", "image_shuffle_delta", "hard_shuffle_delta", "status"])
-    write_md_table(FINAL_DIR / "cvcp_hard_shuffle_results.md", "CVCP Hard-Shuffle Results", rows, ["run_id", "family", "image_shuffle_delta", "hard_shuffle_delta", "status"])
-    write_csv(FINAL_DIR / "cvcp_ab_swap_results.csv", rows, ["run_id", "family", "cf_acc", "cf_option_records", "ab_swap_acc", "status"])
-    write_md_table(FINAL_DIR / "cvcp_ab_swap_results.md", "CVCP A/B-Swap Results", rows, ["run_id", "family", "cf_acc", "cf_option_records", "ab_swap_acc", "status"])
-    write_csv(FINAL_DIR / "cvcp_calibration_auprc.csv", rows, ["run_id", "family", "chexpert_auprc", "chexpert_ece", "nih_appendix_auprc_1k", "status"])
-    write_md_table(FINAL_DIR / "cvcp_calibration_auprc.md", "CVCP Calibration/AUPRC", rows, ["run_id", "family", "chexpert_auprc", "chexpert_ece", "nih_appendix_auprc_1k", "status"])
+    hard_base = FINAL_DIR / f"{args.result_prefix}_hard_shuffle_results"
+    write_csv(hard_base.with_suffix(".csv"), rows, ["run_id", "family", "image_shuffle_delta", "hard_shuffle_delta", "status"])
+    write_md_table(hard_base.with_suffix(".md"), "CVCP Hard-Shuffle Results", rows, ["run_id", "family", "image_shuffle_delta", "hard_shuffle_delta", "status"])
+    ab_base = FINAL_DIR / f"{args.result_prefix}_ab_swap_results"
+    write_csv(ab_base.with_suffix(".csv"), rows, ["run_id", "family", "cf_acc", "cf_option_records", "ab_swap_acc", "status"])
+    write_md_table(ab_base.with_suffix(".md"), "CVCP A/B-Swap Results", rows, ["run_id", "family", "cf_acc", "cf_option_records", "ab_swap_acc", "status"])
+    cal_base = FINAL_DIR / f"{args.result_prefix}_calibration_auprc"
+    write_csv(cal_base.with_suffix(".csv"), rows, ["run_id", "family", "chexpert_auprc", "chexpert_ece", "nih_appendix_auprc_1k", "status"])
+    write_md_table(cal_base.with_suffix(".md"), "CVCP Calibration/AUPRC", rows, ["run_id", "family", "chexpert_auprc", "chexpert_ece", "nih_appendix_auprc_1k", "status"])
 
     cost_rows = [
         {
@@ -262,8 +276,9 @@ def main() -> None:
         for row in rows
     ]
     cost_columns = ["run_id", "model", "gpu", "hours", "steps", "cost_acceptable"]
-    write_csv(FINAL_DIR / "cost_table.csv", cost_rows, cost_columns)
-    write_md_table(FINAL_DIR / "cost_table.md", "Training Cost Table", cost_rows, cost_columns)
+    cost_base = FINAL_DIR / f"{args.result_prefix}_cost_table"
+    write_csv(cost_base.with_suffix(".csv"), cost_rows, cost_columns)
+    write_md_table(cost_base.with_suffix(".md"), "Training Cost Table", cost_rows, cost_columns)
 
     completed = [row for row in rows if row.get("status") == "complete"]
     locked = []
@@ -287,8 +302,9 @@ def main() -> None:
             }
         )
     locked_columns = ["family", "finalist", "seeds", "chexpert_auc", "nih_appendix_auc_1k", "hard_shuffle_delta", "cf_acc", "ece", "final_role"]
-    write_csv(FINAL_DIR / "locked_final_comparison.csv", locked, locked_columns)
-    write_md_table(FINAL_DIR / "locked_final_comparison.md", "Locked Final Comparison", locked, locked_columns)
+    locked_base = FINAL_DIR / f"{args.result_prefix}_locked_final_comparison"
+    write_csv(locked_base.with_suffix(".csv"), locked, locked_columns)
+    write_md_table(locked_base.with_suffix(".md"), "Locked Final Comparison", locked, locked_columns)
     print(f"rows={len(rows)} complete={sum(1 for row in rows if row.get('status') == 'complete')}")
 
 

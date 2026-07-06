@@ -1,0 +1,45 @@
+experiment:
+  id: cvcp_v1_sameq_10k_seed1
+  run_id: CVCP-v1-SAMEQ-10k-seed1
+  route: CVCP-v1
+  data_version: CVCP-v1-SAMEQ-10k
+data:
+  data_root: .
+  train_instruction_path: outputs/instruction_data/cvcp_ccsh/cvcp_v1_sameq_10k_train.jsonl
+  val_instruction_path: outputs/instruction_data/next_stage/sameq_shuf_val.jsonl
+  max_length: 768
+  max_val_samples: 1000
+  num_workers: 0
+model:
+  model_path: H:/Xiyao_Wang/001_models/qwen3-vl-2b-thinking-new
+  dtype: bf16
+  trainable_groups:
+  - vision_tower
+  - visual_connector
+training:
+  learning_rate: 2.0e-05
+  vision_learning_rate: 1.0e-05
+  connector_learning_rate: 2.0e-05
+  weight_decay: 0.01
+  max_steps: 8000
+  batch_size: 1
+  eval_batch_size: 1
+  gradient_accumulation_steps: 1
+  max_grad_norm: 1.0
+  log_interval: 25
+  eval_interval: 500
+  save_interval: 8001
+  save_checkpoints: false
+  save_best_checkpoint: false
+  save_final_checkpoint: true
+  output_dir: F:/Xiyao_Wang/021_260129VIVID_cvcp_ccsh_outputs/qwen3vl_sameq_v4_multiseed/cvcp_v1_sameq_10k_seed1
+  image_shuffle_margin:
+    enabled: true
+    weight: 0.15
+    margin: 0.2
+  answer_margin:
+    enabled: true
+    weight: 0.15
+    margin: 0.2
+seed: 1
+device: cuda:0

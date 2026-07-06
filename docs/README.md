@@ -6,7 +6,8 @@ This directory is the handoff entry point for active research state, requirement
 
 | Purpose | File |
 | --- | --- |
-| Current CVCP/CCSH full experiment plan and final write-back | `../vivid_med_cvcp_ccsh_full_next_experiment_plan.md` |
+| Current SAMEQ-CVCP paper-ready experiment plan and final write-back | `../vivid_med_sameq_cvcp_next_experiment_plan_v4.md` |
+| Prior CVCP/CCSH full-plan closure reference | `../vivid_med_cvcp_ccsh_full_next_experiment_plan.md` |
 | CVCP/CCSH requirement ledger | `cvcp_ccsh_requirement_ledger.md` |
 | CVCP/CCSH readiness audit | `cvcp_ccsh_readiness_audit.md` |
 | Current task checklist and execution boundaries | `../task_plan.md` |
@@ -23,6 +24,8 @@ This directory is the handoff entry point for active research state, requirement
 | CVCP/CCSH model comparison audit | `../outputs/final_tables/model_comparison_results.md` |
 | CVCP/CCSH external-evaluation boundary/results | `../outputs/final_tables/external_eval_results.md` |
 | CVCP/CCSH completion audit | `../outputs/final_tables/cvcp_ccsh_completion_audit.md` |
+| SAMEQ v4 pure-seed live manifest | `../outputs/final_tables/sameq_v4_multiseed_manifest.md` |
+| SAMEQ v4 pure-seed stability/status snapshot | `../outputs/final_tables/sameq_v4_multiseed_stability.md` |
 | Prior case-study real-run status for seed stability + downstream diagnostics | `../outputs/final_tables/case_study_full_execution_status.md` |
 | Prior NIH available/full transfer status with 1k/5k/all subset rows | `../outputs/final_tables/nih_available_transfer_status.md` |
 | Prior extra queue status for curriculum-v2, embeddings, MMD/UMAP, and modules | `../outputs/final_tables/case_study_extra_execution_status.md` |

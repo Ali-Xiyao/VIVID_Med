@@ -1,5 +1,217 @@
 # VIVID-Med Execution Progress
 
+## 2026-07-06 SAMEQ-CVCP v4 takeover
+
+- Loaded `superpowers:using-superpowers`, `planning-with-files`, and `executing-plans` because the user asked to execute the paper-ready SAMEQ-CVCP v4 document end to end.
+- Confirmed the active goal already points at `vivid_med_sameq_cvcp_next_experiment_plan_v4.md`, so no new goal object was created.
+- Re-read `docs/README.md`, `task_plan.md`, `findings.md`, `progress.md`, the old `vivid_med_cvcp_ccsh_full_next_experiment_plan.md`, and the new `vivid_med_sameq_cvcp_next_experiment_plan_v4.md` with UTF-8 decoding.
+- Ran planning session catchup; it returned no unsynced-context payload.
+- Audited current SAMEQ/CVCP assets: script inventory, config inventory, final tables, old closure markdown, module-combo manifest, model comparison audit, external evaluation boundary table, and current GPU state.
+- Verified both RTX 3090 GPUs are idle (`0 MiB`, `0%`) and no compute process is running.
+- Identified the exact v4 gap set: the repo already closes the broad CVCP/CCSH route, but it still needs exact SAMEQ-full/CF bridge rows and pure SAMEQ multi-seed evidence to match the new v4 wording more literally.
+- Updated `task_plan.md` and `findings.md` so the active source of truth is now the SAMEQ-CVCP v4 document rather than only the older v3 closure chain.
+- Updated `docs/README.md` so the current active entry point now points to `vivid_med_sameq_cvcp_next_experiment_plan_v4.md`, while keeping the old v3 CVCP/CCSH document as a prior closure reference.
+- Patched `scripts/prepare_cvcp_ccsh_module_combos.py` to add the exact v4 bridge rows: `SAMEQ-10k+CCSH`, `SAMEQ-full+CCSH`, `SAMEQ-full+CEQ+CCSH`, `SAMEQ-CF-20+CCSH`, and `SAMEQ-CF-20+CEQ+CCSH`.
+- Patched `scripts/run_multiseed_manifest.py` so CVCP/SAMEQ configs from `outputs/final_tables/cvcp_ccsh_training_manifest.csv` can be turned into queue-compatible seed manifests with unique per-seed IDs.
+- Rebuilt the full module-combo manifest (`23` rows total) and wrote the focused v4 bridge subset manifest `outputs/final_tables/sameq_v4_missing_module_manifest.csv`.
+- Generated SAMEQ pure multi-seed configs and manifest for `cvcp_v1_sameq_10k` and `cvcp_v1_sameq_full` seeds `0/1/2` under `configs/qwen3vl_instruction/sameq_v4_multiseed/` and `outputs/final_tables/sameq_v4_multiseed_manifest.{csv,md}`.
+- Launched four hidden background queue processes at about `2026-07-06T13:47:43+08:00`:
+  - Training queue GPU0 lane0/2 PID `34984`
+  - Training queue GPU1 lane1/2 PID `10044`
+  - Module queue GPU0 lane0/2 PID `1616`
+  - Module queue GPU1 lane1/2 PID `7052`
+- First queue-log snapshot shows the expected v4 starts:
+  - Training lane GPU0 started `cvcp_v1_sameq_10k_seed0`
+  - Training lane GPU1 started `cvcp_v1_sameq_10k_seed1`
+  - Module lane GPU0 started `sameq_10k_ccsh export_train_embeddings`
+  - Module lane GPU1 started `sameq_full_ccsh export_train_embeddings`
+- A 30-second post-launch GPU check at `2026-07-06T13:49:27+08:00` showed both RTX 3090s active with about `994 MiB` memory each and live Python compute processes:
+  - GPU0 processes included `train_qwen3vl_clinical_instruction.py` for `cvcp_v1_sameq_10k_seed0` and `export_qwen3vl_instruction_embeddings.py` for `sameq_10k_ccsh`
+  - GPU1 processes included `train_qwen3vl_clinical_instruction.py` for `cvcp_v1_sameq_10k_seed1` and `export_qwen3vl_instruction_embeddings.py` for `sameq_full_ccsh`
+- A deeper live-state check around `2026-07-06T13:58:xx+08:00` confirmed the new SAMEQ-v4 manifests are wired correctly:
+  - `configs/qwen3vl_instruction/sameq_v4_multiseed/cvcp_v1_sameq_10k_seed{0,1}.yaml` each point to isolated seed output dirs under `F:/Xiyao_Wang/021_260129VIVID_cvcp_ccsh_outputs/qwen3vl_sameq_v4_multiseed/`.
+  - `outputs/final_tables/sameq_v4_multiseed_manifest.csv` and `sameq_v4_multiseed_postprocess_manifest.csv` both reference the same seed-specific success/checkpoint paths and no longer rely on the old base-run directories.
+- The two active SAMEQ seed runs are not stalled at initialization:
+  - `cvcp_v1_sameq_10k_seed0` wrote `training_log.txt`, `progress.json`, `config_snapshot.json`, and reached at least `global_step=125`.
+  - `cvcp_v1_sameq_10k_seed1` wrote `training_log.txt`, `progress.json`, `config_snapshot.json`, and reached at least `global_step=125`.
+- `nvidia-smi --query-compute-apps` confirmed both GPUs are simultaneously carrying one seed-training process plus one bridge-export process:
+  - GPU0 hosts `cvcp_v1_sameq_10k_seed0` and `sameq_10k_ccsh`.
+  - GPU1 hosts `cvcp_v1_sameq_10k_seed1` and `sameq_full_ccsh`.
+- The corrected SAMEQ-v4 postprocess watchers are alive and now waiting exactly where expected:
+  - GPU0 watcher PID `7380` is waiting on `cvcp_v1_sameq_10k_seed0 training_not_ready`.
+  - GPU1 watcher PID `15684` is waiting on `cvcp_v1_sameq_10k_seed1 training_not_ready`.
+- The two bridge-export jobs still have only `START` in the wrapper logs and no finished output files yet, but their Python worker processes have sustained CPU time and multi-GB working sets, so they are active rather than dead-on-arrival.
+- A follow-up check about two minutes later showed the SAMEQ-10k seed runs still advancing cleanly:
+  - `cvcp_v1_sameq_10k_seed0` reached at least `global_step=300` by `2026-07-06T14:04:12+08:00`.
+  - `cvcp_v1_sameq_10k_seed1` reached at least `global_step=300` by `2026-07-06T14:04:21+08:00`.
+- `nvidia-smi --query-compute-apps` also resolved the apparent `cuda:0` ambiguity in the module queue: one export worker is attached to GPU0 and the other to GPU1, so the bridge exports are truly split across both 3090s instead of colliding onto a single visible device.
+- As of `2026-07-06T14:03:22+08:00`, the repaired SAMEQ-v4 postprocess watchers are still correctly waiting on `training_not_ready` for the two active seed runs, which is the expected state before the first `metrics_step_500.json`/final package appears.
+- Began synchronizing exact legacy evidence back into the authoritative source markdown `vivid_med_sameq_cvcp_next_experiment_plan_v4.md` instead of waiting for the full queue to finish:
+  - Prefilled the Phase 1 SAMEQ result table with exact completed rows for `SAMEQ-3k-5k`, `SAMEQ-10k-8k`, and `SAMEQ-full-12k`.
+  - Prefilled the Phase 2 CCSH result table with exact completed comparison rows for `Base+CCSH`, `SHUF-K4+CCSH`, and `Replay-CVCP+CCSH`.
+  - Marked `SAMEQ-10k+CCSH` and `SAMEQ-full+CCSH` as actively in progress in the source table instead of pretending those bridge rows are already closed.
+  - Added explicit notes in the source markdown that current NIH appendix values are not being promoted into the formal `External AUC` cells.
+- The two active SAMEQ-10k seed runs reached the first formal eval boundary:
+  - `cvcp_v1_sameq_10k_seed0` reached at least `global_step=500`.
+  - `cvcp_v1_sameq_10k_seed1` reached at least `global_step=500`.
+  - Postprocess watchers are still correctly waiting, which implies the queue logic is gating on final training completion rather than mid-run eval snapshots.
+- The first SAMEQ-v4 bridge wave completed end to end for the two highest-priority CCSH rows:
+  - `sameq_10k_ccsh` finished train/val embedding export, `train_module_ccsh`, and summarize.
+  - `sameq_full_ccsh` finished train/val embedding export, `train_module_ccsh`, and summarize.
+  - The module queue then advanced automatically to `sameq_full_ceq_ccsh` on one lane and `sameq_cf20_ccsh` on the other.
+- Updated the authoritative source markdown again after those artifacts landed:
+  - Replaced the in-progress placeholders for `SAMEQ-10k+CCSH` and `SAMEQ-full+CCSH` with exact metrics.
+  - Added `SAMEQ-CF-20` and `SAMEQ-CF-30` rows to the CF-compatible result table with explicit boundary notes about missing main-external and option-pair diagnostics.
+  - Completed the `Consistency F1` and `ECE` cells for the exact completed `Base+CCSH`, `SHUF-K4+CCSH`, and `Replay-CVCP+CCSH` baselines.
+- Ran another live-state verification after the first bridge write-back:
+  - GPU0 is still running `cvcp_v1_sameq_10k_seed0` plus `sameq_full_ceq_ccsh` export; GPU1 is still running `cvcp_v1_sameq_10k_seed1` plus `sameq_cf20_ccsh` export.
+  - `nvidia-smi` now shows the co-scheduled wave at about `14.0 GiB` on GPU0 and `13.6 GiB` on GPU1, so the two-GPU execution plan remains healthy.
+- Confirmed the first formal eval artifacts for the active pure SAMEQ seed sweep:
+  - `cvcp_v1_sameq_10k_seed0/metrics_step_500.json` exists with `val_loss=0.218644`, and `progress.json` has advanced to at least `global_step=600`.
+  - `cvcp_v1_sameq_10k_seed1/metrics_step_500.json` exists with `val_loss=0.159660`, and `progress.json` has advanced to at least `global_step=575`.
+  - The SAMEQ-v4 postprocess watchers are still waiting on final training completion, which confirms the watcher gate is `metrics_final.json` / final package readiness rather than the step-500 eval event.
+- Confirmed the second bridge wave has entered real work:
+  - GPU0 module lane is exporting train embeddings for `sameq_full_ceq_ccsh`.
+  - GPU1 module lane is exporting train embeddings for `sameq_cf20_ccsh`.
+  - The currently active embedding directories still look empty from the filesystem, which matches the existing export script behavior of writing artifacts late rather than streaming partial `.npz` files from step zero.
+- Continued synchronizing the authoritative v4 markdown with exact already-completed Phase 4 evidence instead of leaving those rows blank:
+  - Updated the `SAMEQ-10k-8k` and `SAMEQ-full-12k` notes so the document distinguishes active seed-refresh evidence from rows that are still queued.
+  - Replaced the stale `queued` wording for `SAMEQ-CF-20+CCSH` with the current exact runtime state: the bridge row is active and GPU1 is exporting `sameq_cf20_ccsh` train embeddings.
+  - Filled the CEQ table rows that already have exact evidence: `SAMEQ+CEQ`, `SAMEQ+CEQ+CCSH`, and `SAMEQ-K4+CEQ+CCSH`.
+  - Kept `SAMEQ-CF+CEQ+CCSH` explicitly pending and left `Attention quality` blank on purpose, because no exact same-row qualitative casebook/attention review artifact exists yet.
+- Short-interval recheck after a 180-second wait showed the remaining live work moving cleanly:
+  - `cvcp_v1_sameq_10k_seed0` and `seed1` both wrote `metrics_step_1000.json`; step-1000 eval losses are `0.137901` and `0.182700`.
+  - Both active pure-SAMEQ seeds continued well past that boundary and had reached at least `global_step=1500` by the recheck.
+  - GPU utilization dropped to the training-only footprint (`~9.6 GiB` on GPU0 and `~9.2 GiB` on GPU1), which indicated the bridge-export workers had already moved off the cards.
+- Verified that the second bridge wave fully closed during that interval:
+  - `sameq_full_ceq_ccsh` now has complete `ceq/metrics_final.json` and `ccsh/metrics_final.json`; its exact row is `complete` in `module_combo_results.csv`.
+  - `sameq_cf20_ccsh` now has `ccsh/metrics_final.json` and is `complete`.
+  - `sameq_cf20_ceq_ccsh` also landed both module metrics and is `complete`.
+- Updated the authoritative v4 markdown again to reflect those newly completed exact rows:
+  - Filled `SAMEQ-CF-20+CCSH` with the exact CCSH metrics.
+  - Refined the CEQ section from generic placeholders into the actual completed paper-ready rows, including `SAMEQ-full+CEQ+CCSH` and `SAMEQ-CF-20+CEQ+CCSH`.
+  - Left the qualitative `Attention quality` column intentionally blank because there is still no same-row formal qualitative review artifact to justify a paper-ready number or label.
+- Tightened a couple of remaining narrative mismatches in the source markdown:
+  - The `SAMEQ-CF-20` baseline note now says its paired `+CCSH` and `+CEQ+CCSH` bridge rows are closed, instead of still describing them as running.
+  - The locked-family shortlist now names the actual completed v4 finalists (`SAMEQ-full+CCSH`, `SAMEQ-CF-20+CCSH`, `SAMEQ-full+CEQ+CCSH`, `SAMEQ-CF-20+CEQ+CCSH`) instead of the older generic placeholders.
+- Brought the multiseed wording in the Phase 1 SAMEQ result table up to date as well: the live refresh note now references the current `step-1000` eval artifacts for seed0/seed1 rather than the older `step-500` checkpoint.
+- Continued source-markdown write-back beyond the bridge/core tables so the back half of the paper-ready document is no longer mostly placeholders:
+  - Added formal boundary notes to the HNMB and AUCH sections, making it explicit that the currently completed replay-backed stacks are not being mislabeled as exact SAMEQ-stack rows.
+  - Filled the curriculum table with exact `Direct-SAMEQ`, `CVCP-prog`, `CVCP-replay`, `CVCP-replay-CCSH`, and `CDCS-SAMEQ` evidence, while preserving a bounded note for the unnamed `CVCP-prog-SHUF` gap.
+  - Converted the external-evaluation table from blank cells into an explicit paper-ready boundary table: no accepted main external exists yet, and NIH stays appendix-only.
+  - Converted the model-comparison section from placeholders into an exact Qwen3-VL result row plus explicit architecture-boundary rows for InternVL, LLaVA, and text-only scaffolds.
+  - Filled the locked-comparison table with provisional finalists and added a note that true `mean±std` locking still depends on the in-flight pure-SAMEQ multiseed refresh.
+- Ran a fresh live audit after the previous write-back pass and confirmed the SAMEQ seed sweep kept moving:
+  - `cvcp_v1_sameq_10k_seed0` still has formal eval files through `metrics_step_2000.json` (`val_loss=0.201574`) and its `training_log.txt` has now advanced through `global_step=2500`.
+  - `cvcp_v1_sameq_10k_seed1` still has formal eval files through `metrics_step_2000.json` (`val_loss=0.204979`) and its `training_log.txt` has now advanced through `global_step=2450`.
+  - The latest GPU snapshot is back to the training-only footprint (`GPU0 36%, 9609 MiB`; `GPU1 32%, 9161 MiB`), which is consistent with the bridge/export wave already being closed and only the pure SAMEQ seeds remaining active.
+  - Postprocess watcher PIDs `7380` and `15684` are still alive and intentionally blocked on final training completion rather than the intermediate step-1000/1500/2000 eval milestones.
+- Patched the remaining stale SAMEQ-refresh wording across the source markdown, findings, and plan files so they now reference the step-2000 formal boundary instead of the older step-1000 snapshot.
+- Ran another 120-second live recheck to distinguish steady progress from a stall:
+  - `cvcp_v1_sameq_10k_seed0` wrote `metrics_step_2500.json` with `val_loss=0.206988`, and its `training_log.txt` continued through `global_step=2675`.
+  - `cvcp_v1_sameq_10k_seed1` also wrote `metrics_step_2500.json` with `val_loss=0.156731`, and its `training_log.txt` continued through `global_step=2600`.
+  - GPU utilization remained in the training-only regime (`GPU0 27%, 9609 MiB`; `GPU1 42%, 9161 MiB`), which is consistent with healthy continued training rather than a hung wrapper state.
+  - `cvcp_v1_sameq_10k_seed2` and all `cvcp_v1_sameq_full_seed*` output directories were still absent, so the queue has not yet advanced beyond the first active 10k pair.
+- Updated the authoritative v4 markdown and planning files again so the current multiseed note now references the stronger step-2500 evidence instead of the older step-2000 snapshot.
+- Patched `scripts/run_multiseed_manifest.py` with filesystem-backed status inference (`completed_existing` / `active` / `queued` / `output_dir_created`) so multiseed manifests can reflect live execution rather than leaving every non-final row at `planned`.
+- Refreshed `outputs/final_tables/sameq_v4_multiseed_manifest.{csv,md}` to match the current queue state: `cvcp_v1_sameq_10k_seed0/seed1` are `active`, while `cvcp_v1_sameq_10k_seed2` and all `cvcp_v1_sameq_full_seed*` rows remain `queued`.
+- Verified `python scripts\run_multiseed_manifest.py ...` now reproduces that same `active/queued` state directly from the CLI instead of requiring a manual rewrite path.
+- Patched `scripts/summarize_multiseed_results.py` so its boundary note matches the current SAMEQ v4 reality (`planned/queued/active` rows are not yet stability evidence), then wrote `outputs/final_tables/sameq_v4_multiseed_stability.{csv,md}` as the current paper-ready seed-sweep status artifact.
+- Updated `docs/README.md` so the active handoff index now points directly to the SAMEQ v4 multiseed manifest and stability snapshot alongside the main v4 source markdown.
+- Stayed with the live sweep long enough to capture the next formal boundary:
+  - `cvcp_v1_sameq_10k_seed0` wrote `metrics_step_3000.json` with `val_loss=0.173802` and then continued to `global_step=3025`.
+  - `cvcp_v1_sameq_10k_seed1` also wrote `metrics_step_3000.json` with `val_loss=0.216326`; its log has reached at least `global_step=3000`.
+  - The active SAMEQ result-table wording in the source markdown, findings, and task plan is now synchronized to the stronger step-3000 formal evidence instead of the older step-2500 snapshot.
+- Rechecked the active SAMEQ-10k pair again after the step-3000 milestone and confirmed both lanes are still moving without queue takeover yet:
+  - `cvcp_v1_sameq_10k_seed0` has now written `metrics_step_4000.json` with `val_loss=0.196355` and then continued to `global_step=4375`.
+  - `cvcp_v1_sameq_10k_seed1` has now also written `metrics_step_4000.json` with `val_loss=0.249366` and then continued to `global_step=4275`.
+  - No `metrics_final.json` exists yet for either run, and `cvcp_v1_sameq_10k_seed2` plus all `cvcp_v1_sameq_full_seed*` directories are still absent, so the queue has not yet advanced beyond the first active 10k pair.
+- Audited the multiseed configs and queue/watcher logic to separate “still running” from “possibly stuck”:
+  - `configs/qwen3vl_instruction/sameq_v4_multiseed/cvcp_v1_sameq_10k_seed0.yaml` confirms the active 10k seed family is configured for `max_steps: 8000`.
+  - `configs/qwen3vl_instruction/sameq_v4_multiseed/cvcp_v1_sameq_full_seed0.yaml` confirms the queued full-scale family is configured for `max_steps: 12000`.
+  - `scripts/run_cvcp_ccsh_training_queue.ps1` still advances only after a row writes `metrics_final.json`; `scripts/run_cvcp_ccsh_postprocess_queue.ps1` still waits for both `metrics_final.json` and `checkpoints/final.pt`.
+  - Fresh tails of `postprocess_gpu0_lane0_of2.log` and `postprocess_gpu1_lane1_of2.log` continue writing `WAIT ... training_not_ready` every two minutes, which confirms the postprocess lanes are alive and correctly gated instead of having exited.
+- Strengthened the live SAMEQ status artifacts so they now capture more than `active/queued`:
+  - Patched `scripts/run_multiseed_manifest.py` to expose `latest_formal_eval_step`, `latest_formal_val_loss`, and `latest_live_step` per seed row.
+  - Patched `scripts/summarize_multiseed_results.py` to carry those fields through into the paper-ready stability snapshot, with a defensive fallback that recomputes them from `output_dir` if the manifest row is missing them.
+  - Regenerated `outputs/final_tables/sameq_v4_multiseed_manifest.{csv,md}` and `sameq_v4_multiseed_stability.{csv,md}`; the active `SAMEQ-10k` rows now show formal step-4000 eval losses plus live train-log steps (`4275` and `4175`) without overstating them as final multiseed evidence.
+  - A later live recheck showed the same formal step-4000 boundary still holds, while the training logs continued on to `global_step=4375` for seed0 and `4275` for seed1; the queue still has not produced `metrics_final.json` or created the `seed2` directory yet.
+- Ran a tighter live-state refresh after the later step-4000 boundary:
+  - `progress.json` now reaches `global_step=4500` for `cvcp_v1_sameq_10k_seed0`, while `cvcp_v1_sameq_10k_seed1` has continued at least to `global_step=4475`; no `metrics_step_4500.json`, `metrics_final.json`, or `checkpoints/final.pt` exists yet for either run.
+  - `outputs/logs/cvcp_ccsh_postprocess/postprocess_gpu0_lane0_of2.log` and `postprocess_gpu1_lane1_of2.log` continue writing `WAIT ... training_not_ready` every two minutes through `2026-07-06T15:51:23+08:00`, so the watcher gate is healthy rather than stalled.
+  - `cvcp_v1_sameq_10k_seed2` and all `cvcp_v1_sameq_full_seed*` output directories are still absent, confirming the queue has not handed off beyond the first active 10k pair.
+  - After correcting one mistaken parallel regeneration, reran `sameq_v4_multiseed_manifest` and then `sameq_v4_multiseed_stability` sequentially; both artifacts now consistently report the active `SAMEQ-10k` rows at `latest_formal_eval_step=4000`, `latest_formal_val_loss=0.196355/0.249366`, and `latest_live_step=4500/4500`.
+- A rapid post-edit recheck immediately moved the boundary again:
+  - `cvcp_v1_sameq_10k_seed0` wrote `metrics_step_4500.json` with `val_loss=0.23758074538430074` and then continued to `latest_live_step=4575`.
+  - `cvcp_v1_sameq_10k_seed1` still had no `metrics_step_4500.json`, but its `progress.json` had reached `latest_live_step=4500`.
+  - Postprocess watchers remained healthy through `2026-07-06T15:55:23+08:00`, still writing `WAIT ... training_not_ready` for both active seeds.
+  - Reran `sameq_v4_multiseed_manifest` and then `sameq_v4_multiseed_stability` sequentially again so the published artifacts now match the asymmetric current state: `seed0=step-4500/loss 0.237581/live 4575`, `seed1=step-4000/loss 0.249366/live 4500`.
+- A final short recheck removed that asymmetry again:
+  - `cvcp_v1_sameq_10k_seed1` then wrote `metrics_step_4500.json` with `val_loss=0.17097222052484137`, while `cvcp_v1_sameq_10k_seed0` continued beyond the eval boundary.
+  - The newest sequential manifest/stability refresh now reports both active seeds at the shared formal `step-4500` boundary, with `latest_formal_val_loss=0.237581/0.170972` and `latest_live_step=4625/4525`.
+  - `metrics_final.json`, `checkpoints/final.pt`, `cvcp_v1_sameq_10k_seed2`, and all `cvcp_v1_sameq_full_seed*` outputs are still absent, so the queue has still not handed off beyond the first active 10k pair.
+- Continued the SAMEQ multiseed monitoring loop without any handoff yet:
+  - A fresh live-state check showed no new final-package evidence, no `seed2` / `SAMEQ-full` output directories, and postprocess watchers still writing healthy `WAIT ... training_not_ready` lines every two minutes.
+  - `progress.json` has now advanced to `latest_live_step=4750` for `cvcp_v1_sameq_10k_seed0` and `latest_live_step=4650` for `cvcp_v1_sameq_10k_seed1`, while the strongest shared formal boundary remains `metrics_step_4500.json` for both active seeds.
+  - Reran `sameq_v4_multiseed_manifest` and then `sameq_v4_multiseed_stability` sequentially once more so the published status artifacts now match the newest verified live progress: `seed0=step-4500/loss 0.237581/live 4750`, `seed1=step-4500/loss 0.170972/live 4650`.
+- One more short monitoring window pushed the live boundary forward again without changing the formal evidence:
+  - `cvcp_v1_sameq_10k_seed0` has now reached `latest_live_step=5000`, which places it inside the next eval/checkpoint window, but `metrics_step_5000.json` is still not written yet.
+  - `cvcp_v1_sameq_10k_seed1` has advanced to `latest_live_step=4950` while still holding the same formal `step-4500` eval artifact.
+  - Reran `sameq_v4_multiseed_manifest` and then `sameq_v4_multiseed_stability` sequentially again so the published status artifacts now match the newest verified live progress: `seed0=step-4500/loss 0.237581/live 5000`, `seed1=step-4500/loss 0.170972/live 4950`.
+- 2026-07-06T16:08:35+08:00 user changed the monitoring cadence again: estimate remaining time from current evidence, then switch to a direct foreground Codex sleep loop with `Start-Sleep -Seconds 3600` after each check. No automation/scheduler should be used for this SAMEQ v4 closeout loop.
+- 2026-07-06T17:09:29+08:00 one-hour foreground sleep check showed a true phase transition rather than another minor live-step update:
+  - `cvcp_v1_sameq_10k_seed0` completed training at `2026-07-06T16:47:37+08:00`, wrote `metrics_final.json`, `checkpoints/final.pt`, and `metrics_step_8000.json`, and the training lane immediately advanced to `cvcp_v1_sameq_10k_seed2`.
+  - `cvcp_v1_sameq_10k_seed1` completed training at `2026-07-06T16:49:07+08:00`, wrote `metrics_final.json`, `checkpoints/final.pt`, and `metrics_step_8000.json`, and the other lane immediately advanced to `cvcp_v1_sameq_full_seed0`.
+  - Postprocess watchers crossed the readiness gate for both completed 10k seeds: LP and NIH appendix 1k finished for both rows, visual-dependence finished for both rows, and both rows were running `counterfactual` by `17:09`.
+  - Sequentially reran `sameq_v4_multiseed_manifest` and `sameq_v4_multiseed_stability`; the published status artifacts now show `seed0/seed1=completed_existing`, `seed2=active (step-1000 loss 0.215413, live 1500)`, `full_seed0=active (step-1000 loss 0.137901, live 1275)`, and `full_seed1/2=queued`.
+- 2026-07-06T18:12:35+08:00 the next hourly foreground check showed continued clean queue execution rather than a stall:
+  - `cvcp_v1_sameq_10k_seed0` and `seed1` both remained fully complete at the training layer (`metrics_final.json + final.pt + step-8000 eval`).
+  - Downstream postprocess for the completed 10k pair also finished end to end: `seed0` reached `DONE ... summarize` at `17:17:42+08:00`, and `seed1` reached `DONE ... summarize` at `17:18:25+08:00`.
+  - Active training has progressed materially on the next two rows: `cvcp_v1_sameq_10k_seed2` now shows `step-5500` eval loss `0.226057` with live step `5700`, and `cvcp_v1_sameq_full_seed0` now shows `step-5000` eval loss `0.144361` with live step `5500`.
+  - Sequentially reran `sameq_v4_multiseed_manifest` and `sameq_v4_multiseed_stability` again after the check; the published artifacts still show `seed0/1=completed_existing`, while `seed2` and `full_seed0` remain the two active rows and `full_seed1/2` remain queued.
+- 2026-07-06T18:17:48+08:00 a short follow-up refresh closed the remaining artifact lag and tightened the remaining-time estimate:
+  - Sequentially reran `sameq_v4_multiseed_manifest` and `sameq_v4_multiseed_stability` in the correct order again; the published artifacts now match the live queue instead of the older `step-1000` snapshot.
+  - `cvcp_v1_sameq_10k_seed2` now publishes as `active (step-5500 loss 0.226057, live 6000)`, and `cvcp_v1_sameq_full_seed0` now publishes as `active (step-5500 loss 0.185037, live 5775)`.
+  - Postprocess watchers are still healthy and writing `WAIT ... training_not_ready` every two minutes for those two active rows, so there is no evidence of a silent gate failure.
+  - Using the active-run start times and current step rates, the training critical path is now approximately `5h10m` from this check if throughput stays steady and the even/odd lane split continues normally; that projects full training plus final downstream summarize closeout around `2026-07-06 23:25-23:35 +08:00`.
+- 2026-07-06T19:20:34+08:00 the next hourly foreground check confirmed a second real queue handoff instead of a stall:
+  - `cvcp_v1_sameq_10k_seed2` has now completed formal training with `metrics_final.json + final.pt + step-8000 eval` (`val_loss=0.184094`), and the GPU0 postprocess lane has already started its downstream package (`lp` and `nih_appendix_1k` done, `visual` running).
+  - GPU0 training immediately handed off again to `cvcp_v1_sameq_full_seed1`, which now shows formal `step-500` loss `0.159660` and live step `975`.
+  - GPU1 remains on `cvcp_v1_sameq_full_seed0`, which has progressed to formal `step-8500` loss `0.213160` and live step `8750`; `cvcp_v1_sameq_full_seed2` is still not started.
+  - Sequentially reran `sameq_v4_multiseed_manifest` and `sameq_v4_multiseed_stability` again after the check; the published artifacts now show the full 10k triplet as `completed_existing`, `full_seed0/full_seed1` as `active`, and only `full_seed2` as `queued`.
+  - The queue critical path is now the full-scale family. If the current full-seed throughput and postprocess tail stay stable, the remaining wall-clock is roughly `4h40m-5h00m` from this check, which projects total closeout around `2026-07-07 00:00-00:20 +08:00`.
+- 2026-07-06T20:25:54+08:00 the next hourly foreground check confirmed a third real queue handoff and effectively closed the 10k family:
+  - `cvcp_v1_sameq_10k_seed2` finished its full downstream package through `summarize` at `2026-07-06T19:44:11+08:00`, so the 10k triplet is now closed end to end rather than only training-complete.
+  - `cvcp_v1_sameq_full_seed0` has completed formal training with `metrics_final.json + final.pt + step-12000` and the GPU1 postprocess lane has already started `lp`.
+  - GPU0 training is now on `cvcp_v1_sameq_full_seed1` with formal `step-4500` loss `0.170972` and live step `4525`, while GPU1 training has already handed off again to newly started `cvcp_v1_sameq_full_seed2` (`live step 300` at refresh time).
+  - Sequentially reran `sameq_v4_multiseed_manifest` and `sameq_v4_multiseed_stability` again after the handoff; the published artifacts now show `10k_seed0/1/2 + full_seed0 = completed_existing`, with only `full_seed1/full_seed2` remaining active.
+  - The critical path is now almost entirely `full_seed2` plus its postprocess tail. If the current throughput holds, total closeout is still most likely around `2026-07-07 00:10-00:30 +08:00`.
+- 2026-07-06T21:28:35+08:00 the next hourly foreground check narrowed the closeout path again:
+  - `cvcp_v1_sameq_full_seed0` finished its downstream package through `summarize` at `2026-07-06T20:55:34+08:00`, so both the entire 10k family and `full_seed0` are now fully closed end to end.
+  - `cvcp_v1_sameq_full_seed1` has progressed to formal `step-8000` loss `0.205080` with live step `8500`.
+  - `cvcp_v1_sameq_full_seed2` has progressed to formal `step-3500` loss `0.242523` with live step `4000`.
+  - Sequentially reran `sameq_v4_multiseed_manifest` and `sameq_v4_multiseed_stability` again after the check; the published artifacts now match the live state with `full_seed1/full_seed2` as the only remaining active rows.
+  - At the current rates, the likely finish window has tightened further to about `2026-07-07 00:05-00:15 +08:00`, with `full_seed2` plus its postprocess tail remaining the longest path.
+- 2026-07-06T22:30:26+08:00 the next hourly foreground check moved both remaining training rows deep into the final window:
+  - `cvcp_v1_sameq_full_seed1` has advanced to formal `step-11500` loss `0.222070` with live step `11875`, so it is only a short distance from formal training completion.
+  - `cvcp_v1_sameq_full_seed2` has advanced to formal `step-7000` loss `0.203718` with live step `7375`.
+  - Postprocess watchers remain healthy and idle-gated on the two remaining full-scale rows: GPU0 is waiting on `full_seed1`, and GPU1 is waiting on `full_seed2`.
+  - Sequentially reran `sameq_v4_multiseed_manifest` and `sameq_v4_multiseed_stability` again after the check; the published artifacts now reflect the `step-11500` / `step-7000` boundary.
+  - The projected finish window remains centered on `2026-07-07 00:10-00:20 +08:00`, with `full_seed2` plus its downstream package still the longest path.
+- 2026-07-06T23:32:19+08:00 the next hourly foreground check reduced the queue to a single remaining active row:
+  - `cvcp_v1_sameq_full_seed1` has completed formal training and downstream package through `summarize`; the GPU0 postprocess lane ended with `QUEUE_DONE`.
+  - `cvcp_v1_sameq_full_seed2` is now the only remaining active row, with formal `step-10000` loss `0.197462` and live step `10375`.
+  - Sequentially reran `sameq_v4_multiseed_manifest` and `sameq_v4_multiseed_stability` again after the check; the published artifacts now show `full_seed2` as the only active row and every other seed as `completed_existing`.
+  - The remaining wall-clock is now essentially `full_seed2` plus its postprocess tail, which keeps the likely final closeout window around `2026-07-07 00:20-00:35 +08:00`.
+- 2026-07-07T00:34:14+08:00 user stopped the hourly sleep loop and requested dense completion checking instead:
+  - `cvcp_v1_sameq_full_seed2` has now completed formal training with `metrics_final.json + final.pt`; the postprocess log shows `lp`, `nih_appendix_1k`, and `visual` all completed, and `counterfactual` is currently running.
+  - GPU0 now only shows a small postprocess footprint, while GPU1 carries the active `counterfactual` worker; this matches the expected final-tail behavior rather than a stalled queue.
+  - The queue has therefore fully exited the training phase. The only remaining work is the last downstream chain for `full_seed2`: `counterfactual -> ab_swap_jsonl -> ab_swap_config -> ab_swap_counterfactual -> paraphrase -> summarize`.
+- 2026-07-07T00:46:26+08:00 dense completion checking reached the final closeout boundary:
+  - `cvcp_v1_sameq_full_seed2` finished `counterfactual -> ab_swap_jsonl -> ab_swap_config -> ab_swap_counterfactual -> paraphrase -> summarize`, and the GPU1 postprocess lane ended with `QUEUE_DONE`.
+  - Sequentially reran `sameq_v4_multiseed_manifest` and `sameq_v4_multiseed_stability`; all six rows now publish as `completed_existing`.
+  - All SAMEQ-v4 experiment workers are done. A residual `Python312` process remains on GPU0, but it is outside the `conda env vivid` experiment chain and is treated as unrelated host noise rather than an unclosed SAMEQ-v4 worker.
+
 ## 2026-06-28
 
 - Resumed active Qwen3-VL v2 objective while preserving old MIMIC V1-V4 closure as baseline-only evidence.

@@ -7,7 +7,8 @@ param(
     [int]$MaxMemoryMiB = 16000,
     [int]$PollSeconds = 120,
     [string]$NihManifest = "data\dataset\processed\nih_external_test_ums.jsonl",
-    [string]$DataRoot = "H:/Xiyao_Wang/000_Public Dataset"
+    [string]$DataRoot = "H:/Xiyao_Wang/000_Public Dataset",
+    [string]$SummarizeArgs = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -161,7 +162,11 @@ for ($i = 0; $i -lt $rows.Count; $i++) {
 
     Invoke-Logged -RunId $row.id -StepName "paraphrase" -SuccessPath $row.paraphrase_output -Command "conda run -n $CondaEnv python scripts\evaluate_qwen3vl_paraphrase_robustness.py --config $trainConfig --checkpoint $checkpointArg --output $paraphraseOutput --max-samples 1000 --batch-size 1 --device $device" -Required $false
 
-    Invoke-Logged -RunId $row.id -StepName "summarize" -SuccessPath "" -Command "conda run -n $CondaEnv python scripts\summarize_cvcp_ccsh_results.py"
+    $summarizeCommand = "conda run -n $CondaEnv python scripts\summarize_cvcp_ccsh_results.py"
+    if ($SummarizeArgs) {
+        $summarizeCommand = "$summarizeCommand $SummarizeArgs"
+    }
+    Invoke-Logged -RunId $row.id -StepName "summarize" -SuccessPath "" -Command $summarizeCommand
 }
 
 Write-QueueLog "QUEUE_DONE"

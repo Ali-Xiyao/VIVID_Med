@@ -1,4 +1,69 @@
-# VIVID-Med CVCP/CCSH Full Experiment Execution Plan
+# VIVID-Med SAMEQ-CVCP v4 Paper-Ready Execution Plan
+
+## Active Scope
+
+Execute and close `vivid_med_sameq_cvcp_next_experiment_plan_v4.md` at the same paper-ready standard used in prior repo closeouts. Treat the v4 document as the authoritative target. Reuse prior CVCP/CCSH artifacts only when the run identity, backbone, module stack, and table semantics match the v4 wording; otherwise either run the exact missing experiment or record an explicit bounded limitation in the source markdown.
+
+## Goal
+
+Produce artifact-backed completion for the SAMEQ-CVCP v4 route: exact SAMEQ/CVCP training rows, SAMEQ/CCSH/CEQ bridge rows, SAMEQ repair rows, curriculum rows, multi-seed evidence for the pure SAMEQ family, bounded external/model-comparison decisions, refreshed final tables, and final write-back into `vivid_med_sameq_cvcp_next_experiment_plan_v4.md`.
+
+## Current Phase
+
+- [x] Phase S0: Skill pre-flight, memory lookup, session catchup, UTF-8 reads, goal-state check, and GPU snapshot.
+- [x] Phase S1: Audit the v4 plan against current repo artifacts, scripts, configs, and old CVCP/CCSH closure outputs.
+- [x] Phase S2: Identify which v4 requirements are already closed by exact or near-exact evidence and which still need exact formal runs.
+- [x] Phase S3: Repoint planning files, docs index, and source-of-truth notes from the old v3 closure to the active v4 SAMEQ-CVCP document.
+- [x] Phase S4: Materialize and run the exact missing SAMEQ-v4 experiments:
+  - [x] `SAMEQ-10k+CCSH`
+  - [x] `SAMEQ-full+CCSH`
+  - [x] `SAMEQ-full+CEQ+CCSH`
+  - [x] `SAMEQ-CF-20+CCSH`
+  - [x] `SAMEQ-CF-20+CEQ+CCSH`
+  - [x] pure SAMEQ multi-seed rows for `SAMEQ-10k-8k` (all three seeds are complete through downstream `summarize`)
+  - [x] pure SAMEQ multi-seed rows for `SAMEQ-full-12k` (all three seeds are complete through downstream `summarize`)
+- [x] Phase S5: Refresh formal result tables/audits and map old CVCP rows into the v4 paper-ready wording without overclaiming unavailable external/model rows.
+- [x] Phase S6: Write final closure and populated tables into `vivid_med_sameq_cvcp_next_experiment_plan_v4.md`, refresh `docs/README.md`, and rerun final verification after the last edit.
+
+## Gap Snapshot
+
+| Area | Current state | Action |
+| --- | --- | --- |
+| SAMEQ/CVCP backbone rows | `27/27` formal CVCP/CF/token-weighting/dual rows already exist. | Reuse exact rows where names/semantics match v4. |
+| SAMEQ bridge rows | The exact v4 bridge subset is now closed for `SAMEQ-10k`, `SAMEQ-full`, and `SAMEQ-CF-20`, including the CEQ+CCSH upper rows. | Keep the source markdown synchronized with the landed exact metrics while the pure-SAMEQ seed sweep continues. |
+| SAMEQ multi-seed | Prior repo has multi-seed for SHUF/SAMEQ-SHUF/K4 families, not pure SAMEQ-CVCP. | Generate seed-specific SAMEQ manifests and run them formally. |
+| External main dataset | VinDr is image-only; PadChest missing; NIH is appendix-only; MIMIC is conditional. | Keep as explicit bounded limitation unless a main external becomes runnable locally. |
+| Model comparison | Qwen3-VL is supported; InternVL/LLaVA/text scaffolds remain trainer-boundary rows. | Keep as explicit compatibility/boundary evidence unless new trainer adapters are implemented. |
+| Source doc sync | `vivid_med_sameq_cvcp_next_experiment_plan_v4.md` is untracked and has no final closure section yet. | Make it the final synchronized target for this goal. |
+
+## Execution Resources
+
+- Local GPUs are approved by the user for this goal: GPU0 and GPU1 are both NVIDIA GeForce RTX 3090 24 GiB.
+- Fresh snapshot on 2026-07-06T13:41:20+08:00 showed both GPUs idle at `0 MiB` and `0%` utilization.
+- Live snapshot at 2026-07-06T14:20:xx+08:00 showed both GPUs active again: pure SAMEQ multi-seed training is running on both devices, and the second bridge wave is co-scheduled alongside it at roughly `14.0/24.6 GiB` on GPU0 and `13.6/24.6 GiB` on GPU1.
+- Current worktree note: `vivid_med_sameq_cvcp_next_experiment_plan_v4.md` is untracked; do not lose its current wording while syncing formal results back into it.
+- The existing CVCP queue scripts and module-combo queue scripts already support custom manifests and lane splitting; prefer reusing them instead of inventing new queue wrappers unless the manifest shape is insufficient.
+- Current live queue state:
+  - Training queue GPU0 lane0/2 PID `34984` completed `cvcp_v1_sameq_10k_seed0` at `2026-07-06T16:47:37+08:00`; `cvcp_v1_sameq_10k_seed2` and `cvcp_v1_sameq_full_seed1` also completed formal training plus downstream package through `summarize`, and this lane is fully drained.
+  - Training queue GPU1 lane1/2 PID `10044` completed `cvcp_v1_sameq_10k_seed1` at `2026-07-06T16:49:07+08:00`; `cvcp_v1_sameq_full_seed0` and `cvcp_v1_sameq_full_seed2` also completed formal training plus downstream package through `summarize`, and this lane is fully drained as well.
+  - Module queue roots `1616` and `7052` have exited after closing the full v4 bridge subset: `sameq_full_ceq_ccsh`, `sameq_cf20_ccsh`, and `sameq_cf20_ceq_ccsh` are all `complete` in `outputs/final_tables/module_combo_results.csv`.
+  - Exact new bridge metrics are now landed: `sameq_full_ceq_ccsh` (`CEQ auc=0.869218`, `CCSH auc=0.881573`), `sameq_cf20_ccsh` (`CCSH auc=0.831303`), and `sameq_cf20_ceq_ccsh` (`CEQ auc=0.835453`, `CCSH auc=0.831303`).
+  - Postprocess watchers GPU0/GPU1 PIDs `7380` and `15684` fully drained the completed 10k pair through downstream package closeout: both seeds finished LP, NIH appendix 1k, visual dependence, counterfactual, A/B-swap counterfactual, paraphrase, and summarize between `2026-07-06T16:49+08:00` and `2026-07-06T17:18+08:00`.
+  - The queue is now fully closed: `cvcp_v1_sameq_10k_seed0/1/2` and `cvcp_v1_sameq_full_seed0/1/2` are all complete through downstream `summarize`.
+  - `outputs/final_tables/sameq_v4_multiseed_manifest.{csv,md}` has been refreshed to the final boundary: all six rows are now `completed_existing`.
+  - `outputs/final_tables/sameq_v4_multiseed_stability.{csv,md}` now records the same final paper-ready boundary: all six rows are complete.
+
+## Evidence Rules
+
+- A v4 row is complete only when the exact run package, config/resolved config, metrics, diagnostics, and final-table row exist for that SAMEQ-CVCP wording, or when an explicit evidence-backed boundary is written into the v4 document.
+- Near-match prior artifacts may support interpretation, but they cannot close an exact v4 row if the backbone scale, seed requirement, or module stack differs.
+- Multi-seed claims for pure SAMEQ must come from seed-specific SAMEQ outputs, not from SHUF/SAMEQ-SHUF legacy families.
+- External and model-comparison rows may be closed as bounded limitations only if the current local audit still shows the same hard constraint after this turn's verification.
+- Final completion requires the v4 source markdown, `docs/README.md`, and final audits to agree after the last edit.
+
+---
+
+# Historical Section: VIVID-Med CVCP/CCSH Full Experiment Execution Plan
 
 ## Active Scope
 
@@ -47,7 +112,7 @@ Produce artifact-backed completion for the full CVCP/CCSH plan: data/external se
   - GPU0 module PID `31452`.
   - GPU1 module PID `22352`.
 - Recovery snapshot at 2026-07-04T18:04:05+08:00: the first row `cvcp_v1_sameq_3k` is complete end-to-end; `cvcp_v1_sameq_10k` training is complete but LP postprocess was interrupted before `metrics_final.json`; training lanes for `cvcp_v1_sameq_full` and `cvcp_v2_shuf_k2` were externally interrupted with exit code `1073807364` and have no checkpoint because the new configs use final-only checkpointing.
-- `scripts/run_cvcp_ccsh_training_queue.ps1` now archives any no-`metrics_final.json`/no-checkpoint training output directory into the F-drive `interrupted_runs/` evidence area before rerunning that run from scratch. Routine manual monitoring follows the user's latest request: after each status check, run a direct PowerShell sleep (`Start-Sleep -Seconds 7200`) and then check again. Do not set up automations or schedulers for this monitoring loop.
+- `scripts/run_cvcp_ccsh_training_queue.ps1` now archives any no-`metrics_final.json`/no-checkpoint training output directory into the F-drive `interrupted_runs/` evidence area before rerunning that run from scratch. Routine manual monitoring now follows the user's latest request from `2026-07-06T16:08:35+08:00`: after each status check, run a direct foreground PowerShell sleep (`Start-Sleep -Seconds 3600`) in Codex and then check again. Do not set up automations or schedulers for this monitoring loop.
 - Relaunch snapshot at 2026-07-04T18:05:37+08:00: training PIDs `22440`/`21372`, postprocess PIDs `11808`/`21488`, module-combo PIDs `20656`/`4480`. The rerun health check at 2026-07-04T18:09:30+08:00 showed `cvcp_v1_sameq_full` and `cvcp_v2_shuf_k2` actively logging new train steps and GPU memory below capacity.
 - Current branch is `codex/vivid-med-p0-consolidation`; the worktree already contains substantial existing tracked and untracked changes from earlier project work. Do not revert unrelated changes.
 
