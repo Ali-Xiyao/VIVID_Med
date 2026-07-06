@@ -33,10 +33,11 @@ Image → ViT(train) → Projector(train) → Frozen LLM(forward) → JSON token
 ├── evaluation/             # 评估模块
 │   ├── verifier.py         # UMS Verifier
 │   └── metrics.py          # 评估指标
+├── docs/                   # 活跃 requirement ledgers、handoff 和边界说明
 ├── scripts/                # 运行脚本
 │   ├── train_cxr.py        # CXR 训练脚本
 │   └── test_pipeline.py    # 测试脚本
-└── Profle/                 # 设计文档
+└── profile/                # 设计文档与历史方案
 ```
 
 ## 快速开始
@@ -188,10 +189,17 @@ outputs = llm(inputs_embeds=visual_embeds, ...)  # 不要包在 torch.no_grad() 
 
 ## 参考文档
 
-详细设计文档见 `Profle/` 目录：
-- `00_方案总览.md` - 整体方案
-- `02_方法.md` - 方法细节
-- `03_数据集.md` - 数据集说明
-- `04_模型.md` - 模型配置
-- `05_UMS_与Verifier_与FailureTaxonomy.md` - UMS 规范
-- `06_训练目标与SamplePolicy.md` - 训练目标
+当前交接入口见 `docs/README.md`。本轮 case-study/module 计划的活跃结果入口是：
+
+- `vivid_med_case_study_modules_next_experiment_plan.md`
+- `docs/case_study_modules_requirement_ledger.md`
+- `outputs/final_tables/case_study_modules_completion_audit.md`
+- `outputs/final_tables/locked_final_comparison.md`
+
+详细设计文档见 `profile/` 目录：
+- `profile/README.md` - profile 文档索引
+- `profile/01_方案与方法.md` - 当前方案与方法
+- `profile/02_数据与实验.md` - 数据与实验设置
+- `profile/03_写作参考.md` - 写作参考
+- `profile/汇报清单.md` - 汇报材料清单
+- `profile/archive/` - 历史方案与旧版记录

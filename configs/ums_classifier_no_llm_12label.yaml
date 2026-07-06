@@ -1,0 +1,57 @@
+# No-LLM UMS classifier: ViT-B predicts 4-state logits for each UMS finding.
+# This controls whether the UMS schema alone explains VIVID-Med gains.
+
+data:
+  data_root: "./data/dataset"
+  train_ums_path: "./data/dataset/processed/chexpert_ums_train.jsonl"
+  val_ums_path: "./data/dataset/processed/chexpert_ums_val.jsonl"
+  selected_labels:
+    - "Enlarged Cardiomediastinum"
+    - "Cardiomegaly"
+    - "Lung Opacity"
+    - "Lung Lesion"
+    - "Edema"
+    - "Consolidation"
+    - "Pneumonia"
+    - "Atelectasis"
+    - "Pneumothorax"
+    - "Pleural Effusion"
+    - "Fracture"
+    - "Support Devices"
+  image_size: 224
+  max_val_samples: 1000
+  num_workers: 4
+
+model:
+  vit_model_name: "vit_base_patch16_224"
+  vit_pretrained: true
+  drop_rate: 0.0
+  drop_path_rate: 0.1
+
+training:
+  learning_rate: 1.0e-4
+  weight_decay: 0.01
+  warmup_steps: 500
+  max_steps: 10000
+  batch_size: 32
+  eval_batch_size: 64
+  gradient_accumulation_steps: 1
+  max_grad_norm: 1.0
+  fp16: false
+  bf16: true
+  log_interval: 10
+  eval_interval: 500
+  save_interval: 1000
+  output_dir: "./outputs/ums_classifier_no_llm_12label_full"
+  state_class_weights:
+    null: 0.25
+    absent: 1.0
+    uncertain: 1.0
+    present: 1.0
+
+evaluation:
+  threshold: 0.5
+  uncertain_policy: "ignore"
+
+seed: 42
+device: "cuda"

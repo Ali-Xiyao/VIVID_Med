@@ -9,14 +9,32 @@
 
 import numpy as np
 from typing import Dict, Any, List, Optional, Tuple
-from sklearn.metrics import (
-    roc_auc_score,
-    f1_score,
-    precision_score,
-    recall_score,
-    accuracy_score,
-    confusion_matrix,
-)
+
+
+_SKLEARN_METRICS = None
+
+
+def _get_sklearn_metrics():
+    global _SKLEARN_METRICS
+    if _SKLEARN_METRICS is None:
+        from sklearn.metrics import (
+            accuracy_score,
+            average_precision_score,
+            f1_score,
+            precision_score,
+            recall_score,
+            roc_auc_score,
+        )
+
+        _SKLEARN_METRICS = {
+            "accuracy_score": accuracy_score,
+            "average_precision_score": average_precision_score,
+            "f1_score": f1_score,
+            "precision_score": precision_score,
+            "recall_score": recall_score,
+            "roc_auc_score": roc_auc_score,
+        }
+    return _SKLEARN_METRICS
 
 
 def compute_classification_metrics(
@@ -39,6 +57,13 @@ def compute_classification_metrics(
     Returns:
         包含各项指标的字典
     """
+    sklearn_metrics = _get_sklearn_metrics()
+    accuracy_score = sklearn_metrics["accuracy_score"]
+    f1_score = sklearn_metrics["f1_score"]
+    precision_score = sklearn_metrics["precision_score"]
+    recall_score = sklearn_metrics["recall_score"]
+    roc_auc_score = sklearn_metrics["roc_auc_score"]
+    average_precision_score = sklearn_metrics["average_precision_score"]
     metrics = {}
 
     # 处理多标签情况
@@ -55,6 +80,9 @@ def compute_classification_metrics(
         # 每个标签的指标
         per_label_metrics = {}
         aucs = []
+        auprcs = []
+        eces = []
+        briers = []
         f1s = []
 
         for i in valid_labels:
@@ -88,12 +116,26 @@ def compute_classification_metrics(
                     if np.issubdtype(y_prob.dtype, np.floating):
                         prob_mask = prob_mask & np.isfinite(y_prob[:, i])
                     if prob_mask.sum() > 0:
-                        label_metrics["auc"] = roc_auc_score(y_true[prob_mask, i], y_prob[prob_mask, i])
+                        y_t_prob = y_true[prob_mask, i]
+                        y_p_prob = y_prob[prob_mask, i]
+                        label_metrics["auc"] = roc_auc_score(y_t_prob, y_p_prob)
+                        label_metrics["auprc"] = average_precision_score(y_t_prob, y_p_prob)
+                        label_metrics["brier"] = float(np.mean((y_p_prob - y_t_prob) ** 2))
+                        label_metrics["ece"] = compute_ece(y_t_prob, y_p_prob, n_bins=10)
                         aucs.append(label_metrics["auc"])
+                        auprcs.append(label_metrics["auprc"])
+                        briers.append(label_metrics["brier"])
+                        eces.append(label_metrics["ece"])
                     else:
                         label_metrics["auc"] = None
+                        label_metrics["auprc"] = None
+                        label_metrics["brier"] = None
+                        label_metrics["ece"] = None
                 except:
                     label_metrics["auc"] = None
+                    label_metrics["auprc"] = None
+                    label_metrics["brier"] = None
+                    label_metrics["ece"] = None
 
             f1s.append(label_metrics["f1"])
             per_label_metrics[label_name] = label_metrics
@@ -101,6 +143,9 @@ def compute_classification_metrics(
         metrics["per_label"] = per_label_metrics
         metrics["macro_f1"] = np.mean(f1s) if f1s else 0
         metrics["macro_auc"] = np.mean(aucs) if aucs else None
+        metrics["macro_auprc"] = np.mean(auprcs) if auprcs else None
+        metrics["macro_brier"] = np.mean(briers) if briers else None
+        metrics["macro_ece"] = np.mean(eces) if eces else None
         # micro-F1 (ignore NaN)
         valid_mask = ~np.isnan(y_true)
         if y_pred.ndim == 2 and np.issubdtype(y_pred.dtype, np.floating):

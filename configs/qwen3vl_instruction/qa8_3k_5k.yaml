@@ -1,0 +1,38 @@
+experiment:
+  id: qa8_3k_5k
+  run_id: QA8-3k
+  route: p4v2_hard_counterfactual_qa8
+  data_version: D6_hard_cf_3k_qa8
+
+data:
+  data_root: "."
+  train_instruction_path: "./outputs/instruction_data/glm_validated/d6_hard_cf_3k_qa8.jsonl"
+  val_instruction_path: "./outputs/instruction_data/glm_validated/d6_hard_cf_val200.jsonl"
+  max_length: 768
+  num_workers: 0
+
+model:
+  model_path: "H:/Xiyao_Wang/001_models/qwen3-vl-2b-thinking-new"
+  dtype: "bf16"
+  trainable_groups:
+    - vision_tower
+    - visual_connector
+
+training:
+  learning_rate: 2.0e-5
+  vision_learning_rate: 1.0e-5
+  connector_learning_rate: 2.0e-5
+  weight_decay: 0.01
+  max_steps: 5000
+  batch_size: 1
+  eval_batch_size: 1
+  gradient_accumulation_steps: 1
+  max_grad_norm: 1.0
+  log_interval: 25
+  eval_interval: 500
+  save_interval: 1000
+  save_checkpoints: true
+  output_dir: "./outputs/qwen3vl_instruction/qa8_3k_5k"
+
+seed: 42
+device: "cuda:0"

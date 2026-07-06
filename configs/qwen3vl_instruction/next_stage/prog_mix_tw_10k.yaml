@@ -1,0 +1,63 @@
+experiment:
+  id: prog_mix_tw_10k
+  run_id: PROG-Mix-TW-10k
+  route: scale_progressive_tw_ums
+  data_version: PROG-Mix-TW-10k
+data:
+  data_root: .
+  train_instruction_path: ./outputs/instruction_data/next_stage/prog_mix_10k_train.jsonl
+  val_instruction_path: ./outputs/instruction_data/next_stage/storymix_10k_val.jsonl
+  max_length: 768
+  max_val_samples: 1000
+  num_workers: 0
+model:
+  model_path: H:/Xiyao_Wang/001_models/qwen3-vl-2b-thinking-new
+  dtype: bf16
+  trainable_groups:
+  - vision_tower
+  - visual_connector
+training:
+  learning_rate: 2.0e-05
+  vision_learning_rate: 1.0e-05
+  connector_learning_rate: 2.0e-05
+  weight_decay: 0.01
+  max_steps: 8000
+  batch_size: 1
+  eval_batch_size: 1
+  gradient_accumulation_steps: 1
+  max_grad_norm: 1.0
+  log_interval: 25
+  eval_interval: 500
+  save_interval: 1000
+  save_checkpoints: true
+  output_dir: ./outputs/qwen3vl_instruction/next_stage/prog_mix_tw_10k
+  loss_weighting:
+    enabled: true
+    base_weight: 1.0
+    answer_type_weights:
+      same_question_different_answer: 2.0
+      counterfactual_choice: 1.8
+      laterality_location: 2.0
+      finding_verification: 1.2
+      uncertainty: 1.5
+      answerability: 1.2
+    visual_dependency_weights:
+      very_high: 2.0
+      high: 1.5
+      medium: 1.0
+      low: 0.7
+    quality_flag_weights:
+      hard_image_shuffle: 2.0
+      multi_negative_k4: 1.2
+      same_question: 1.3
+  image_shuffle_margin:
+    enabled: true
+    weight: 0.1
+    margin: 0.2
+  answer_margin:
+    enabled: true
+    weight: 0.1
+    margin: 0.2
+  curriculum_schedule: ./outputs/next_stage_manifests/prog-mix-10k_materialized_schedule.json
+seed: 42
+device: cuda:0

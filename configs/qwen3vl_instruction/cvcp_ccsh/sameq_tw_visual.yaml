@@ -1,0 +1,58 @@
+experiment:
+  id: sameq_tw_visual
+  run_id: SAMEQ-TW-visual
+  route: TokenWeighting
+  data_version: SAMEQ-TW-visual
+data:
+  data_root: .
+  train_instruction_path: outputs/instruction_data/cvcp_ccsh/cvcp_v1_sameq_10k_train.jsonl
+  val_instruction_path: outputs/instruction_data/next_stage/sameq_shuf_val.jsonl
+  max_length: 768
+  max_val_samples: 1000
+  num_workers: 0
+model:
+  model_path: H:/Xiyao_Wang/001_models/qwen3-vl-2b-thinking-new
+  dtype: bf16
+  trainable_groups:
+  - vision_tower
+  - visual_connector
+training:
+  learning_rate: 2.0e-05
+  vision_learning_rate: 1.0e-05
+  connector_learning_rate: 2.0e-05
+  weight_decay: 0.01
+  max_steps: 5000
+  batch_size: 1
+  eval_batch_size: 1
+  gradient_accumulation_steps: 1
+  max_grad_norm: 1.0
+  log_interval: 25
+  eval_interval: 500
+  save_interval: 5001
+  save_checkpoints: false
+  save_best_checkpoint: false
+  save_final_checkpoint: true
+  output_dir: F:/Xiyao_Wang/021_260129VIVID_cvcp_ccsh_outputs/qwen3vl/sameq_tw_visual
+  image_shuffle_margin:
+    enabled: true
+    weight: 0.15
+    margin: 0.2
+  answer_margin:
+    enabled: true
+    weight: 0.15
+    margin: 0.2
+  loss_weighting:
+    enabled: true
+    default_weight: 1.0
+    visual_dependency_weights:
+      very_high: 1.6
+      high: 1.4
+      medium: 1.15
+      low: 0.9
+      unknown: 1.0
+    answer_type_weights:
+      same_question_different_answer: 1.35
+      counterfactual_choice: 1.25
+    normalize: true
+seed: 42
+device: cuda:0

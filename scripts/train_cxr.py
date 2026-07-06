@@ -64,6 +64,7 @@ def create_dataloaders(config: dict):
     val_dense_min_answerable = data_cfg.get("val_dense_min_answerable")
     field_query_training = data_cfg.get("field_query_training")
     target_format = data_cfg.get("target_format", "json")
+    schema_mode = data_cfg.get("schema_mode", "state_only")
 
     # 训练数据集
     train_dataset = CheXpertUMSDataset(
@@ -81,6 +82,7 @@ def create_dataloaders(config: dict):
         dense_subset_min_answerable=train_dense_min_answerable,
         field_query_training=field_query_training,
         target_format=target_format,
+        schema_mode=schema_mode,
     )
 
     # 验证数据集
@@ -101,6 +103,7 @@ def create_dataloaders(config: dict):
             dense_subset_min_answerable=val_dense_min_answerable,
             field_query_training=None,
             target_format=target_format,
+            schema_mode=schema_mode,
         )
     else:
         if max_val_samples and max_val_samples < len(train_dataset):
@@ -127,6 +130,7 @@ def create_dataloaders(config: dict):
                 dense_subset_min_answerable=val_dense_min_answerable,
                 field_query_training=None,
                 target_format=target_format,
+                schema_mode=schema_mode,
             )
             val_dataset = Subset(val_base_dataset, val_indices)
 
@@ -181,6 +185,7 @@ def create_model(config: dict, device: str):
         use_flash_attention=model_cfg.get("use_flash_attention", True),
         max_text_length=model_cfg.get("max_text_length", 512),
         load_llm=True,
+        llm_random_init=bool(model_cfg.get("llm_random_init", False)),
         spd_enabled=spd_enabled,
         spd_num_groups=spd_num_groups,
         spd_tokens_per_group=spd_tokens_per_group,

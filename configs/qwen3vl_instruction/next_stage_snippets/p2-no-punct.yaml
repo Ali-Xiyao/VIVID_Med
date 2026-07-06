@@ -1,0 +1,3 @@
+training:
+  loss_masking:
+    mode: "json_no_punct"

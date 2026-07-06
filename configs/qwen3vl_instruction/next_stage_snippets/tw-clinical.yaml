@@ -1,0 +1,19 @@
+training:
+  loss_weighting:
+    enabled: True
+    base_weight: 1.0
+    answer_type_weights:
+      counterfactual_choice: 1.5
+      same_question_different_answer: 1.6
+      laterality_location: 1.8
+      evidence_phrase: 1.3
+      uncertainty: 1.4
+      answerability: 1.2
+    visual_dependency_weights:
+      very_high: 1.7
+      high: 1.35
+      medium: 1.0
+      low: 0.85
+    quality_flag_weights:
+      hard_image_shuffle: 1.5
+      rare_finding: 1.3

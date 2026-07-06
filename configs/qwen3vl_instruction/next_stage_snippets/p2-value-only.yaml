@@ -1,0 +1,10 @@
+training:
+  loss_masking:
+    mode: "json_value_only"
+    values:
+      - "present"
+      - "absent"
+      - "uncertain"
+      - "null"
+      - "true"
+      - "false"

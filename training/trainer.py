@@ -100,6 +100,7 @@ class VIVIDTrainer:
         self.prompt_template = prompt_template
         self.token_weighting = token_weighting or {}
         self.answerability_mask = self._build_answerability_mask_config(answerability_mask)
+        self.instruction_weighting = self._build_instruction_weighting_config(self.token_weighting)
         self._answerability_span_cache: Dict[str, Dict[str, Any]] = {}
         self._answerability_state_patterns = self._build_answerability_state_patterns()
         train_dataset = getattr(train_dataloader, "dataset", None)
@@ -116,6 +117,12 @@ class VIVIDTrainer:
             label_smoothing=0.0,
             reduction="mean",
         )
+        if self.instruction_weighting["enabled"]:
+            print("Using instruction token weighting:")
+            print(f"  default_weight: {self.instruction_weighting['default_weight']}")
+            print(f"  visual_dependency_weights: {self.instruction_weighting['visual_dependency_weights']}")
+            print(f"  answer_type_weights: {self.instruction_weighting['answer_type_weights']}")
+            print(f"  normalize: {self.instruction_weighting['normalize']}")
         if self.answerability_mask["enabled"]:
             print("Using answerability-aware token mask:")
             print(f"  true_weight: {self.answerability_mask['true_weight']}")
@@ -344,6 +351,8 @@ class VIVIDTrainer:
             return None
 
         state_weights = token_weighting.get("state_weights", {})
+        if not state_weights:
+            return None
         token_id_weights, token_sequence_weights = self._build_state_token_weights(state_weights)
         if not token_id_weights and not token_sequence_weights:
             print("Warning: token weighting enabled but no state tokens were found in tokenizer.")
@@ -364,6 +373,111 @@ class VIVIDTrainer:
             token_sequence_weights=token_sequence_weights,
             default_token_weight=default_weight,
         )
+
+    def _build_instruction_weighting_config(self, token_weighting: Dict[str, Any]) -> Dict[str, Any]:
+        cfg = dict(token_weighting or {})
+        answer_type_weights = {
+            str(key): float(value)
+            for key, value in (cfg.get("answer_type_weights") or {}).items()
+        }
+        visual_dependency_weights = {
+            str(key): float(value)
+            for key, value in (cfg.get("visual_dependency_weights") or {}).items()
+        }
+        quality_flag_weights = {
+            str(key): float(value)
+            for key, value in (cfg.get("quality_flag_weights") or {}).items()
+        }
+        enabled = bool(cfg.get("enabled", False)) and bool(
+            answer_type_weights or visual_dependency_weights or quality_flag_weights
+        )
+        default_weight = float(cfg.get("default_weight", 1.0))
+        if default_weight < 0.0:
+            raise ValueError("token_weighting.default_weight must be >= 0")
+        for name, mapping in {
+            "answer_type_weights": answer_type_weights,
+            "visual_dependency_weights": visual_dependency_weights,
+            "quality_flag_weights": quality_flag_weights,
+        }.items():
+            for key, value in mapping.items():
+                if value < 0.0:
+                    raise ValueError(f"token_weighting.{name}[{key}] must be >= 0")
+
+        return {
+            "enabled": enabled,
+            "default_weight": default_weight,
+            "answer_type_weights": answer_type_weights,
+            "visual_dependency_weights": visual_dependency_weights,
+            "quality_flag_weights": quality_flag_weights,
+            "normalize": bool(cfg.get("normalize_sample_weights", True)),
+        }
+
+    def _build_instruction_token_weights(
+        self,
+        batch: Dict[str, Any],
+        labels: torch.Tensor,
+    ) -> Optional[torch.Tensor]:
+        if not self.instruction_weighting["enabled"]:
+            return None
+        if labels is None or labels.dim() != 2:
+            return None
+
+        batch_size = labels.shape[0]
+        answer_types = batch.get("answer_types") or []
+        visual_dependencies = batch.get("visual_dependencies") or []
+        quality_flags = batch.get("quality_flags") or []
+
+        default_weight = self.instruction_weighting["default_weight"]
+        sample_weights = torch.full(
+            (batch_size,),
+            fill_value=default_weight,
+            dtype=torch.float32,
+            device=labels.device,
+        )
+
+        answer_type_weights = self.instruction_weighting["answer_type_weights"]
+        visual_dependency_weights = self.instruction_weighting["visual_dependency_weights"]
+        quality_flag_weights = self.instruction_weighting["quality_flag_weights"]
+
+        for sample_index in range(batch_size):
+            if sample_index < len(answer_types):
+                answer_type = str(answer_types[sample_index])
+                sample_weights[sample_index] *= float(answer_type_weights.get(answer_type, 1.0))
+            if sample_index < len(visual_dependencies):
+                visual_dependency = str(visual_dependencies[sample_index])
+                sample_weights[sample_index] *= float(
+                    visual_dependency_weights.get(visual_dependency, 1.0)
+                )
+            if sample_index < len(quality_flags):
+                flags = quality_flags[sample_index] or []
+                if isinstance(flags, str):
+                    flags = [flags]
+                for flag in flags:
+                    sample_weights[sample_index] *= float(quality_flag_weights.get(str(flag), 1.0))
+
+        if self.instruction_weighting["normalize"]:
+            valid = labels != -100
+            token_counts = valid.sum(dim=1).clamp_min(1).to(dtype=sample_weights.dtype)
+            token_weight_mass = (sample_weights * token_counts).sum()
+            token_count_total = token_counts.sum().clamp_min(1.0)
+            if token_weight_mass > 0:
+                sample_weights = sample_weights * (token_count_total / token_weight_mass)
+
+        token_weights = torch.ones_like(labels, dtype=torch.float32, device=labels.device)
+        token_weights = token_weights * sample_weights.unsqueeze(1)
+        token_weights = torch.where(labels != -100, token_weights, torch.ones_like(token_weights))
+        return token_weights
+
+    def _combine_token_weights(
+        self,
+        first: Optional[torch.Tensor],
+        second: Optional[torch.Tensor],
+    ) -> Optional[torch.Tensor]:
+        if first is None:
+            return second
+        if second is None:
+            return first
+        return first * second
 
     def _find_matching_brace(self, text: str, open_brace_index: int) -> int:
         if open_brace_index < 0 or open_brace_index >= len(text) or text[open_brace_index] != "{":
@@ -752,15 +866,25 @@ class VIVIDTrainer:
                     answerable=answerable,
                     labels=outputs["labels"],
                 )
+            instruction_token_weights = None
+            if outputs.get("labels") is not None:
+                instruction_token_weights = self._build_instruction_token_weights(
+                    batch=batch,
+                    labels=outputs["labels"],
+                )
+            extra_token_weights = self._combine_token_weights(
+                instruction_token_weights,
+                answerability_token_weights,
+            )
 
             if outputs.get("labels") is not None and (
-                self.token_loss is not None or answerability_token_weights is not None
+                self.token_loss is not None or extra_token_weights is not None
             ):
                 token_loss_fn = self.token_loss if self.token_loss is not None else self.base_token_loss
                 total_loss = token_loss_fn(
                     outputs["logits"],
                     outputs["labels"],
-                    extra_token_weights=answerability_token_weights,
+                    extra_token_weights=extra_token_weights,
                 )
             else:
                 total_loss = outputs["loss"]
@@ -822,15 +946,25 @@ class VIVIDTrainer:
                     answerable=answerable,
                     labels=outputs["labels"],
                 )
+            instruction_token_weights = None
+            if outputs.get("labels") is not None:
+                instruction_token_weights = self._build_instruction_token_weights(
+                    batch=batch,
+                    labels=outputs["labels"],
+                )
+            extra_token_weights = self._combine_token_weights(
+                instruction_token_weights,
+                answerability_token_weights,
+            )
 
             if outputs.get("labels") is not None and (
-                self.token_loss is not None or answerability_token_weights is not None
+                self.token_loss is not None or extra_token_weights is not None
             ):
                 token_loss_fn = self.token_loss if self.token_loss is not None else self.base_token_loss
                 val_loss = token_loss_fn(
                     outputs["logits"],
                     outputs["labels"],
-                    extra_token_weights=answerability_token_weights,
+                    extra_token_weights=extra_token_weights,
                 )
             else:
                 val_loss = outputs["loss"]

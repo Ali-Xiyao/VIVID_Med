@@ -1,0 +1,52 @@
+data:
+  data_root: ./data/dataset
+  train_ums_path: ./data/splits/chexpert_train_3k.jsonl
+  val_ums_path: ./data/splits/chexpert_val_fixed.jsonl
+  selected_labels:
+  - Enlarged Cardiomediastinum
+  - Cardiomegaly
+  - Lung Opacity
+  - Lung Lesion
+  - Edema
+  - Consolidation
+  - Pneumonia
+  - Atelectasis
+  - Pneumothorax
+  - Pleural Effusion
+  - Fracture
+  - Support Devices
+  image_size: 224
+  max_val_samples: 1000
+  num_workers: 0
+  target_format: json
+model:
+  vit_model_name: vit_base_patch16_224
+  vit_pretrained: true
+  vit_output_type: all
+  num_prefix_tokens: 4
+  projector_mlp_hidden_dim: 1536
+  projector_dropout: 0.1
+  llm_model_name: C:/Users/Admin/.cache/modelscope/hub/models/Qwen/Qwen2___5-1___5B-Instruct
+  llm_random_init: true
+  use_flash_attention: false
+training:
+  learning_rate: 0.0001
+  vit_learning_rate: 2.0e-05
+  projector_learning_rate: 0.0001
+  weight_decay: 0.01
+  warmup_steps: 500
+  max_steps: 10000
+  batch_size: 2
+  gradient_accumulation_steps: 16
+  max_grad_norm: 1.0
+  fp16: false
+  bf16: true
+  log_interval: 10
+  eval_interval: 500
+  save_interval: 1000
+  output_dir: ./outputs/data_scaling/random_lm_ums_3k
+evaluation:
+  threshold: 0.5
+  uncertain_policy: ignore
+seed: 42
+device: cuda:0

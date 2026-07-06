@@ -1,0 +1,64 @@
+# Debug-only SPD G=2 config. Uses Qwen instead of tiny-gpt2 because the vivid
+# conda env has torch 2.5 and transformers refuses tiny-gpt2 .bin weights.
+
+data:
+  data_root: "./data/dataset"
+  train_ums_path: "./data/dataset/processed/chexpert_ums_train.jsonl"
+  val_ums_path: "./data/dataset/processed/chexpert_ums_val.jsonl"
+  selected_labels:
+    - "Enlarged Cardiomediastinum"
+    - "Cardiomegaly"
+    - "Lung Opacity"
+    - "Lung Lesion"
+    - "Edema"
+    - "Consolidation"
+    - "Pneumonia"
+    - "Atelectasis"
+    - "Pneumothorax"
+    - "Pleural Effusion"
+    - "Fracture"
+    - "Support Devices"
+  image_size: 224
+  max_train_samples: 20
+  max_val_samples: 4
+  num_workers: 0
+  target_format: "json"
+
+model:
+  vit_model_name: "vit_base_patch16_224"
+  vit_pretrained: true
+  vit_output_type: "all"
+  num_prefix_tokens: 4
+  projector_mlp_hidden_dim: 1536
+  projector_dropout: 0.1
+  llm_model_name: "Qwen/Qwen2.5-1.5B-Instruct"
+  use_flash_attention: false
+  spd:
+    enabled: true
+    num_groups: 2
+    tokens_per_group: 4
+    ortho_weight: 0.02
+
+training:
+  learning_rate: 1.0e-4
+  vit_learning_rate: 2.0e-5
+  projector_learning_rate: 1.0e-4
+  weight_decay: 0.01
+  warmup_steps: 1
+  max_steps: 5
+  batch_size: 2
+  gradient_accumulation_steps: 1
+  max_grad_norm: 1.0
+  fp16: false
+  bf16: true
+  log_interval: 1
+  eval_interval: 2
+  save_interval: 5
+  output_dir: "./outputs/debug_ablation_spd_g2_12label"
+
+evaluation:
+  threshold: 0.5
+  uncertain_policy: "ignore"
+
+seed: 42
+device: "cuda"

@@ -1,0 +1,57 @@
+experiment:
+  id: shuf_tw_clinical_seed1
+  run_id: SHUF-TW-clinical-seed1
+  route: token_weighting
+  data_version: SHUF-TW-clinical
+data:
+  data_root: .
+  train_instruction_path: ./outputs/instruction_data/glm_validated/d7_hard_shuffle_3k.jsonl
+  val_instruction_path: ./outputs/instruction_data/glm_validated/d7_hard_shuffle_val200.jsonl
+  max_length: 768
+  max_val_samples: 1000
+  num_workers: 0
+model:
+  model_path: H:/Xiyao_Wang/001_models/qwen3-vl-2b-thinking-new
+  dtype: bf16
+  trainable_groups:
+  - vision_tower
+  - visual_connector
+training:
+  learning_rate: 2.0e-05
+  vision_learning_rate: 1.0e-05
+  connector_learning_rate: 2.0e-05
+  weight_decay: 0.01
+  max_steps: 5000
+  batch_size: 1
+  eval_batch_size: 1
+  gradient_accumulation_steps: 1
+  max_grad_norm: 1.0
+  log_interval: 25
+  eval_interval: 500
+  save_interval: 1000
+  save_checkpoints: true
+  output_dir: H:/Xiyao_Wang/021_260129VIVID/outputs/qwen3vl_case_study_multiseed/shuf_tw_clinical_seed1
+  loss_weighting:
+    enabled: true
+    base_weight: 1.0
+    answer_type_weights:
+      counterfactual_choice: 1.5
+      same_question_different_answer: 1.6
+      laterality_location: 1.8
+      evidence_phrase: 1.3
+      uncertainty: 1.4
+      answerability: 1.2
+    visual_dependency_weights:
+      very_high: 1.7
+      high: 1.35
+      medium: 1.0
+      low: 0.85
+    quality_flag_weights:
+      hard_image_shuffle: 1.5
+      rare_finding: 1.3
+  image_shuffle_margin:
+    enabled: true
+    weight: 0.1
+    margin: 0.2
+seed: 1
+device: cuda:0

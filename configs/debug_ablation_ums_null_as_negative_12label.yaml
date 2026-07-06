@@ -1,0 +1,60 @@
+# Debug-only null-as-negative UMS config. Uses the production Qwen safetensors path,
+# but only 20 train samples / 4 val samples / 5 steps.
+
+data:
+  data_root: "./data/dataset"
+  train_ums_path: "./data/dataset/processed/chexpert_ums_train.jsonl"
+  val_ums_path: "./data/dataset/processed/chexpert_ums_val.jsonl"
+  selected_labels:
+    - "Enlarged Cardiomediastinum"
+    - "Cardiomegaly"
+    - "Lung Opacity"
+    - "Lung Lesion"
+    - "Edema"
+    - "Consolidation"
+    - "Pneumonia"
+    - "Atelectasis"
+    - "Pneumothorax"
+    - "Pleural Effusion"
+    - "Fracture"
+    - "Support Devices"
+  image_size: 224
+  max_train_samples: 20
+  max_val_samples: 4
+  num_workers: 0
+  target_format: "json"
+  json_null_state: "absent"
+
+model:
+  vit_model_name: "vit_base_patch16_224"
+  vit_pretrained: true
+  vit_output_type: "all"
+  num_prefix_tokens: 4
+  projector_mlp_hidden_dim: 1536
+  projector_dropout: 0.1
+  llm_model_name: "Qwen/Qwen2.5-1.5B-Instruct"
+  use_flash_attention: false
+
+training:
+  learning_rate: 1.0e-4
+  vit_learning_rate: 2.0e-5
+  projector_learning_rate: 1.0e-4
+  weight_decay: 0.01
+  warmup_steps: 1
+  max_steps: 5
+  batch_size: 1
+  gradient_accumulation_steps: 1
+  max_grad_norm: 1.0
+  fp16: false
+  bf16: false
+  log_interval: 1
+  eval_interval: 2
+  save_interval: 5
+  output_dir: "./outputs/debug_ablation_ums_null_as_negative_12label"
+
+evaluation:
+  threshold: 0.5
+  uncertain_policy: "ignore"
+
+seed: 42
+device: "cuda:0"

@@ -1,0 +1,69 @@
+You are generating report-grounded counterfactual clinical QA records for chest X-ray representation learning.
+
+Input:
+- A MIMIC-CXR image path and de-identified radiology report text.
+- A target list of common chest X-ray findings.
+
+Task:
+Generate short clinically faithful visual QA records grounded in the report, with counterfactual choices as the main supervision signal.
+
+Rules:
+- Use only facts supported by the report text.
+- Prefer counterfactual_choice records. When possible, generate at least 3 counterfactual_choice records out of 4 instructions.
+- A counterfactual_choice question must include one correct option and plausible incorrect alternatives.
+- Incorrect options must either contradict the report-supported fact or represent unsupported alternatives; do not make the correct answer ambiguous.
+- Good counterfactual axes include finding state, location, laterality, severity, uncertainty, temporal comparison, device position, and evidence phrase.
+- If you quote evidence, evidence_phrase must be an exact contiguous substring from the report.
+- If a finding is not mentioned in the report, use state "null" and answerability "not_answerable"; do not call it absent.
+- Do not invent locations, laterality, severity, temporal comparisons, or devices.
+- Keep each answer under 40 words.
+- Mark evidence_source as "report_substring" when evidence_phrase is an exact report substring. Use "normalized_report" only when paraphrasing a report-supported fact.
+- Add quality flag "report_text_available".
+- Add quality flag "v3_counterfactual".
+- Output JSON only.
+
+Allowed answer_type values:
+- counterfactual_choice
+- finding_verification
+- evidence_phrase
+- laterality_location
+- severity
+- uncertainty
+- answerability
+- report_consistency
+- device_position
+- temporal_comparison
+
+Allowed counterfactual_type values:
+- state_choice
+- location_choice
+- laterality_choice
+- severity_choice
+- uncertainty_choice
+- temporal_choice
+- device_position_choice
+- evidence_choice
+- null
+
+Output format:
+{
+  "instructions": [
+    {
+      "question": "...",
+      "answer": "...",
+      "finding": "...",
+      "state": "present|absent|uncertain|null",
+      "answerability": "answerable|not_answerable",
+      "uncertainty": "definite|uncertain|null",
+      "laterality": null,
+      "location": null,
+      "severity": null,
+      "evidence_phrase": null,
+      "evidence_source": "report_substring|normalized_report|none",
+      "answer_type": "counterfactual_choice|finding_verification|evidence_phrase|laterality_location|severity|uncertainty|answerability|report_consistency|device_position|temporal_comparison",
+      "visual_dependency": "high|medium|low",
+      "counterfactual_type": "state_choice|location_choice|laterality_choice|severity_choice|uncertainty_choice|temporal_choice|device_position_choice|evidence_choice|null",
+      "quality_flags": ["v3_mimic_report_grounded_counterfactual", "report_text_available", "v3_counterfactual"]
+    }
+  ]
+}

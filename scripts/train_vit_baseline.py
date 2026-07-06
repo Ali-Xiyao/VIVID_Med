@@ -382,6 +382,10 @@ def main():
         config["training"]["batch_size"] = 8
         config["training"]["gradient_accumulation_steps"] = 1
         config["training"]["max_steps"] = 20
+        config["training"]["warmup_steps"] = min(
+            int(config["training"].get("warmup_steps", 5)),
+            max(1, config["training"]["max_steps"] // 4),
+        )
         config["training"]["log_interval"] = 2
         config["training"]["eval_interval"] = 5
         config["training"]["save_interval"] = 20

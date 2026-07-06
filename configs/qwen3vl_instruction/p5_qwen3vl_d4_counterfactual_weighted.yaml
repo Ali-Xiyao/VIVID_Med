@@ -1,0 +1,56 @@
+experiment:
+  id: p5_qwen3vl_d4_counterfactual_weighted
+  pilot_id: P5
+  route: qwen3vl_coupled
+  data_version: D4_report_grounded_counterfactual_weighted
+
+data:
+  data_root: "."
+  train_instruction_path: "./outputs/instruction_data/glm_validated/v3_train_validated.jsonl"
+  val_instruction_path: "./outputs/instruction_data/glm_validated/v3_val_validated.jsonl"
+  max_length: 768
+  num_workers: 0
+
+model:
+  model_path: "H:/Xiyao_Wang/001_models/qwen3-vl-2b-thinking-new"
+  dtype: "bf16"
+  trainable_groups:
+    - vision_tower
+    - visual_connector
+
+training:
+  learning_rate: 2.0e-5
+  vision_learning_rate: 1.0e-5
+  connector_learning_rate: 2.0e-5
+  weight_decay: 0.01
+  max_steps: 1000
+  batch_size: 1
+  eval_batch_size: 1
+  gradient_accumulation_steps: 1
+  max_grad_norm: 1.0
+  log_interval: 10
+  eval_interval: 100
+  save_interval: 250
+  save_checkpoints: true
+  loss_weighting:
+    enabled: true
+    base_weight: 1.0
+    answer_type_weights:
+      evidence_phrase: 1.5
+      laterality_location: 1.5
+      severity: 1.3
+      uncertainty: 1.2
+      image_report_consistency: 1.4
+      counterfactual_choice: 1.5
+      hard_negative_laterality: 1.8
+      hard_negative_state: 1.8
+    visual_dependency_weights:
+      high: 1.5
+      medium: 1.1
+      low: 0.8
+    quality_flag_weights:
+      v3_counterfactual: 1.2
+  output_dir: "./outputs/qwen3vl_instruction_runs/p5_d4_counterfactual_weighted"
+
+seed: 42
+device: "cuda:1"

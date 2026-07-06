@@ -1,0 +1,31 @@
+experiment:
+  id: lp_sameq_cf_30_chexpert_1k
+  route: qwen3vl_cvcp_ccsh_vision_linear_probe
+  source_run_id: SAMEQ-CF-30
+data:
+  data_root: H:/Xiyao_Wang/000_Public Dataset
+  train_ums_path: ./data/splits/chexpert_train_1k.jsonl
+  val_ums_path: ./data/splits/chexpert_val_fixed.jsonl
+  use_common_labels_only: true
+  max_train_samples: 1000
+  max_val_samples: 1000
+  num_workers: 0
+  processor_prompt: Classify the chest X-ray findings.
+model:
+  model_path: H:/Xiyao_Wang/001_models/qwen3-vl-2b-thinking-new
+  dtype: bf16
+  freeze_backbone: true
+  vision_checkpoint: F:/Xiyao_Wang/021_260129VIVID_cvcp_ccsh_outputs/qwen3vl/sameq_cf_30/checkpoints/final.pt
+training:
+  learning_rate: 0.001
+  weight_decay: 0.01
+  max_steps: 1000
+  batch_size: 2
+  eval_batch_size: 2
+  uncertain_policy: ignore
+  log_interval: 25
+  eval_interval: 250
+  save_interval: 1001
+  output_dir: F:/Xiyao_Wang/021_260129VIVID_cvcp_ccsh_outputs/lp/sameq_cf_30_chexpert_1k
+seed: 42
+device: cuda:0

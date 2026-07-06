@@ -1,0 +1,44 @@
+experiment:
+  id: cur_v2_progressive_replay
+  run_id: CUR-v2-progressive-replay
+  route: workflow_progressive
+  data_version: PROG-Mix
+data:
+  data_root: .
+  train_instruction_path: outputs/instruction_data/next_stage/cur_v2_progressive_replay_train.jsonl
+  val_instruction_path: outputs/instruction_data/next_stage/storymix_qa8_val.jsonl
+  max_length: 768
+  max_val_samples: 1000
+  num_workers: 0
+model:
+  model_path: H:/Xiyao_Wang/001_models/qwen3-vl-2b-thinking-new
+  dtype: bf16
+  trainable_groups:
+  - vision_tower
+  - visual_connector
+training:
+  learning_rate: 2.0e-05
+  vision_learning_rate: 1.0e-05
+  connector_learning_rate: 2.0e-05
+  weight_decay: 0.01
+  max_steps: 12000
+  batch_size: 1
+  eval_batch_size: 1
+  gradient_accumulation_steps: 1
+  max_grad_norm: 1.0
+  log_interval: 25
+  eval_interval: 500
+  save_interval: 1000
+  save_checkpoints: true
+  output_dir: outputs/qwen3vl_case_study_modules/cur_v2_progressive_replay
+  image_shuffle_margin:
+    enabled: true
+    weight: 0.1
+    margin: 0.2
+  answer_margin:
+    enabled: true
+    weight: 0.1
+    margin: 0.2
+  curriculum_schedule: ./outputs/next_stage_manifests/prog-mix_materialized_schedule.json
+seed: 42
+device: cuda:0

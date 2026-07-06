@@ -1,0 +1,34 @@
+experiment:
+  id: lp_qwen3vl_vision_debug
+  route: qwen3vl_vision_linear_probe
+
+data:
+  data_root: "H:/Xiyao_Wang/000_Public Dataset"
+  train_ums_path: "./data/splits/chexpert_train_1k.jsonl"
+  val_ums_path: "./data/splits/chexpert_val_fixed.jsonl"
+  use_common_labels_only: true
+  max_train_samples: 32
+  max_val_samples: 32
+  num_workers: 0
+  processor_prompt: "Classify the chest X-ray findings."
+
+model:
+  model_path: "H:/Xiyao_Wang/001_models/qwen3-vl-2b-thinking-new"
+  dtype: "bf16"
+  freeze_backbone: true
+  vision_checkpoint: null
+
+training:
+  learning_rate: 1.0e-3
+  weight_decay: 0.01
+  max_steps: 10
+  batch_size: 1
+  eval_batch_size: 1
+  uncertain_policy: "ignore"
+  log_interval: 1
+  eval_interval: 5
+  save_interval: 10
+  output_dir: "./outputs/qwen3vl_lp_runs/debug_base_vision_publicroot"
+
+seed: 42
+device: "cuda:0"

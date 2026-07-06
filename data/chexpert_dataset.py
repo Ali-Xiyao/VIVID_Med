@@ -54,6 +54,7 @@ class CheXpertUMSDataset(Dataset):
         dense_subset_min_answerable: Optional[int] = None,
         field_query_training: Optional[Dict[str, Any]] = None,
         target_format: str = "json",  # "json" (UMS) or "text" (free-text)
+        schema_mode: str = "state_only",
     ):
         """
         Args:
@@ -111,6 +112,12 @@ class CheXpertUMSDataset(Dataset):
                 f"target_format must be one of {_valid_formats}, got '{target_format}'"
             )
         self.target_format = target_format
+        _valid_schema_modes = ("state_only", "state_answerability", "state_uncertainty")
+        if schema_mode not in _valid_schema_modes:
+            raise ValueError(
+                f"schema_mode must be one of {_valid_schema_modes}, got '{schema_mode}'"
+            )
+        self.schema_mode = schema_mode
 
         # 加载 UMS 数据
         self.samples = self._load_ums_jsonl(ums_jsonl_path, max_samples)
@@ -418,16 +425,31 @@ class CheXpertUMSDataset(Dataset):
             if name in sample["findings"]:
                 item = dict(sample["findings"][name])
                 item["state"] = self._normalize_state(item.get("state"), missing=False)
+                self._augment_schema_item(sample, name, item)
                 output["findings"][name] = item
             elif include_missing_for_selected or (
                 include_labels is None and self.json_include_all_labels
             ):
-                output["findings"][name] = {
+                item = {
                     "state": self._normalize_state(None, missing=True),
                     "score": None,
                 }
+                self._augment_schema_item(sample, name, item)
+                output["findings"][name] = item
 
         return json.dumps(output, ensure_ascii=False)
+
+    def _augment_schema_item(self, sample: Dict, name: str, item: Dict[str, Any]) -> None:
+        if self.schema_mode == "state_answerability":
+            answerability = sample.get("answerability", {})
+            item["answerable"] = bool(answerability.get(name, False))
+        elif self.schema_mode == "state_uncertainty":
+            uncertainty = sample.get("uncertainty", {})
+            uncertain = uncertainty.get(name)
+            if uncertain is None:
+                item["uncertain"] = None
+            else:
+                item["uncertain"] = bool(uncertain)
 
     # --- free-text 模板 ---------------------------------------------------
     _FREETEXT_PRESENT = [

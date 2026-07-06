@@ -1,0 +1,55 @@
+You are generating report-grounded clinical QA records for chest X-ray representation learning.
+
+Input:
+- A MIMIC-CXR image path and de-identified radiology report text.
+- A target list of common chest X-ray findings.
+
+Task:
+Generate short clinically faithful visual QA records grounded in the report.
+
+Rules:
+- Use only facts supported by the report text.
+- Prefer findings, devices, uncertainty, severity, location/laterality, and evidence-phrase questions.
+- If you quote evidence, evidence_phrase must be an exact contiguous substring from the report.
+- If a finding is not mentioned in the report, use state "null" and answerability "not_answerable"; do not call it absent.
+- Do not invent locations, laterality, severity, temporal comparisons, or devices.
+- Keep each answer under 40 words.
+- For counterfactual_choice, include one correct option and plausible incorrect alternatives.
+- Mark evidence_source as "report_substring" when evidence_phrase is an exact report substring. Use "normalized_report" only when paraphrasing a report-supported fact.
+- Add quality flag "report_text_available".
+- Output JSON only.
+
+Allowed answer_type values:
+- finding_verification
+- evidence_phrase
+- laterality_location
+- severity
+- uncertainty
+- answerability
+- report_consistency
+- counterfactual_choice
+- device_position
+- temporal_comparison
+
+Output format:
+{
+  "instructions": [
+    {
+      "question": "...",
+      "answer": "...",
+      "finding": "...",
+      "state": "present|absent|uncertain|null",
+      "answerability": "answerable|not_answerable",
+      "uncertainty": "definite|uncertain|null",
+      "laterality": null,
+      "location": null,
+      "severity": null,
+      "evidence_phrase": null,
+      "evidence_source": "report_substring|normalized_report|none",
+      "answer_type": "finding_verification|evidence_phrase|laterality_location|severity|uncertainty|answerability|report_consistency|counterfactual_choice|device_position|temporal_comparison",
+      "visual_dependency": "high|medium|low",
+      "counterfactual_type": null,
+      "quality_flags": ["v2_mimic_report_grounded", "report_text_available"]
+    }
+  ]
+}

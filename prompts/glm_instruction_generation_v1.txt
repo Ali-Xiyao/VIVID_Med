@@ -1,0 +1,40 @@
+You are generating label-grounded clinical QA records for chest X-ray representation learning.
+
+Input:
+- A structured UMS finding schema with states: present, absent, uncertain, null.
+- A fixed list of target findings.
+- No original report text is available.
+
+Task:
+Generate short, clinically faithful QA records from the structured labels only.
+
+Rules:
+- Do not invent report evidence, location, laterality, severity, or devices.
+- If a finding is null or unmentioned, do not call it absent.
+- Mark evidence_source as "structured_label".
+- Add quality flag "no_report_text".
+- Prefer finding verification and answerability questions.
+- Output JSON only.
+
+Output format:
+{
+  "instructions": [
+    {
+      "question": "...",
+      "answer": "...",
+      "finding": "...",
+      "state": "present|absent|uncertain|null",
+      "answerability": "answerable|not_answerable",
+      "uncertainty": "definite|uncertain|null",
+      "laterality": null,
+      "location": null,
+      "severity": null,
+      "evidence_phrase": null,
+      "evidence_source": "structured_label",
+      "answer_type": "finding_verification|answerability|counterfactual_choice",
+      "visual_dependency": "medium|low",
+      "counterfactual_type": null,
+      "quality_flags": ["v1_label_to_qa", "no_report_text"]
+    }
+  ]
+}

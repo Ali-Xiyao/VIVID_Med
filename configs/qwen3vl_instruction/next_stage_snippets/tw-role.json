@@ -1,0 +1,26 @@
+{
+  "training": {
+    "loss_weighting": {
+      "enabled": true,
+      "base_weight": 1.0,
+      "answer_type_weights": {
+        "counterfactual_choice": 1.5,
+        "same_question_different_answer": 1.5,
+        "laterality_location": 1.8,
+        "finding_verification": 1.1,
+        "uncertainty": 1.2,
+        "answerability": 1.1
+      },
+      "visual_dependency_weights": {
+        "very_high": 1.5,
+        "high": 1.25,
+        "medium": 1.0,
+        "low": 0.9
+      },
+      "quality_flag_weights": {
+        "hard_image_shuffle": 1.5,
+        "standardized_ab": 1.3
+      }
+    }
+  }
+}

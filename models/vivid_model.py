@@ -44,6 +44,7 @@ class VIVIDModel(nn.Module):
         llm_model_name: str = "Qwen/Qwen3-1.7B",
         llm_device: Optional[str] = None,
         load_llm: bool = True,
+        llm_random_init: bool = False,
         # SPD 配置
         spd_enabled: bool = False,
         spd_num_groups: int = 3,
@@ -63,6 +64,7 @@ class VIVIDModel(nn.Module):
             llm_model_name: HuggingFace LLM 模型名称
             llm_device: LLM 设备（默认与模型相同）
             load_llm: 是否加载 LLM（调试时可设为 False）
+            llm_random_init: 是否只加载 LLM config/tokenizer 并随机初始化同架构权重
             use_flash_attention: 是否使用 Flash Attention
             max_text_length: 文本最大长度（token）
         """
@@ -89,7 +91,12 @@ class VIVIDModel(nn.Module):
         self.llm_embed_dim = None
 
         if load_llm:
-            self._load_llm(llm_model_name, use_flash_attention, llm_device=self.llm_device)
+            self._load_llm(
+                llm_model_name,
+                use_flash_attention,
+                llm_device=self.llm_device,
+                random_init=llm_random_init,
+            )
         else:
             # 使用默认值（Qwen3-1.7B）
             self.llm_embed_dim = 1536
@@ -121,6 +128,7 @@ class VIVIDModel(nn.Module):
         model_name: str,
         use_flash_attention: bool = True,
         llm_device: Optional[str] = None,
+        random_init: bool = False,
     ):
         """
         加载并冻结 LLM
@@ -128,14 +136,15 @@ class VIVIDModel(nn.Module):
         关键：冻结参数但保持 forward 可导
         支持从 HuggingFace 或 ModelScope 下载
         """
-        from transformers import AutoModelForCausalLM, AutoTokenizer
+        from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer
 
         # 下载相关环境变量（提升稳定性，避免 Xet）
         os.environ.setdefault("HF_HUB_DISABLE_XET", "1")
         os.environ.setdefault("HF_HUB_DOWNLOAD_TIMEOUT", "300")
         os.environ.setdefault("HF_HUB_ETAG_TIMEOUT", "300")
 
-        print(f"Loading LLM: {model_name}")
+        init_mode = "random-init same architecture" if random_init else "pretrained"
+        print(f"Loading LLM: {model_name} ({init_mode})")
 
         # 尝试从 ModelScope 下载（国内镜像）
         use_modelscope = False
@@ -189,19 +198,53 @@ class VIVIDModel(nn.Module):
             torch_dtype=llm_dtype,
         )
 
-        try:
-            self.llm = AutoModelForCausalLM.from_pretrained(
-                model_path,
-                attn_implementation=attn_implementation,
-                **common_load_kwargs,
+        if random_init:
+            config = AutoConfig.from_pretrained(model_path, trust_remote_code=True)
+            previous_default_device = None
+            use_default_cuda_device = (
+                str(target_device).startswith("cuda")
+                and hasattr(torch, "set_default_device")
             )
-        except Exception as e:
-            print(f"Flash attention not available, falling back to eager: {e}")
-            self.llm = AutoModelForCausalLM.from_pretrained(
-                model_path,
-                attn_implementation="eager",
-                **common_load_kwargs,
-            )
+            if use_default_cuda_device:
+                previous_default_device = torch.get_default_device()
+                print(
+                    f"Random-init LLM will be constructed on {target_device} "
+                    f"with dtype {llm_dtype}"
+                )
+                torch.set_default_device(target_device)
+            try:
+                try:
+                    self.llm = AutoModelForCausalLM.from_config(
+                        config,
+                        trust_remote_code=True,
+                        attn_implementation=attn_implementation,
+                        torch_dtype=llm_dtype,
+                    )
+                except Exception as e:
+                    print(f"Attention implementation override not available for random-init model, using default: {e}")
+                    self.llm = AutoModelForCausalLM.from_config(
+                        config,
+                        trust_remote_code=True,
+                        torch_dtype=llm_dtype,
+                    )
+            finally:
+                if use_default_cuda_device:
+                    torch.set_default_device(previous_default_device)
+            self.llm = self.llm.to(device=target_device, dtype=llm_dtype)
+        else:
+            try:
+                self.llm = AutoModelForCausalLM.from_pretrained(
+                    model_path,
+                    attn_implementation=attn_implementation,
+                    **common_load_kwargs,
+                )
+            except Exception as e:
+                print(f"Flash attention not available, falling back to eager: {e}")
+                self.llm = AutoModelForCausalLM.from_pretrained(
+                    model_path,
+                    attn_implementation="eager",
+                    **common_load_kwargs,
+                )
 
         # 冻结 LLM 参数
         # 关键：只设置 requires_grad=False，不要用 torch.no_grad()

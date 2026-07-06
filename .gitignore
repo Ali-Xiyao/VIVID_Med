@@ -1,6 +1,10 @@
 vivid_env/
 data/dataset/
+data/splits/
+data/instructions/
 outputs/
+History/
+.remote_upload_tmp/
 pretrained/*.pth
 pretrained/*.pt
 
@@ -9,4 +13,8 @@ __pycache__/
 
 .DS_Store
 .claude/
+.superpowers/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
 nul

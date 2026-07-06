@@ -9,7 +9,8 @@
 - `training/`: losses and trainer (`losses.py`, `trainer.py`).
 - `evaluation/`: UMS verifier + metrics (`verifier.py`, `metrics.py`).
 - `scripts/`: runnable entry points (`train_cxr.py`, `test_pipeline.py`).
-- `profle/`: design docs and schema notes (Markdown).
+- `docs/`: active requirement ledgers, handoff indexes, and boundary notes (`docs/README.md` is the first stop).
+- `profile/`: design docs and schema notes (Markdown).
 
 ## Build, Test, and Development Commands
 
@@ -47,3 +48,13 @@ Notes:
 
 - Datasets are medical images—treat `data/dataset/**` as sensitive and keep it local.
 - Avoid committing generated artifacts such as `outputs/`, `vivid_env/`, and `__pycache__/`; add a `.gitignore` if/when you set up Git.
+
+## Agent Workflow & Skill Use
+
+- Before starting any task or command sequence, check whether an available skill or superpower should be used; if one applies, load and follow it before executing file edits, experiments, or long-running commands.
+- Prefer `superpowers:using-superpowers` as the pre-flight rule for skill selection: when there is even a small chance a skill applies, inspect it first, then proceed with the matching workflow.
+- Use `subagent-plan-decomposer` (`C:\Users\Admin\.codex\skills\subagent-plan-decomposer\SKILL.md`) when converting an existing plan into a main-agent plus subagent execution plan. Keep final decisions, merge/conflict handling, and user-visible conclusions with the main agent.
+- Use `superpowers:subagent-driven-development` (`C:\Users\Admin\.codex\superpowers\skills\subagent-driven-development\SKILL.md`) when executing an implementation plan with mostly independent tasks that benefit from fresh implementer/reviewer subagents. Do not use it for small, tightly coupled, or single-file edits unless the user explicitly asks.
+- Use `planning-with-files` (`C:\Users\Admin\.codex\skills\planning-with-files\SKILL.md`) for complex multi-step work, research workflows, experiment queues, or work expected to span many tool calls. Keep `task_plan.md`, `findings.md`, and `progress.md` in the project root when this workflow is active.
+- For current research handoff, read `docs/README.md`, `task_plan.md`, `findings.md`, and `progress.md` before interpreting old root-level proposal markdown. Treat generated files under `outputs/` as evidence, but keep them ignored unless the user explicitly asks to version artifacts.
+- For simple one-step questions or narrow edits, briefly note that the skill check was considered and continue directly.
