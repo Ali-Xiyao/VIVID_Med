@@ -321,3 +321,34 @@ loading matched the official full model with `0` parameter mismatches and
 exactly `0.0` max/mean token error. The BiVES training object retained `0`
 language parameters, completed exactly two optimization steps, preserved
 `K=16` on every S/C/U/I row, and produced nonzero keep/control changes.
+
+## 2026-07-17 BiVES-CXR Round-3 Formal-Protocol Repair
+
+**Authority:** `BiVES_CXR_MIA_TMI_ready_proposal.md` plus the user-supplied
+round-3 review.
+
+**Goal:** Close the remaining dataset grouping, reproducibility, provenance,
+and locked-test protocol gates before any formal dataset run. Do not start
+formal 4B/9B training in this phase.
+
+- [x] T0: Read the round-3 review, active authority, planning files, Git state,
+  and current server boundary.
+- [x] T1: Make `group_id` the exact quartet sampling/alignment unit, enforce
+  one S/C/U/I row and one normalized statement per formal group, and iterate
+  every group in deterministic grouped evaluation.
+- [x] T2: Make controls reproducible from per-sample protocol seeds; keep train
+  variation epoch-aware, freeze eval controls, and export control/evidence
+  indices plus seed/protocol metadata.
+- [x] T3: Verify actual image SHA-256 with a resolved-path cache, use actual
+  hashes for leakage auditing, and close image handles in the dataset loader.
+- [x] T4: Add a provenance-complete canonical statement embedding cache
+  builder and validate cache ontology/text/vocabulary fingerprints at load.
+- [x] T5: Disable locked-test evaluation in training by default and add a
+  separate explicit final-evaluation entry point with checkpoint/manifest/
+  cache/code/calibration hashes.
+- [x] T6: Add eligible-conditioned specificity metrics, fixed-four-class
+  patient bootstrap accounting, compute-match the 9B config, and update the
+  proposal wording from minimal to K-budgeted.
+- [ ] T7: Run local/server regression gates, commit/push `main`, and synchronize
+  source-only changes to the server. Formal training remains blocked until
+  manifests/cache are built and audited.

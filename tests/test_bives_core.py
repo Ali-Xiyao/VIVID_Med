@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import unittest
+import tempfile
+from pathlib import Path
 
 import torch
 import torch.nn as nn
@@ -15,6 +17,7 @@ from bives_cxr.interventions import (
     build_matched_control_masks,
     delete_evidence,
     retain_evidence,
+    stable_control_seed,
 )
 from bives_cxr.losses import (
     BiVESLoss,
@@ -27,8 +30,13 @@ from bives_cxr.metrics import (
     classification_metrics,
     finalize_intervention_metrics,
     intervention_metric_counts,
+    patient_bootstrap_confidence_intervals,
 )
 from bives_cxr.model import BiVESCXR, BiVESModelConfig
+from bives_cxr.statement_cache import (
+    build_statement_cache_payload,
+    load_statement_embedding_matrix,
+)
 from scripts.train_bives_cxr import BiVESExperiment, load_checkpoint_model_state
 
 
@@ -111,6 +119,40 @@ class InterventionTests(unittest.TestCase):
         self.assertEqual(tuple(controls.shape), (1, 4, 6))
         self.assertTrue(bool((controls.sum(dim=-1) == 2).all()))
         self.assertFalse(bool(((controls > 0.5) & (gate.detach() > 0.5).unsqueeze(1)).any()))
+
+    def test_seeded_controls_are_reproducible_and_sample_specific(self) -> None:
+        evidence = torch.tensor(
+            [[1, 1, 0, 0, 0, 0, 0, 0], [1, 1, 0, 0, 0, 0, 0, 0]],
+            dtype=torch.float32,
+        )
+        valid = torch.ones_like(evidence, dtype=torch.bool)
+        seeds = [
+            stable_control_seed("val", "sample-a"),
+            stable_control_seed("val", "sample-b"),
+        ]
+        first = build_matched_control_masks(
+            evidence,
+            valid,
+            topk=2,
+            num_controls=4,
+            sample_seeds=seeds,
+        )
+        second = build_matched_control_masks(
+            evidence,
+            valid,
+            topk=2,
+            num_controls=4,
+            sample_seeds=seeds,
+        )
+        self.assertTrue(torch.equal(first, second))
+        changed = build_matched_control_masks(
+            evidence,
+            valid,
+            topk=2,
+            num_controls=4,
+            sample_seeds=[seeds[0] + 1, seeds[1] + 1],
+        )
+        self.assertFalse(torch.equal(first, changed))
 
     def test_total_variation(self) -> None:
         constant = torch.ones(1, 9)
@@ -384,6 +426,7 @@ class MetricContractTests(unittest.TestCase):
         metrics = finalize_intervention_metrics(counts)
         self.assertEqual(metrics["evidence_only_sufficiency"], 1.0)
         self.assertEqual(metrics["irrelevant_stability_worst_case"], 0.5)
+        self.assertEqual(metrics["irrelevant_stability_eligible_worst_case"], 1.0)
 
     def test_primary_and_calibration_metrics(self) -> None:
         probabilities = torch.tensor(
@@ -402,6 +445,54 @@ class MetricContractTests(unittest.TestCase):
             torch.eye(4, dtype=torch.int64).tolist(),
         )
         self.assertIn("aurc", metrics)
+
+    def test_patient_bootstrap_uses_fixed_four_class_contract(self) -> None:
+        probabilities = torch.eye(4).repeat(2, 1).numpy()
+        targets = torch.arange(4).repeat(2).numpy()
+        patient_ids = [f"patient-{index}" for index in range(8)]
+        result = patient_bootstrap_confidence_intervals(
+            probabilities,
+            targets,
+            patient_ids,
+            replicates=50,
+            seed=5,
+        )
+        self.assertEqual(result["_metadata"]["class_labels"], [0, 1, 2, 3])
+        self.assertEqual(result["macro_f1"]["requested_replicates"], 50)
+        self.assertLessEqual(result["balanced_accuracy"]["valid_replicates"], 50)
+
+
+class StatementCacheTests(unittest.TestCase):
+    def test_cache_binds_embeddings_to_exact_normalized_text(self) -> None:
+        texts = {"stmt-a": "  Right   effusion PRESENT. "}
+        payload = build_statement_cache_payload(
+            {"stmt-a": torch.tensor([3.0, 4.0]) / 5.0},
+            texts,
+            {
+                "model_name_or_path": "Qwen3.5-4B",
+                "revision": "abc",
+                "tokenizer_revision": "abc",
+                "tokenizer_class": "DummyTokenizer",
+                "pooling": "input_embedding_mean",
+                "normalize": True,
+                "dtype": "float32",
+            },
+        )
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "cache.pt"
+            torch.save(payload, path)
+            matrix = load_statement_embedding_matrix(
+                path,
+                {"stmt-a": 0},
+                {"stmt-a": "right effusion present."},
+            )
+            self.assertEqual(tuple(matrix.shape), (1, 2))
+            with self.assertRaises(ValueError):
+                load_statement_embedding_matrix(
+                    path,
+                    {"stmt-a": 0},
+                    {"stmt-a": "left effusion present."},
+                )
 
     def test_decoder_temperature_fit_is_positive_and_improves_nll(self) -> None:
         positive = torch.tensor([8.0, 1.0, 5.0, 0.1] * 4)

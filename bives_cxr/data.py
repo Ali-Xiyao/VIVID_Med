@@ -19,6 +19,7 @@ REQUIRED_FIELDS = {
     "sample_id",
     "patient_id",
     "image_path",
+    "group_id",
     "canonical_statement_id",
     "statement_text",
     "state",
@@ -78,7 +79,8 @@ class BiVESManifestDataset(Dataset):
             image_path = self.data_root / image_path
         if not image_path.exists():
             raise FileNotFoundError(image_path)
-        image = Image.open(image_path).convert("RGB")
+        with Image.open(image_path) as source:
+            image = source.convert("RGB")
         return {
             **row,
             "image": image,
@@ -89,7 +91,7 @@ class BiVESManifestDataset(Dataset):
 
 
 class SameStatementStateBatchSampler(Sampler[list[int]]):
-    """Yield batches composed of complete same-statement S/C/U/I groups."""
+    """Yield batches composed of exact matched ``group_id`` S/C/U/I quartets."""
 
     def __init__(
         self,
@@ -115,26 +117,40 @@ class SameStatementStateBatchSampler(Sampler[list[int]]):
         self.epoch = 0
 
         grouped: dict[str, dict[str, list[int]]] = defaultdict(lambda: defaultdict(list))
+        group_statements: dict[str, set[str]] = defaultdict(set)
+        group_texts: dict[str, set[str]] = defaultdict(set)
         for index, row in enumerate(dataset.rows):
-            grouped[str(row["canonical_statement_id"])][str(row["state"])].append(index)
-        incomplete = {
-            statement_id: sorted(set(self.states) - set(state_rows))
-            for statement_id, state_rows in grouped.items()
-            if not set(self.states).issubset(state_rows)
-        }
-        if incomplete and require_complete_groups:
-            examples = list(incomplete.items())[:5]
+            group_id = str(row["group_id"])
+            grouped[group_id][str(row["state"])].append(index)
+            group_statements[group_id].add(str(row["canonical_statement_id"]))
+            group_texts[group_id].add(normalize_statement_text(row["statement_text"]))
+        invalid: dict[str, dict[str, object]] = {}
+        for group_id, state_rows in grouped.items():
+            state_counts = {state: len(state_rows.get(state, [])) for state in self.states}
+            if (
+                any(count != 1 for count in state_counts.values())
+                or set(state_rows) != set(self.states)
+                or len(group_statements[group_id]) != 1
+                or len(group_texts[group_id]) != 1
+            ):
+                invalid[group_id] = {
+                    "state_counts": state_counts,
+                    "statement_ids": sorted(group_statements[group_id]),
+                    "statement_texts": sorted(group_texts[group_id]),
+                }
+        if invalid and require_complete_groups:
+            examples = list(invalid.items())[:5]
             raise ValueError(
-                f"{len(incomplete)} canonical statements lack complete {self.states} groups; "
+                f"{len(invalid)} group_id quartets violate the exact S/C/U/I contract; "
                 f"examples={examples}"
             )
         self.groups = {
-            statement_id: state_rows
-            for statement_id, state_rows in grouped.items()
-            if set(self.states).issubset(state_rows)
+            group_id: {state: state_rows[state][0] for state in self.states}
+            for group_id, state_rows in grouped.items()
+            if group_id not in invalid
         }
         if not self.groups:
-            raise ValueError("no complete same-statement state groups are available")
+            raise ValueError("no valid group_id S/C/U/I quartets are available")
 
     def set_epoch(self, epoch: int) -> None:
         self.epoch = int(epoch)
@@ -147,16 +163,15 @@ class SameStatementStateBatchSampler(Sampler[list[int]]):
 
     def __iter__(self) -> Iterator[list[int]]:
         rng = random.Random(self.seed + self.epoch)
-        statement_ids = sorted(self.groups)
+        group_ids = sorted(self.groups)
         if self.shuffle:
-            rng.shuffle(statement_ids)
+            rng.shuffle(group_ids)
         current: list[int] = []
         group_count = 0
-        for statement_id in statement_ids:
-            rows_by_state = self.groups[statement_id]
+        for group_id in group_ids:
+            rows_by_state = self.groups[group_id]
             for state in self.states:
-                candidates = rows_by_state[state]
-                current.append(candidates[rng.randrange(len(candidates))] if self.shuffle else candidates[0])
+                current.append(rows_by_state[state])
             group_count += 1
             if group_count == self.groups_per_batch:
                 yield current
@@ -171,28 +186,53 @@ def build_group_loss_indices(batch: list[dict[str, Any]]) -> dict[str, torch.Ten
 
     grouped: dict[str, dict[str, int]] = defaultdict(dict)
     for index, item in enumerate(batch):
-        statement_id = str(item["canonical_statement_id"])
+        group_id = str(item["group_id"])
         state = str(item["state"])
-        if state in grouped[statement_id]:
-            raise ValueError(f"batch contains duplicate {state} rows for statement {statement_id}")
-        grouped[statement_id][state] = index
+        if state in grouped[group_id]:
+            raise ValueError(f"batch contains duplicate {state} rows for group_id {group_id}")
+        grouped[group_id][state] = index
 
     support: list[int] = []
     contradict: list[int] = []
     uncertain: list[int] = []
-    for statement_id, state_indices in grouped.items():
+    for group_id, state_indices in grouped.items():
         missing = set(STATE_NAMES) - set(state_indices)
         if missing:
             raise ValueError(
-                f"same-statement batch group {statement_id!r} is incomplete; missing={sorted(missing)}"
+                f"group_id quartet {group_id!r} is incomplete; missing={sorted(missing)}"
             )
         support.append(state_indices["support"])
         contradict.append(state_indices["contradict"])
         uncertain.append(state_indices["uncertain"])
     if not support:
-        raise ValueError("batch has no complete same-statement groups")
+        raise ValueError("batch has no complete group_id quartets")
     return {
         "support_pair_indices": torch.tensor(support, dtype=torch.long),
         "contradict_pair_indices": torch.tensor(contradict, dtype=torch.long),
         "uncertain_indices": torch.tensor(uncertain, dtype=torch.long),
     }
+
+
+def normalize_statement_text(value: Any) -> str:
+    return " ".join(str(value).strip().lower().split())
+
+
+def statement_text_by_id(rows: list[dict[str, Any]]) -> dict[str, str]:
+    """Return a unique normalized ontology mapping from manifest rows."""
+
+    texts: dict[str, set[str]] = defaultdict(set)
+    for row in rows:
+        texts[str(row["canonical_statement_id"])].add(
+            normalize_statement_text(row["statement_text"])
+        )
+    inconsistent = {
+        statement_id: sorted(values)
+        for statement_id, values in texts.items()
+        if len(values) != 1
+    }
+    if inconsistent:
+        raise ValueError(
+            "canonical statement IDs map to inconsistent normalized text: "
+            f"{list(inconsistent.items())[:5]}"
+        )
+    return {statement_id: next(iter(values)) for statement_id, values in texts.items()}

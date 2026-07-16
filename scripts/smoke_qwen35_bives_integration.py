@@ -57,6 +57,7 @@ def synthetic_group() -> list[dict[str, object]]:
             {
                 "sample_id": f"synthetic-{state}",
                 "patient_id": f"synthetic-patient-{index}",
+                "group_id": "synthetic-effusion-right-quartet",
                 "canonical_statement_id": "synthetic-effusion-right",
                 "statement_text": "A right pleural effusion is present.",
                 "state": state,
@@ -218,6 +219,7 @@ def main() -> None:
             device_batch["statement_indices"],
             device_batch["content_valid_mask"],
             run_interventions=True,
+            control_seeds=device_batch["control_seeds"],
         )
         losses = loss_fn(
             outputs,

@@ -32,6 +32,11 @@ def parse_args() -> argparse.Namespace:
         default=True,
     )
     parser.add_argument("--require-provenance", action=argparse.BooleanOptionalAction, default=True)
+    parser.add_argument(
+        "--verify-image-sha256",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+    )
     parser.add_argument("--output", type=Path)
     return parser.parse_args()
 
@@ -51,6 +56,7 @@ def main() -> None:
         check_decodable=args.check_decodable,
         reject_constant_images=args.reject_constant_images,
         require_provenance=args.require_provenance,
+        verify_image_sha256=args.verify_image_sha256,
     )
     rendered = json.dumps(report, indent=2, ensure_ascii=False)
     print(rendered)

@@ -53,11 +53,11 @@
 
 ### 0.2 新论文的唯一核心命题
 
-> **A clinical statement should be verified from a minimal visual evidence set that is sufficient when retained, necessary when removed, and invariant to perturbations of irrelevant context.**
+> **A clinical statement should be verified from a K-budgeted visual evidence set that is sufficient when retained, necessary when removed, and invariant to matched perturbations of irrelevant context.**
 
 中文表述：
 
-> 对一个临床陈述的判断，应当来自一个最小视觉证据集：保留该证据时结论应保持，删除该证据时模型应转为“证据不足”，扰动证据之外的无关区域时结论应稳定。
+> 对一个临床陈述的判断，应当来自一个固定 K 预算的视觉证据集：保留该证据时结论应保持，删除该证据时模型应转为“证据不足”，对匹配的无关区域进行干预时结论应稳定。
 
 这一个定义统一取代原来的 CEQ、CCSH 和 AUCH：
 
@@ -575,13 +575,15 @@ support–contradict pairwise ranking：
 
 ---
 
-## 4.7 最小性与空间连续性
+## 4.7 固定 K 预算与空间连续性
 
-证据集应尽可能小，但不能小到丢失全部病理区域：
+当前主实现使用 fixed exact-K selector。它学习“在给定 K 预算下选哪些
+patch”，并不学习每个样本的自适应集合大小。因此主结果只声称
+**K-budgeted evidence set**，不声称已证明最小基数。
 
-\[
-\mathcal L_{min}=\frac{1}{P}\sum_pm_p.
-\]
+固定 K 配置令 \(\lambda_{min}=0\)，并预注册
+\(K\in\{4,8,16,32\}\) 的敏感性分析。自适应 hard-concrete/\(L_0\)
+最小性作为后续扩展，不进入当前主方法。
 
 对局部病灶可加入 total variation：
 
@@ -618,7 +620,6 @@ support–contradict pairwise ranking：
 +\lambda_{ies}\mathcal L_{IES}
 +\lambda_p\mathcal L_{pair}
 +\lambda_i\mathcal L_{I-mag}
-+\lambda_m\mathcal L_{min}
 +\lambda_{tv}\mathcal L_{TV}.
 \]
 

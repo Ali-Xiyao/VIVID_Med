@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections import Counter, defaultdict
+import hashlib
 from pathlib import Path
 import re
 from typing import Any
@@ -30,6 +31,14 @@ def _resolve_image_path(root: Path, value: Any) -> Path:
     return path if path.is_absolute() else root / path
 
 
+def file_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(8 << 20), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
 def audit_manifests(
     manifests: dict[str, str | Path],
     data_root: str | Path = ".",
@@ -38,6 +47,7 @@ def audit_manifests(
     check_decodable: bool = False,
     reject_constant_images: bool = False,
     require_provenance: bool = False,
+    verify_image_sha256: bool = True,
 ) -> dict[str, Any]:
     """Audit split isolation, group semantics, provenance, and image readiness."""
 
@@ -56,6 +66,7 @@ def audit_manifests(
     groups_by_split: dict[str, set[str]] = {}
     statement_texts: dict[str, set[str]] = defaultdict(set)
     image_statement_states: dict[tuple[str, str], set[str]] = defaultdict(set)
+    image_hash_cache: dict[str, str] = {}
 
     for split, manifest_path in manifests.items():
         rows = read_manifest(manifest_path)
@@ -63,6 +74,7 @@ def audit_manifests(
         patients_by_split[split] = patients
         state_counts = Counter(str(row["state"]) for row in rows)
         statement_states: dict[str, set[str]] = defaultdict(set)
+        quartet_rows: dict[str, list[dict[str, Any]]] = defaultdict(list)
         missing_images: list[str] = []
         unreadable_images: list[str] = []
         constant_images: list[str] = []
@@ -95,17 +107,19 @@ def audit_manifests(
             image_statement_states[(normalized_path, statement_id)].add(str(row["state"]))
             image_hash = str(row.get("image_sha256", "")).strip().lower()
             if image_hash:
-                split_hashes.add(image_hash)
                 if require_provenance and re.fullmatch(r"[0-9a-f]{64}", image_hash) is None:
                     report["errors"].append(
                         f"{split} sample {sample_id!r} has invalid image_sha256={image_hash!r}"
                     )
+                if not verify_image_sha256:
+                    split_hashes.add(image_hash)
             study_id = str(row.get("study_id", "")).strip()
             if study_id:
                 split_studies.add(study_id)
             group_id = str(row.get("group_id", "")).strip()
             if group_id:
                 split_groups.add(group_id)
+                quartet_rows[group_id].append(row)
             declared_split = str(row.get("split", "")).strip()
             if declared_split and declared_split != split:
                 report["errors"].append(
@@ -145,6 +159,17 @@ def audit_manifests(
                                     constant_images.append(str(image_path))
                     except Exception:
                         unreadable_images.append(str(image_path))
+            if verify_image_sha256 and image_path.is_file():
+                actual_hash = image_hash_cache.get(normalized_path)
+                if actual_hash is None:
+                    actual_hash = file_sha256(image_path)
+                    image_hash_cache[normalized_path] = actual_hash
+                split_hashes.add(actual_hash)
+                if image_hash and image_hash != actual_hash:
+                    report["errors"].append(
+                        f"{split} sample {sample_id!r} image_sha256 mismatch: "
+                        f"declared={image_hash}, actual={actual_hash}"
+                    )
 
         absent_states = [state for state in STATE_NAMES if state_counts[state] == 0]
         if absent_states:
@@ -189,6 +214,36 @@ def audit_manifests(
                     f"counts={dict(insufficient_kinds)}"
                 )
 
+        invalid_quartets: dict[str, dict[str, object]] = {}
+        for group_id, group_rows in quartet_rows.items():
+            group_state_counts = Counter(str(row["state"]) for row in group_rows)
+            statement_ids = {
+                str(row["canonical_statement_id"]) for row in group_rows
+            }
+            normalized_texts = {
+                _normalized_text(row["statement_text"]) for row in group_rows
+            }
+            if (
+                len(group_rows) != len(STATE_NAMES)
+                or any(group_state_counts[state] != 1 for state in STATE_NAMES)
+                or set(group_state_counts) != set(STATE_NAMES)
+                or len(statement_ids) != 1
+                or len(normalized_texts) != 1
+            ):
+                invalid_quartets[group_id] = {
+                    "records": len(group_rows),
+                    "state_counts": {
+                        state: group_state_counts[state] for state in STATE_NAMES
+                    },
+                    "statement_ids": sorted(statement_ids),
+                    "statement_texts": sorted(normalized_texts),
+                }
+        if invalid_quartets and require_provenance:
+            report["errors"].append(
+                f"{split} has {len(invalid_quartets)} invalid group_id quartets; "
+                f"examples={list(invalid_quartets.items())[:3]}"
+            )
+
         report["splits"][split] = {
             "manifest": str(manifest_path),
             "records": len(rows),
@@ -200,6 +255,8 @@ def audit_manifests(
             "unreadable_image_count": len(unreadable_images),
             "constant_image_count": len(constant_images),
             "provenance_missing_count": provenance_missing,
+            "invalid_group_count": len(invalid_quartets),
+            "verified_image_hash_count": len(split_hashes),
             "insufficient_kind_counts": dict(insufficient_kinds),
             "source_counts": dict(source_counts),
             "view_counts": dict(view_counts),

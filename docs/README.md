@@ -26,6 +26,8 @@ BiVES-CXR is the only active paper and code mainline.
 | Real-weight Qwen3.5 vision smoke | `../scripts/smoke_qwen35_vision.py` |
 | Qwen3.5-to-BiVES server integration gate | `../scripts/smoke_qwen35_bives_integration.py` |
 | Manifest audit | `../scripts/audit_bives_manifest.py` |
+| Statement cache builder | `../scripts/build_bives_statement_embeddings.py` |
+| Explicit locked-test evaluator | `../scripts/evaluate_bives_final.py` |
 | CPU tests | `../tests/test_bives_core.py`, `../tests/test_bives_readiness.py` |
 | VinDr archive/integrity utilities | `../scripts/extract_vindr_cxr.py`, `../scripts/audit_vindr_cxr_integrity.py` |
 
@@ -62,7 +64,9 @@ The repository has an executable BiVES core, strict same-statement group
 training, mask-before-contextual-block exact-K interventional closure, full-row
 primary evaluation, a separate grouped mechanism evaluator, best-checkpoint
 selection, decoder-temperature calibration, a vision-only Qwen3.5 loader,
-synthetic CPU smoke, and proposal-level unit tests.
+provenance-complete statement caches, deterministic intervention controls,
+an isolated locked-test release entry, synthetic CPU smoke, and proposal-level
+unit tests.
 
 Formal training has not been started by this consolidation. Before server P0:
 

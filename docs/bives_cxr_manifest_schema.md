@@ -9,7 +9,7 @@ Each JSONL row must contain:
   "image_path": "relative/or/absolute/path",
   "image_sha256": "lowercase-sha256",
   "study_id": "source-study-id",
-  "group_id": "canonical-statement-group-id",
+  "group_id": "exact-matched-quartet-id",
   "canonical_statement_id": "pleural_effusion|right",
   "statement_text": "A right pleural effusion is present.",
   "state": "support",
@@ -67,4 +67,11 @@ Rules:
 7. A canonical statement ID must map to exactly one normalized statement text.
 8. The same image/study/hash cannot cross patient-disjoint splits.
 9. The same image-statement pair cannot carry conflicting state labels.
-10. Every formal canonical statement group must cover S/C/U/I before training.
+10. `group_id` identifies one exact matched S/C/U/I quartet, not an ontology
+    statement. It must contain exactly four rows: one support, one contradict,
+    one uncertain, and one insufficient row.
+11. All four rows in a `group_id` must share one canonical statement ID and
+    one normalized statement text. Multiple `group_id` values may reuse the
+    same canonical statement.
+12. `image_sha256` is verified against file bytes in streaming chunks and is
+    cached per resolved path during an audit. A mismatch is a hard failure.

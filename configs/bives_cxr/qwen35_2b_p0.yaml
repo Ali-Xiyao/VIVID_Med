@@ -23,7 +23,8 @@ model:
   freeze_backbone: true
   statement_dim: 256
   statement_embeddings:
-    mode: learned_id
+    mode: frozen_cached
+    path: data/bives_cxr/statement_embeddings/qwen35_canonical.pt
 
 bives:
   fusion_dim: 256
@@ -56,6 +57,7 @@ audit:
   reject_constant_images: true
   require_complete_statements: true
   require_provenance: true
+  verify_image_sha256: true
 
 loss:
   lambda_ies: 0.5
@@ -70,6 +72,10 @@ loss:
 
 evaluation:
   batch_size: 8
+  run_calibration: true
+  run_test: false
+  selection_metric: nll
+  selection_mode: min
   calibration_max_iter: 100
   bootstrap_replicates: 1000
 
@@ -78,6 +84,7 @@ training:
   lr_backbone: 0.00001
   weight_decay: 0.05
   max_steps: 100
+  gradient_accumulation_steps: 1
   eval_interval: 20
   max_grad_norm: 1.0
   output_dir: outputs/bives_cxr/qwen35_2b_p0

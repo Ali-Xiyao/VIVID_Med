@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import tempfile
 import unittest
 from pathlib import Path
@@ -38,6 +39,9 @@ class BiVESReadinessTest(unittest.TestCase):
             self.assertEqual(float(payload["loss"]["lambda_min"]), 0.0)
             self.assertGreaterEqual(int(payload["bives"]["contextual_layers"]), 1)
             self.assertTrue(payload["audit"]["require_complete_statements"])
+            self.assertTrue(payload["audit"]["verify_image_sha256"])
+            self.assertFalse(payload["evaluation"]["run_test"])
+            self.assertEqual(payload["evaluation"]["selection_metric"], "nll")
         main = yaml.safe_load((config_root / "qwen35_4b_main.yaml").read_text(encoding="utf-8"))
         self.assertIn("train_locked.jsonl", main["data"]["train_manifest"])
         self.assertIn("calibration_locked.jsonl", main["data"]["calibration_manifest"])
@@ -45,6 +49,8 @@ class BiVESReadinessTest(unittest.TestCase):
         self.assertEqual(main["model"]["statement_embeddings"]["mode"], "frozen_cached")
         scale = yaml.safe_load((config_root / "qwen35_9b_scale.yaml").read_text(encoding="utf-8"))
         self.assertEqual(scale["model"]["statement_embeddings"]["mode"], "frozen_cached")
+        self.assertEqual(scale["training"]["max_steps"], main["training"]["max_steps"])
+        self.assertEqual(scale["training"]["gradient_accumulation_steps"], 2)
 
     def test_qwen35_path_guard_accepts_only_multimodal_qwen35(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -74,6 +80,7 @@ class BiVESReadinessTest(unittest.TestCase):
                     "sample_id": f"sample-{index}",
                     "patient_id": "shared-patient",
                     "image_path": "unused.png",
+                    "group_id": "effusion-quartet",
                     "canonical_statement_id": "effusion-right",
                     "statement_text": "A right pleural effusion is present.",
                     "state": state,
@@ -103,6 +110,7 @@ class BiVESReadinessTest(unittest.TestCase):
                         "sample_id": f"{split}-{index}",
                         "patient_id": f"{split}-patient-{index}",
                         "image_path": f"{split}-{index}.png",
+                        "group_id": f"{split}-effusion-quartet",
                         "canonical_statement_id": "effusion-right",
                         "statement_text": "A right pleural effusion is present.",
                         "state": state,
@@ -133,6 +141,7 @@ class BiVESReadinessTest(unittest.TestCase):
                             "sample_id": f"{statement}-{state}",
                             "patient_id": f"{statement}-patient-{index}",
                             "image_path": f"{statement}-{state}.png",
+                            "group_id": f"{statement}-quartet",
                             "canonical_statement_id": statement,
                             "statement_text": statement,
                             "state": state,
@@ -183,6 +192,7 @@ class BiVESReadinessTest(unittest.TestCase):
                         "sample_id": f"sample-{index}",
                         "patient_id": f"patient-{index}",
                         "image_path": "same.png" if index < 2 else f"image-{index}.png",
+                        "group_id": "conflict-quartet",
                         "canonical_statement_id": "effusion-right",
                         "statement_text": "Different wording" if index == 3 else "Effusion present.",
                         "state": state,
@@ -207,19 +217,23 @@ class BiVESReadinessTest(unittest.TestCase):
                     ):
                         image_name = f"{split}-{statement_index}-{state_index}.png"
                         image = Image.new("L", (8, 8))
-                        image.putdata([(pixel + state_index) % 255 for pixel in range(64)])
-                        image.save(root / image_name)
+                        split_offset = 0 if split == "train" else 80
+                        image.putdata(
+                            [
+                                (pixel + state_index + split_offset) % 255
+                                for pixel in range(64)
+                            ]
+                        )
+                        image_path = root / image_name
+                        image.save(image_path)
+                        image_hash = hashlib.sha256(image_path.read_bytes()).hexdigest()
                         rows.append(
                             {
                                 "sample_id": f"{split}-{statement_id}-{state}",
                                 "patient_id": f"{split}-patient-{statement_index}-{state_index}",
                                 "study_id": f"{split}-study-{statement_index}-{state_index}",
                                 "image_path": image_name,
-                                "image_sha256": (
-                                    f"{0 if split == 'train' else 1:x}"
-                                    f"{statement_index:x}"
-                                    f"{state_index:x}"
-                                ).ljust(64, "0"),
+                                "image_sha256": image_hash,
                                 "group_id": f"{split}-{statement_id}",
                                 "canonical_statement_id": statement_id,
                                 "statement_text": statement_id,
@@ -246,6 +260,76 @@ class BiVESReadinessTest(unittest.TestCase):
                 require_provenance=True,
             )
             self.assertEqual(report["status"], "pass", report["errors"])
+            self.assertGreater(report["splits"]["train"]["verified_image_hash_count"], 0)
+
+    def test_audit_rejects_declared_image_hash_mismatch(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            rows = []
+            for index, state in enumerate(
+                ("support", "contradict", "uncertain", "insufficient")
+            ):
+                image_path = root / f"{index}.png"
+                Image.new("L", (8, 8), color=20 + index).save(image_path)
+                rows.append(
+                    {
+                        "sample_id": f"sample-{index}",
+                        "patient_id": f"patient-{index}",
+                        "image_path": image_path.name,
+                        "image_sha256": "0" * 64,
+                        "group_id": "quartet-1",
+                        "canonical_statement_id": "effusion-right",
+                        "statement_text": "Effusion right",
+                        "state": state,
+                    }
+                )
+            manifest = root / "manifest.jsonl"
+            write_jsonl(manifest, rows)
+            report = audit_manifests(
+                {"train": manifest},
+                data_root=root,
+                verify_image_sha256=True,
+            )
+            self.assertEqual(report["status"], "fail")
+            self.assertTrue(
+                any("image_sha256 mismatch" in error for error in report["errors"])
+            )
+
+    def test_group_sampler_does_not_merge_two_quartets_with_same_statement(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            rows = []
+            for group_id in ("quartet-a", "quartet-b"):
+                for index, state in enumerate(
+                    ("support", "contradict", "uncertain", "insufficient")
+                ):
+                    rows.append(
+                        {
+                            "sample_id": f"{group_id}-{state}",
+                            "patient_id": f"{group_id}-patient-{index}",
+                            "image_path": f"{group_id}-{state}.png",
+                            "group_id": group_id,
+                            "canonical_statement_id": "effusion-right",
+                            "statement_text": "Effusion right",
+                            "state": state,
+                        }
+                    )
+            manifest = root / "groups.jsonl"
+            write_jsonl(manifest, rows)
+            dataset = BiVESManifestDataset(manifest, root)
+            batches = list(
+                SameStatementStateBatchSampler(
+                    dataset,
+                    groups_per_batch=1,
+                    shuffle=False,
+                )
+            )
+            self.assertEqual(len(batches), 2)
+            for batch in batches:
+                self.assertEqual(
+                    len({dataset.rows[index]["group_id"] for index in batch}),
+                    1,
+                )
 
 
 if __name__ == "__main__":

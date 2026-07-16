@@ -37,8 +37,9 @@ def intervention_metric_counts(
     drop_pred = drop["state_probs"].argmax(dim=-1)
     control_pred = control["state_probs"].argmax(dim=-1)
     original_correct = original_pred == targets
-    eos_eligible = original_correct & answerable
-    eri_eligible = original_correct & answerable
+    eligible = original_correct & answerable
+    eos_eligible = eligible
+    eri_eligible = eligible
     target_change = (drop["state_probs"] - original["state_probs"]).abs().sum(dim=-1)
     control_branches = outputs.get("controls")
     if isinstance(control_branches, list) and control_branches:
@@ -69,6 +70,25 @@ def intervention_metric_counts(
         "tcig_sum": float((target_change - mean_control_change).sum().item()),
         "tcig_worst_sum": float((target_change - worst_control_change).sum().item()),
         "tcig_denominator": float(targets.numel()),
+        "eligible_denominator": float(eligible.sum().item()),
+        "eligible_control_stability_mean_sum": float(
+            (control_stable.float().mean(dim=1) * eligible.float()).sum().item()
+        ),
+        "eligible_control_stability_worst_sum": float(
+            (control_stable.all(dim=1).float() * eligible.float()).sum().item()
+        ),
+        "eligible_control_effect_mean_sum": float(
+            (mean_control_change * eligible.float()).sum().item()
+        ),
+        "eligible_control_effect_worst_sum": float(
+            (worst_control_change * eligible.float()).sum().item()
+        ),
+        "eligible_tcig_sum": float(
+            ((target_change - mean_control_change) * eligible.float()).sum().item()
+        ),
+        "eligible_tcig_worst_sum": float(
+            ((target_change - worst_control_change) * eligible.float()).sum().item()
+        ),
     }
 
 
@@ -93,6 +113,24 @@ def finalize_intervention_metrics(counts: dict[str, float]) -> dict[str, float]:
         ),
         "target_control_gap": ratio("tcig_sum", "tcig_denominator"),
         "target_control_gap_worst_case": ratio("tcig_worst_sum", "tcig_denominator"),
+        "irrelevant_stability_eligible_mean": ratio(
+            "eligible_control_stability_mean_sum", "eligible_denominator"
+        ),
+        "irrelevant_stability_eligible_worst_case": ratio(
+            "eligible_control_stability_worst_sum", "eligible_denominator"
+        ),
+        "control_effect_l1_eligible_mean": ratio(
+            "eligible_control_effect_mean_sum", "eligible_denominator"
+        ),
+        "control_effect_l1_eligible_worst_case": ratio(
+            "eligible_control_effect_worst_sum", "eligible_denominator"
+        ),
+        "target_control_gap_eligible": ratio(
+            "eligible_tcig_sum", "eligible_denominator"
+        ),
+        "target_control_gap_eligible_worst_case": ratio(
+            "eligible_tcig_worst_sum", "eligible_denominator"
+        ),
     }
 
 
@@ -220,8 +258,25 @@ def classification_metrics(
     curve, aurc = risk_coverage(probabilities, targets)
     return {
         "accuracy": float((predictions == targets).mean()),
-        "macro_f1": float(f1_score(targets, predictions, average="macro", zero_division=0)),
-        "balanced_accuracy": float(balanced_accuracy_score(targets, predictions)),
+        "macro_f1": float(
+            f1_score(
+                targets,
+                predictions,
+                labels=np.arange(len(STATE_NAMES)),
+                average="macro",
+                zero_division=0,
+            )
+        ),
+        "balanced_accuracy": float(
+            np.mean(
+                [
+                    float((predictions[targets == class_index] == class_index).mean())
+                    if bool((targets == class_index).any())
+                    else 0.0
+                    for class_index in range(len(STATE_NAMES))
+                ]
+            )
+        ),
         "per_state": {
             state_name: {
                 "precision": float(precision[index]),
@@ -263,7 +318,7 @@ def patient_bootstrap_confidence_intervals(
     patient_ids: list[str],
     replicates: int = 1000,
     seed: int = 17,
-) -> dict[str, dict[str, float]]:
+) -> dict[str, object]:
     if len(patient_ids) != len(targets):
         raise ValueError("patient_ids and targets must have equal length")
     unique_patients = sorted(set(patient_ids))
@@ -282,6 +337,7 @@ def patient_bootstrap_confidence_intervals(
         "macro_f1": [],
         "balanced_accuracy": [],
     }
+    missing_class_replicates = 0
     for _ in range(replicates):
         sampled_patients = rng.choice(unique_patients, size=len(unique_patients), replace=True)
         sampled_rows = np.concatenate([patient_rows[str(patient)] for patient in sampled_patients])
@@ -289,18 +345,48 @@ def patient_bootstrap_confidence_intervals(
         sampled_targets = targets[sampled_rows]
         values["accuracy"].append(float((predictions == sampled_targets).mean()))
         values["macro_f1"].append(
-            float(f1_score(sampled_targets, predictions, average="macro", zero_division=0))
+            float(
+                f1_score(
+                    sampled_targets,
+                    predictions,
+                    labels=np.arange(len(STATE_NAMES)),
+                    average="macro",
+                    zero_division=0,
+                )
+            )
         )
-        with np.errstate(all="ignore"):
-            balanced = balanced_accuracy_score(sampled_targets, predictions)
-        values["balanced_accuracy"].append(float(balanced))
-    return {
+        recalls: list[float] = []
+        for class_index in range(len(STATE_NAMES)):
+            selected = sampled_targets == class_index
+            if not bool(selected.any()):
+                recalls = []
+                missing_class_replicates += 1
+                break
+            recalls.append(float((predictions[selected] == class_index).mean()))
+        values["balanced_accuracy"].append(
+            float(np.mean(recalls)) if recalls else float("nan")
+        )
+    intervals = {
         key: {
             "lower_95": float(np.nanquantile(metric_values, 0.025)),
             "median": float(np.nanquantile(metric_values, 0.5)),
             "upper_95": float(np.nanquantile(metric_values, 0.975)),
-            "replicates": int(replicates),
+            "requested_replicates": int(replicates),
+            "valid_replicates": int(
+                sum(not math.isnan(value) for value in metric_values)
+            ),
         }
         for key, metric_values in values.items()
         if not all(math.isnan(value) for value in metric_values)
+    }
+    return {
+        **intervals,
+        "_metadata": {
+            "class_labels": list(range(len(STATE_NAMES))),
+            "sampling_unit": "patient",
+            "requested_replicates": int(replicates),
+            "balanced_accuracy_missing_class_replicates": int(
+                missing_class_replicates
+            ),
+        },
     }

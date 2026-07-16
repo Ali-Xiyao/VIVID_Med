@@ -54,6 +54,7 @@ audit:
   reject_constant_images: true
   require_complete_statements: true
   require_provenance: true
+  verify_image_sha256: true
 
 loss:
   lambda_ies: 0.5
@@ -68,6 +69,10 @@ loss:
 
 evaluation:
   batch_size: 8
+  run_calibration: true
+  run_test: false
+  selection_metric: nll
+  selection_mode: min
   calibration_max_iter: 100
   bootstrap_replicates: 1000
 
@@ -76,6 +81,7 @@ training:
   lr_backbone: 0.00001
   weight_decay: 0.05
   max_steps: 1000
+  gradient_accumulation_steps: 1
   eval_interval: 100
   max_grad_norm: 1.0
   output_dir: outputs/bives_cxr/qwen35_4b_main

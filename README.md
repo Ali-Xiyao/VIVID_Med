@@ -27,6 +27,8 @@ There is no flat four-class prediction head in the active model.
 - Real-weight vision smoke: [`scripts/smoke_qwen35_vision.py`](scripts/smoke_qwen35_vision.py)
 - Server integration gate: [`scripts/smoke_qwen35_bives_integration.py`](scripts/smoke_qwen35_bives_integration.py)
 - Manifest audit: [`scripts/audit_bives_manifest.py`](scripts/audit_bives_manifest.py)
+- Statement cache builder: [`scripts/build_bives_statement_embeddings.py`](scripts/build_bives_statement_embeddings.py)
+- Locked-test release: [`scripts/evaluate_bives_final.py`](scripts/evaluate_bives_final.py)
 - Tests: [`tests/test_bives_core.py`](tests/test_bives_core.py)
 - Handoff index: [`docs/README.md`](docs/README.md)
 
@@ -76,14 +78,17 @@ python scripts/train_bives_cxr.py \
   --debug
 ```
 
-Before formal training, build and audit the BiVES manifest. Required JSONL
+Before formal training, build and audit the BiVES manifest and frozen statement
+cache. Required JSONL
 fields are documented in [`docs/bives_cxr_manifest_schema.md`](docs/bives_cxr_manifest_schema.md).
 
-Primary validation, calibration, and test use full sequential row coverage and
-assert that every `sample_id` is evaluated exactly once. Same-statement grouped
+Primary validation and calibration use full sequential row coverage and assert
+that every `sample_id` is evaluated exactly once. Same-statement grouped
 evaluation is separate and reports pair/polarity mechanism diagnostics.
 Temperature calibration is fitted only on the locked calibration split after
-the validation-selected `best.pt` checkpoint is reloaded.
+the validation-selected `best.pt` checkpoint is reloaded. The training entry
+cannot evaluate the locked test; final release requires
+`scripts/evaluate_bives_final.py --run-locked-test`.
 
 ## Repository layout
 

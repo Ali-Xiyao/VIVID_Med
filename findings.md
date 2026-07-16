@@ -235,3 +235,37 @@
   manifests, and no frozen
   `data/bives_cxr/statement_embeddings/qwen35_canonical.pt`; therefore P0 and
   formal 4B/9B dataset training remain fail-fast blocked.
+
+## 2026-07-17 BiVES-CXR Round-3 Protocol Findings
+
+- `canonical_statement_id` identifies the ontology item, while `group_id`
+  identifies one matched S/C/U/I quartet. Sampling and pair alignment must use
+  `group_id`; otherwise rows from distinct matched quartets can be mixed.
+- Random-disjoint controls must be stochastic but reproducible during training
+  and fully fixed during validation/calibration/test. Prediction artifacts
+  need seeds, protocol version, evidence indices, control indices, and grid.
+- Declared image hashes are not provenance unless the audit hashes the actual
+  resolved files and uses those actual hashes for cross-split leakage checks.
+- Formal statement embeddings represent a fixed canonical ontology, not
+  open-vocabulary verification. The cache must fingerprint encoder settings,
+  normalized statement text, vocabulary ordering, and format version.
+- The locked test must be isolated from training and hyperparameter selection.
+  Training may use train/validation/calibration only; final test access must be
+  an explicit separate action with complete artifact hashes.
+- Implemented the exact quartet contract: `group_id` is now the sampler and
+  loss-alignment unit, with exactly one S/C/U/I row and one statement/text per
+  group. Reused ontology statements can span multiple independent quartets.
+- Evaluation controls are deterministic by split/sample/protocol seed.
+  Prediction artifacts include control seed/protocol, exact evidence/control
+  patch indices, and grid dimensions. Best-checkpoint selection defaults to
+  original-state validation NLL.
+- Manifest readiness now computes actual file SHA-256 with an 8 MiB streaming
+  reader and resolved-path cache; actual hashes drive leakage checks.
+- Frozen statement caches now require encoder/tokenizer/pooling/dtype
+  provenance, normalized ontology text, per-text hashes, vocabulary hash, and
+  finite dimension-consistent embeddings.
+- Training no longer accesses the locked test. The explicit final evaluator
+  requires `--run-locked-test` and records checkpoint, calibration, manifest,
+  cache, code, and control-protocol provenance.
+- Added eligible-conditioned specificity/gap metrics, fixed-four-class patient
+  bootstrap bookkeeping, and compute-matched 4B/9B optimizer-step budgets.

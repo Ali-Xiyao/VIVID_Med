@@ -2,7 +2,17 @@
 
 from __future__ import annotations
 
+import hashlib
+
 import torch
+
+
+CONTROL_PROTOCOL_VERSION = "random_disjoint_v1"
+
+
+def stable_control_seed(*parts: object) -> int:
+    payload = "\x1f".join(str(part) for part in parts).encode("utf-8")
+    return int.from_bytes(hashlib.sha256(payload).digest()[:8], "big") & 0x7FFF_FFFF_FFFF_FFFF
 
 
 def _expand_mask(mask: torch.Tensor, tokens: torch.Tensor) -> torch.Tensor:
@@ -48,6 +58,7 @@ def build_matched_control_masks(
     num_controls: int = 4,
     mode: str = "random_disjoint",
     generator: torch.Generator | None = None,
+    sample_seeds: torch.Tensor | list[int] | tuple[int, ...] | None = None,
 ) -> torch.Tensor:
     """Sample exact-K controls that are disjoint from the evidence set."""
 
@@ -65,6 +76,10 @@ def build_matched_control_masks(
     controls = evidence_hard_mask.new_zeros(
         (evidence_hard_mask.shape[0], num_controls, evidence_hard_mask.shape[1])
     )
+    if sample_seeds is not None:
+        sample_seeds = [int(value) for value in torch.as_tensor(sample_seeds).cpu().tolist()]
+        if len(sample_seeds) != evidence_hard_mask.shape[0]:
+            raise ValueError("sample_seeds must contain one seed per batch row")
     for batch_index in range(evidence_hard_mask.shape[0]):
         candidates = torch.where(valid_mask[batch_index] & ~evidence[batch_index])[0]
         if candidates.numel() < topk:
@@ -73,7 +88,17 @@ def build_matched_control_masks(
                 f"for topk={topk}"
             )
         for control_index in range(num_controls):
-            order = torch.randperm(candidates.numel(), device=candidates.device, generator=generator)
+            row_generator = generator
+            if sample_seeds is not None:
+                row_generator = torch.Generator(device=candidates.device)
+                row_generator.manual_seed(
+                    stable_control_seed(sample_seeds[batch_index], control_index)
+                )
+            order = torch.randperm(
+                candidates.numel(),
+                device=candidates.device,
+                generator=row_generator,
+            )
             selected = candidates[order[:topk]]
             controls[batch_index, control_index, selected] = 1.0
     return controls

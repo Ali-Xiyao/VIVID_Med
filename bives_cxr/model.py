@@ -136,6 +136,7 @@ class BiVESCXR(nn.Module):
         statement_embeddings: torch.Tensor,
         valid_mask: torch.Tensor,
         run_interventions: bool = True,
+        control_seeds: torch.Tensor | list[int] | tuple[int, ...] | None = None,
     ) -> dict[str, dict[str, torch.Tensor] | torch.Tensor]:
         original = self.score_tokens(patch_tokens, statement_embeddings, valid_mask)
         output: dict[str, dict[str, torch.Tensor] | torch.Tensor] = {"original": original}
@@ -160,6 +161,7 @@ class BiVESCXR(nn.Module):
             self.config.topk,
             num_controls=self.config.num_controls,
             mode=self.config.control_mode,
+            sample_seeds=control_seeds,
         )
         output["keep"] = self.score_tokens(keep_tokens, statement_embeddings, keep_valid)
         output["drop"] = self.score_tokens(drop_tokens, statement_embeddings, drop_valid)
@@ -186,4 +188,10 @@ class BiVESCXR(nn.Module):
         output["keep_valid_mask"] = keep_valid
         output["drop_valid_mask"] = drop_valid
         output["control_valid_masks"] = torch.stack(control_valid_masks, dim=1)
+        if control_seeds is not None:
+            output["control_seeds"] = torch.as_tensor(
+                control_seeds,
+                dtype=torch.int64,
+                device=evidence_hard_mask.device,
+            )
         return output
