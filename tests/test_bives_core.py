@@ -248,7 +248,7 @@ class ModelContractTests(unittest.TestCase):
                 for branch in outputs["controls"]
             ]
         ).mean()
-        self.assertGreater(float(control_loss), 0.0)
+        self.assertGreater(float(control_loss.detach()), 0.0)
         model.zero_grad(set_to_none=True)
         control_loss.backward()
         gradient = model.contextual_evidence.layers[0].self_attn.in_proj_weight.grad
