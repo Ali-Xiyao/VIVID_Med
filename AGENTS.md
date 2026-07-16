@@ -21,6 +21,7 @@ belong under `legacy/`.
 - `configs/bives_cxr/`: the only active experiment configurations.
 - `scripts/train_bives_cxr.py`: server training entry.
 - `scripts/smoke_bives_cxr.py`: synthetic CPU smoke.
+- `scripts/smoke_qwen35_vision.py`: read-only real-weight vision-only smoke.
 - `scripts/audit_bives_manifest.py`: manifest and split readiness audit.
 - `scripts/{prepare,extract,audit}_vindr_cxr*.py`: current external-data tools.
 - `tests/`: active BiVES contract tests.
@@ -33,6 +34,9 @@ belong under `legacy/`.
 ```bash
 pip install -r requirements.txt
 python scripts/smoke_bives_cxr.py
+python scripts/smoke_qwen35_vision.py \
+  --model-path /path/to/Qwen3.5-0.8B \
+  --dtype fp32
 python -m unittest discover -s tests -p "test_bives_*.py" -v
 python scripts/audit_bives_manifest.py \
   --train data/bives_cxr/manifests/train_locked.jsonl \

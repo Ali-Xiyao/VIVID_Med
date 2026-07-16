@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import json
+import random
+from collections import defaultdict
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterator
 
 from PIL import Image
-from torch.utils.data import Dataset
+import torch
+from torch.utils.data import Dataset, Sampler
 
 from .decoder import STATE_NAMES
 
@@ -83,3 +86,113 @@ class BiVESManifestDataset(Dataset):
             "statement_index": self.statement_to_index[str(row["canonical_statement_id"])],
             "state_index": STATE_NAMES.index(str(row["state"])),
         }
+
+
+class SameStatementStateBatchSampler(Sampler[list[int]]):
+    """Yield batches composed of complete same-statement S/C/U/I groups."""
+
+    def __init__(
+        self,
+        dataset: BiVESManifestDataset,
+        groups_per_batch: int = 1,
+        states: tuple[str, ...] = tuple(STATE_NAMES),
+        shuffle: bool = True,
+        seed: int = 17,
+        drop_last: bool = False,
+        require_complete_groups: bool = True,
+    ) -> None:
+        if groups_per_batch <= 0:
+            raise ValueError("groups_per_batch must be positive")
+        unknown_states = set(states) - set(STATE_NAMES)
+        if unknown_states:
+            raise ValueError(f"unknown BiVES states: {sorted(unknown_states)}")
+        self.dataset = dataset
+        self.groups_per_batch = int(groups_per_batch)
+        self.states = tuple(states)
+        self.shuffle = bool(shuffle)
+        self.seed = int(seed)
+        self.drop_last = bool(drop_last)
+        self.epoch = 0
+
+        grouped: dict[str, dict[str, list[int]]] = defaultdict(lambda: defaultdict(list))
+        for index, row in enumerate(dataset.rows):
+            grouped[str(row["canonical_statement_id"])][str(row["state"])].append(index)
+        incomplete = {
+            statement_id: sorted(set(self.states) - set(state_rows))
+            for statement_id, state_rows in grouped.items()
+            if not set(self.states).issubset(state_rows)
+        }
+        if incomplete and require_complete_groups:
+            examples = list(incomplete.items())[:5]
+            raise ValueError(
+                f"{len(incomplete)} canonical statements lack complete {self.states} groups; "
+                f"examples={examples}"
+            )
+        self.groups = {
+            statement_id: state_rows
+            for statement_id, state_rows in grouped.items()
+            if set(self.states).issubset(state_rows)
+        }
+        if not self.groups:
+            raise ValueError("no complete same-statement state groups are available")
+
+    def set_epoch(self, epoch: int) -> None:
+        self.epoch = int(epoch)
+
+    def __len__(self) -> int:
+        groups = len(self.groups)
+        if self.drop_last:
+            return groups // self.groups_per_batch
+        return (groups + self.groups_per_batch - 1) // self.groups_per_batch
+
+    def __iter__(self) -> Iterator[list[int]]:
+        rng = random.Random(self.seed + self.epoch)
+        statement_ids = sorted(self.groups)
+        if self.shuffle:
+            rng.shuffle(statement_ids)
+        current: list[int] = []
+        group_count = 0
+        for statement_id in statement_ids:
+            rows_by_state = self.groups[statement_id]
+            for state in self.states:
+                candidates = rows_by_state[state]
+                current.append(candidates[rng.randrange(len(candidates))] if self.shuffle else candidates[0])
+            group_count += 1
+            if group_count == self.groups_per_batch:
+                yield current
+                current = []
+                group_count = 0
+        if current and not self.drop_last:
+            yield current
+
+
+def build_group_loss_indices(batch: list[dict[str, Any]]) -> dict[str, torch.Tensor]:
+    """Build aligned S/C pairs and uncertain indices from a collated group batch."""
+
+    grouped: dict[str, dict[str, int]] = defaultdict(dict)
+    for index, item in enumerate(batch):
+        statement_id = str(item["canonical_statement_id"])
+        state = str(item["state"])
+        if state in grouped[statement_id]:
+            raise ValueError(f"batch contains duplicate {state} rows for statement {statement_id}")
+        grouped[statement_id][state] = index
+
+    support: list[int] = []
+    contradict: list[int] = []
+    uncertain: list[int] = []
+    for statement_id, state_indices in grouped.items():
+        missing = set(STATE_NAMES) - set(state_indices)
+        if missing:
+            raise ValueError(
+                f"same-statement batch group {statement_id!r} is incomplete; missing={sorted(missing)}"
+            )
+        support.append(state_indices["support"])
+        contradict.append(state_indices["contradict"])
+        uncertain.append(state_indices["uncertain"])
+    if not support:
+        raise ValueError("batch has no complete same-statement groups")
+    return {
+        "support_pair_indices": torch.tensor(support, dtype=torch.long),
+        "contradict_pair_indices": torch.tensor(contradict, dtype=torch.long),
+        "uncertain_indices": torch.tensor(uncertain, dtype=torch.long),
+    }

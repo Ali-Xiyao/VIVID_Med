@@ -5,11 +5,20 @@ from __future__ import annotations
 import unittest
 
 import torch
+import torch.nn as nn
 
+from bives_cxr.backbones import PatchBatch, restore_qwen35_row_major
+from bives_cxr.gates import EvidenceGate
 from bives_cxr.decoder import EvidenceStateDecoder
-from bives_cxr.interventions import delete_evidence, retain_evidence
-from bives_cxr.losses import BiVESLoss, nll_from_probs, total_variation
+from bives_cxr.interventions import (
+    build_matched_control_masks,
+    delete_evidence,
+    retain_evidence,
+)
+from bives_cxr.losses import BiVESLoss, BiVESLossConfig, nll_from_probs, total_variation
+from bives_cxr.metrics import finalize_intervention_metrics, intervention_metric_counts
 from bives_cxr.model import BiVESCXR, BiVESModelConfig
+from scripts.train_bives_cxr import BiVESExperiment
 
 
 class DecoderTests(unittest.TestCase):
@@ -71,12 +80,26 @@ class InterventionTests(unittest.TestCase):
     def test_keep_drop_algebra(self) -> None:
         tokens = torch.randn(2, 4, 3)
         mask = torch.tensor([[1.0, 0.0, 0.5, 1.0], [0.0, 1.0, 0.25, 0.75]])
-        mask_token = torch.randn(3)
-        keep = retain_evidence(tokens, mask, mask_token)
-        drop = delete_evidence(tokens, mask, mask_token)
-        expected = tokens + mask_token.view(1, 1, -1)
-        self.assertTrue(torch.allclose(keep + drop, expected))
+        keep = retain_evidence(tokens, mask)
+        drop = delete_evidence(tokens, mask)
+        self.assertTrue(torch.allclose(keep + drop, tokens))
         self.assertEqual(tuple(keep.shape), (2, 4, 3))
+
+    def test_exact_k_gate_and_random_disjoint_controls(self) -> None:
+        logits = torch.tensor([[4.0, 3.0, 2.0, 1.0, 0.0, -1.0]])
+        valid = torch.ones_like(logits, dtype=torch.bool)
+        gate = EvidenceGate(mode="soft_topk", topk=2)(logits, valid)
+        self.assertEqual(int((gate.detach() > 0.5).sum()), 2)
+        controls = build_matched_control_masks(
+            (gate.detach() > 0.5).float(),
+            valid,
+            topk=2,
+            num_controls=4,
+            generator=torch.Generator().manual_seed(7),
+        )
+        self.assertEqual(tuple(controls.shape), (1, 4, 6))
+        self.assertTrue(bool((controls.sum(dim=-1) == 2).all()))
+        self.assertFalse(bool(((controls > 0.5) & (gate.detach() > 0.5).unsqueeze(1)).any()))
 
     def test_total_variation(self) -> None:
         constant = torch.ones(1, 9)
@@ -122,6 +145,22 @@ class ModelContractTests(unittest.TestCase):
         self.assertEqual(tuple(original["evidence_maps"].shape), (4, 4, 2))
         self.assertTrue(bool((original["evidence_pm"] >= 0).all()))
         self.assertTrue(bool(((original["gate"] >= 0) & (original["gate"] <= 1)).all()))
+        self.assertTrue(bool((outputs["evidence_hard_mask"].sum(dim=-1) == 2).all()))
+        self.assertTrue(
+            torch.equal(outputs["keep_valid_mask"], outputs["evidence_hard_mask"])
+        )
+        self.assertFalse(
+            bool((outputs["drop_valid_mask"] & outputs["evidence_hard_mask"]).any())
+        )
+        self.assertTrue(bool((outputs["control_masks"].sum(dim=-1) == 2).all()))
+        self.assertFalse(
+            bool(
+                (
+                    (outputs["control_masks"] > 0.5)
+                    & outputs["evidence_hard_mask"].unsqueeze(1)
+                ).any()
+            )
+        )
         losses = BiVESLoss()(outputs, targets, (2, 2))
         self.assertTrue(bool(torch.isfinite(losses["total"])))
         losses["total"].backward()
@@ -130,6 +169,102 @@ class ModelContractTests(unittest.TestCase):
         for parameter in self.model.parameters():
             if parameter.grad is not None:
                 self.assertTrue(bool(torch.isfinite(parameter.grad).all()))
+
+    def test_pair_and_uncertain_losses_are_mandatory_when_enabled(self) -> None:
+        patches = torch.randn(4, 8, 8)
+        statements = torch.randn(4, 6)
+        valid = torch.ones(4, 8, dtype=torch.bool)
+        targets = torch.tensor([0, 1, 2, 3])
+        model = BiVESCXR(
+            BiVESModelConfig(
+                visual_dim=8,
+                statement_dim=6,
+                fusion_dim=16,
+                gate_mode="soft_topk",
+                topk=2,
+                num_controls=2,
+            )
+        )
+        outputs = model(patches, statements, valid)
+        loss_fn = BiVESLoss(BiVESLossConfig(lambda_pair=0.1, lambda_u_pol=0.1))
+        with self.assertRaises(ValueError):
+            loss_fn(outputs, targets, (2, 4))
+        losses = loss_fn(
+            outputs,
+            targets,
+            (2, 4),
+            torch.tensor([0]),
+            torch.tensor([1]),
+            torch.tensor([2]),
+        )
+        self.assertIn("pair", losses)
+        self.assertIn("uncertain_polarity", losses)
+
+
+class BackboneContractTests(unittest.TestCase):
+    def test_inverse_unshuffle_restores_row_major(self) -> None:
+        block_major = torch.tensor(
+            [0, 1, 4, 5, 2, 3, 6, 7, 8, 9, 12, 13, 10, 11, 14, 15],
+            dtype=torch.float32,
+        ).unsqueeze(-1)
+        restored = restore_qwen35_row_major(block_major, 4, 4, 2)
+        self.assertEqual(restored.squeeze(-1).tolist(), list(range(16)))
+
+    def test_bf16_backbone_tokens_are_cast_to_fp32_head(self) -> None:
+        class DummyBackbone(nn.Module):
+            def __init__(self) -> None:
+                super().__init__()
+                self.anchor = nn.Parameter(torch.zeros((), dtype=torch.bfloat16), requires_grad=False)
+
+            def forward(self, pixel_values: torch.Tensor, image_grid_thw: torch.Tensor) -> PatchBatch:
+                del image_grid_thw
+                if pixel_values.dtype != torch.bfloat16:
+                    raise AssertionError(f"expected BF16 backbone input, got {pixel_values.dtype}")
+                return PatchBatch(
+                    tokens=torch.randn(4, 8, 8, dtype=torch.bfloat16),
+                    valid_mask=torch.ones(4, 8, dtype=torch.bool),
+                    grid_hw=[(2, 4)] * 4,
+                )
+
+        experiment = BiVESExperiment(
+            DummyBackbone(),
+            num_statements=1,
+            statement_dim=6,
+            head_config=BiVESModelConfig(
+                visual_dim=8,
+                statement_dim=6,
+                fusion_dim=16,
+                gate_mode="soft_topk",
+                topk=2,
+                num_controls=1,
+            ),
+        )
+        outputs, _ = experiment(
+            torch.empty(0, dtype=torch.float32),
+            torch.empty(0, dtype=torch.long),
+            torch.zeros(4, dtype=torch.long),
+            torch.ones(4, 8, dtype=torch.bool),
+        )
+        self.assertEqual(outputs["original"]["state_probs"].dtype, torch.float32)
+
+
+class MetricContractTests(unittest.TestCase):
+    def test_eos_and_eri_condition_on_original_correct(self) -> None:
+        def branch(predictions: list[int]) -> dict[str, torch.Tensor]:
+            probs = torch.zeros(3, 4)
+            probs[torch.arange(3), torch.tensor(predictions)] = 1.0
+            return {"state_probs": probs}
+
+        outputs = {
+            "original": branch([0, 0, 2]),
+            "keep": branch([0, 1, 1]),
+            "drop": branch([3, 3, 3]),
+            "control": branch([0, 0, 2]),
+        }
+        targets = torch.tensor([0, 1, 2])
+        metrics = finalize_intervention_metrics(intervention_metric_counts(outputs, targets))
+        self.assertEqual(metrics["evidence_only_sufficiency"], 0.5)
+        self.assertEqual(metrics["evidence_removal_insufficient"], 1.0)
 
 
 if __name__ == "__main__":

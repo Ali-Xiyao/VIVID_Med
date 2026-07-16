@@ -230,6 +230,39 @@ Cleanup policy: preserve source code, configs, active documentation, final table
 - [x] B5: Run compile checks, 12 CPU unit tests, the synthetic BiVES smoke, the Qwen3.5 processor/grid smoke, and active-path navigation audits.
 - [x] B6: Reviewed the staged diff, committed the intended consolidation, pushed `main` to `origin`, verified commit equality, synchronized the source archive into the server project without touching data/outputs/pretrained/model, and reran server CPU validation.
 
+## 2026-07-16 BiVES-CXR Code-Review Repair
+
+**Authority:** `BiVES_CXR_MIA_TMI_ready_proposal.md` plus the user-supplied
+`BiVES_CXR_code_review_2026-07-16` findings.
+
+**Goal:** Close the gap between the correct BiVES architecture prototype and a
+real Qwen3.5 P0-ready implementation. Do not start formal 4B/9B training in
+this repair phase.
+
+- [x] R0: Record the review findings and reproduce the current contract gaps.
+- [x] R1: Fix BF16-to-FP32 head boundaries and restore Qwen3.5 merger-pre token
+  order to row-major; add focused tests.
+- [x] R2: Implement same-statement S/C/U/I group sampling, mandatory pair
+  indices, and uncertain-polarity loss; enable them in active configs.
+- [x] R3: Replace soft/learned-token interventions with exact-K straight-through
+  evidence masks, branch-specific validity, zero replacement, and random
+  disjoint equal-area controls.
+- [x] R4: Add letterbox content masks, correct conditional/aggregate mechanism
+  metrics, and restrict GPU batch movement to fields actually consumed.
+- [x] R5: Make manifest readiness auditing a mandatory pre-model-load gate and
+  strengthen split/group/semantic/image/provenance checks.
+- [x] R6: Load and retain only the Qwen3.5 vision module for training, update
+  locked 4B/9B data/config boundaries, and improve resolved-config/checkpoint
+  metadata.
+- [ ] R7: Run compile, BiVES unit tests, synthetic smoke, and a bounded
+  Qwen3.5 vision-only load/inference gate; then commit, push, and sync source
+  changes to the server project.
+
+Local R7 evidence is complete: compile passed, `20/20` BiVES unit tests passed,
+the synthetic smoke passed, and the real Qwen3.5-0.8B vision-only smoke
+returned `784` finite row-major patches with `100,592,896` visual parameters
+and `0` language parameters. Git/server handoff remains.
+
 ### New errors / environment notes
 
 | Error | Attempt | Resolution |

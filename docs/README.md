@@ -23,6 +23,7 @@ BiVES-CXR is the only active paper and code mainline.
 | Qwen3.5 configs | `../configs/bives_cxr/` |
 | Training entry | `../scripts/train_bives_cxr.py` |
 | CPU smoke | `../scripts/smoke_bives_cxr.py` |
+| Real-weight Qwen3.5 vision smoke | `../scripts/smoke_qwen35_vision.py` |
 | Manifest audit | `../scripts/audit_bives_manifest.py` |
 | CPU tests | `../tests/test_bives_core.py`, `../tests/test_bives_readiness.py` |
 | VinDr archive/integrity utilities | `../scripts/extract_vindr_cxr.py`, `../scripts/audit_vindr_cxr_integrity.py` |
@@ -52,13 +53,14 @@ pilot/provenance evidence only and cannot close a BiVES paper gate.
 
 ## Current execution status
 
-The repository has an executable BiVES core, Qwen3.5 validation, a server
-training scaffold, synthetic CPU smoke, and proposal-level unit tests.
+The repository has an executable BiVES core, strict same-statement group
+training, exact-K interventional closure, a vision-only Qwen3.5 loader,
+synthetic CPU smoke, and proposal-level unit tests.
 
 Formal training has not been started by this consolidation. Before server P0:
 
-1. create a patient-disjoint BiVES manifest and pass
-   `scripts/audit_bives_manifest.py`;
+1. create locked train/validation/calibration/test manifests with provenance,
+   hashes, complete S/C/U/I groups, and pass the strict mandatory audit;
 2. perform the uncertain-vs-insufficient expert pilot;
 3. verify same-statement cross-state coverage;
 4. run Qwen3.5-2B P0;

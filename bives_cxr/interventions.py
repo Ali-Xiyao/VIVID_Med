@@ -11,18 +11,72 @@ def _expand_mask(mask: torch.Tensor, tokens: torch.Tensor) -> torch.Tensor:
     return mask.to(dtype=tokens.dtype).unsqueeze(-1)
 
 
-def retain_evidence(tokens: torch.Tensor, mask: torch.Tensor, mask_token: torch.Tensor) -> torch.Tensor:
+def retain_evidence(
+    tokens: torch.Tensor,
+    mask: torch.Tensor,
+    replacement: torch.Tensor | None = None,
+) -> torch.Tensor:
     expanded = _expand_mask(mask, tokens)
-    return expanded * tokens + (1.0 - expanded) * mask_token.view(1, 1, -1)
+    if replacement is None:
+        return expanded * tokens
+    return expanded * tokens + (1.0 - expanded) * replacement.view(1, 1, -1)
 
 
-def delete_evidence(tokens: torch.Tensor, mask: torch.Tensor, mask_token: torch.Tensor) -> torch.Tensor:
+def delete_evidence(
+    tokens: torch.Tensor,
+    mask: torch.Tensor,
+    replacement: torch.Tensor | None = None,
+) -> torch.Tensor:
     expanded = _expand_mask(mask, tokens)
-    return (1.0 - expanded) * tokens + expanded * mask_token.view(1, 1, -1)
+    if replacement is None:
+        return (1.0 - expanded) * tokens
+    return (1.0 - expanded) * tokens + expanded * replacement.view(1, 1, -1)
 
 
-def delete_control(tokens: torch.Tensor, control_mask: torch.Tensor, mask_token: torch.Tensor) -> torch.Tensor:
-    return delete_evidence(tokens, control_mask, mask_token)
+def delete_control(
+    tokens: torch.Tensor,
+    control_mask: torch.Tensor,
+    replacement: torch.Tensor | None = None,
+) -> torch.Tensor:
+    return delete_evidence(tokens, control_mask, replacement)
+
+
+def build_matched_control_masks(
+    evidence_hard_mask: torch.Tensor,
+    valid_mask: torch.Tensor,
+    topk: int,
+    num_controls: int = 4,
+    mode: str = "random_disjoint",
+    generator: torch.Generator | None = None,
+) -> torch.Tensor:
+    """Sample exact-K controls that are disjoint from the evidence set."""
+
+    if evidence_hard_mask.shape != valid_mask.shape:
+        raise ValueError("evidence_hard_mask and valid_mask must share [B,P] shape")
+    if mode != "random_disjoint":
+        raise ValueError(f"unsupported matched-control mode: {mode}")
+    if num_controls <= 0:
+        raise ValueError("num_controls must be positive")
+    valid_mask = valid_mask.bool()
+    evidence = evidence_hard_mask.detach() > 0.5
+    if bool(((evidence & valid_mask).sum(dim=-1) != topk).any()):
+        raise ValueError("evidence_hard_mask must contain exactly topk valid patches")
+
+    controls = evidence_hard_mask.new_zeros(
+        (evidence_hard_mask.shape[0], num_controls, evidence_hard_mask.shape[1])
+    )
+    for batch_index in range(evidence_hard_mask.shape[0]):
+        candidates = torch.where(valid_mask[batch_index] & ~evidence[batch_index])[0]
+        if candidates.numel() < topk:
+            raise ValueError(
+                f"sample {batch_index} has only {candidates.numel()} disjoint control candidates "
+                f"for topk={topk}"
+            )
+        for control_index in range(num_controls):
+            order = torch.randperm(candidates.numel(), device=candidates.device, generator=generator)
+            selected = candidates[order[:topk]]
+            controls[batch_index, control_index, selected] = 1.0
+    return controls
 
 
 def build_equal_area_control_mask(
@@ -30,26 +84,12 @@ def build_equal_area_control_mask(
     valid_mask: torch.Tensor,
     topk: int,
 ) -> torch.Tensor:
-    """Select low-evidence valid patches as a disjoint equal-area control."""
-    if evidence_gate.shape != valid_mask.shape:
-        raise ValueError("evidence_gate and valid_mask must share [B,P] shape")
-    valid_mask = valid_mask.bool()
-    control = torch.zeros_like(evidence_gate)
-    for batch_index in range(evidence_gate.shape[0]):
-        valid_indices = torch.where(valid_mask[batch_index])[0]
-        if valid_indices.numel() == 0:
-            continue
-        k = min(int(topk), int(valid_indices.numel() // 2 or 1))
-        values = evidence_gate[batch_index, valid_indices].detach()
-        evidence_indices = valid_indices[torch.topk(values, k=k).indices]
-        candidate_mask = torch.ones(valid_indices.numel(), dtype=torch.bool, device=valid_indices.device)
-        for selected in evidence_indices:
-            candidate_mask &= valid_indices != selected
-        candidates = valid_indices[candidate_mask]
-        if candidates.numel() == 0:
-            continue
-        k_control = min(k, int(candidates.numel()))
-        candidate_values = evidence_gate[batch_index, candidates].detach()
-        selected_control = candidates[torch.topk(-candidate_values, k=k_control).indices]
-        control[batch_index, selected_control] = 1.0
-    return control
+    """Compatibility wrapper returning one random-disjoint control."""
+
+    evidence_hard = evidence_gate > 0.5
+    return build_matched_control_masks(
+        evidence_hard.to(evidence_gate.dtype),
+        valid_mask,
+        topk,
+        num_controls=1,
+    )[:, 0]

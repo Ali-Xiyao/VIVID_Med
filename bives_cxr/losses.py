@@ -15,6 +15,7 @@ class BiVESLossConfig:
     lambda_ctrl: float = 0.5
     lambda_pair: float = 0.0
     pair_margin: float = 0.2
+    lambda_u_pol: float = 0.0
     lambda_i_mag: float = 0.1
     lambda_min: float = 1e-3
     lambda_tv: float = 1e-4
@@ -36,13 +37,23 @@ def jensen_shannon(left: torch.Tensor, right: torch.Tensor, eps: float = 1e-8) -
     )
 
 
-def total_variation(mask: torch.Tensor, grid_hw: tuple[int, int]) -> torch.Tensor:
+def total_variation(
+    mask: torch.Tensor,
+    grid_hw: tuple[int, int],
+    valid_mask: torch.Tensor | None = None,
+) -> torch.Tensor:
     height, width = grid_hw
     if height * width != mask.shape[-1]:
         raise ValueError("grid height * width must equal patch count")
     grid = mask.reshape(mask.shape[0], height, width)
-    horizontal = torch.abs(grid[:, :, 1:] - grid[:, :, :-1]).sum(dim=(1, 2))
-    vertical = torch.abs(grid[:, 1:, :] - grid[:, :-1, :]).sum(dim=(1, 2))
+    horizontal_delta = torch.abs(grid[:, :, 1:] - grid[:, :, :-1])
+    vertical_delta = torch.abs(grid[:, 1:, :] - grid[:, :-1, :])
+    if valid_mask is not None:
+        valid_grid = valid_mask.reshape(mask.shape[0], height, width).bool()
+        horizontal_delta = horizontal_delta * (valid_grid[:, :, 1:] & valid_grid[:, :, :-1])
+        vertical_delta = vertical_delta * (valid_grid[:, 1:, :] & valid_grid[:, :-1, :])
+    horizontal = horizontal_delta.sum(dim=(1, 2))
+    vertical = vertical_delta.sum(dim=(1, 2))
     return (horizontal + vertical).mean()
 
 
@@ -60,6 +71,7 @@ class BiVESLoss(nn.Module):
         grid_hw: tuple[int, int],
         support_pair_indices: torch.Tensor | None = None,
         contradict_pair_indices: torch.Tensor | None = None,
+        uncertain_indices: torch.Tensor | None = None,
     ) -> dict[str, torch.Tensor]:
         original = outputs["original"]
         assert isinstance(original, dict)
@@ -85,23 +97,50 @@ class BiVESLoss(nn.Module):
             else:
                 sufficiency = state_loss.new_zeros(())
                 necessity = state_loss.new_zeros(())
-            control_loss = jensen_shannon(original["state_probs"], control["state_probs"], self.config.eps).mean()
+            control_branches = outputs.get("controls")
+            if isinstance(control_branches, list) and control_branches:
+                control_loss = torch.stack(
+                    [
+                        jensen_shannon(
+                            original["state_probs"],
+                            branch["state_probs"],
+                            self.config.eps,
+                        ).mean()
+                        for branch in control_branches
+                    ]
+                ).mean()
+            else:
+                control_loss = jensen_shannon(
+                    original["state_probs"],
+                    control["state_probs"],
+                    self.config.eps,
+                ).mean()
             ies = sufficiency + self.config.lambda_nec * necessity + self.config.lambda_ctrl * control_loss
             total = total + self.config.lambda_ies * ies
             losses.update({"sufficiency": sufficiency, "necessity": necessity, "control": control_loss, "ies": ies})
 
         insufficient = targets == 3
         i_magnitude = original["total_evidence"][insufficient].mean() if bool(insufficient.any()) else state_loss.new_zeros(())
-        minimality = original["gate"].mean()
-        tv = total_variation(original["gate"], grid_hw)
+        valid_mask = original["valid_mask"].bool()
+        minimality = (
+            original["gate"].sum(dim=-1)
+            / valid_mask.sum(dim=-1).clamp_min(1).to(original["gate"].dtype)
+        ).mean()
+        tv = total_variation(original["gate"], grid_hw, valid_mask)
         total = total + self.config.lambda_i_mag * i_magnitude
         total = total + self.config.lambda_min * minimality + self.config.lambda_tv * tv
         losses.update({"insufficient_magnitude": i_magnitude, "minimality": minimality, "tv": tv})
 
-        if support_pair_indices is not None and contradict_pair_indices is not None:
-            rho = (original["evidence_pos"] - original["evidence_neg"]) / (
-                original["total_evidence"] + self.config.eps
-            )
+        rho = (original["evidence_pos"] - original["evidence_neg"]) / (
+            original["total_evidence"] + self.config.eps
+        )
+        if self.config.lambda_pair > 0:
+            if support_pair_indices is None or contradict_pair_indices is None:
+                raise ValueError(
+                    "lambda_pair > 0 requires support_pair_indices and contradict_pair_indices"
+                )
+            if support_pair_indices.numel() == 0:
+                raise ValueError("pair loss requires at least one aligned S/C pair")
             pair = torch.relu(
                 self.config.pair_margin
                 - rho[support_pair_indices.long()]
@@ -109,6 +148,12 @@ class BiVESLoss(nn.Module):
             ).mean()
             total = total + self.config.lambda_pair * pair
             losses["pair"] = pair
+        if self.config.lambda_u_pol > 0:
+            if uncertain_indices is None or uncertain_indices.numel() == 0:
+                raise ValueError("lambda_u_pol > 0 requires uncertain_indices")
+            uncertain_polarity = rho[uncertain_indices.long()].abs().mean()
+            total = total + self.config.lambda_u_pol * uncertain_polarity
+            losses["uncertain_polarity"] = uncertain_polarity
 
         losses["total"] = total
         return losses

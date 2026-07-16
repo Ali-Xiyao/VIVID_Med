@@ -6,9 +6,11 @@ import unittest
 from pathlib import Path
 
 import yaml
+from PIL import Image
 
 from bives_cxr.audit import audit_manifests
 from bives_cxr.backbones import validate_qwen35_model_path
+from bives_cxr.data import BiVESManifestDataset, SameStatementStateBatchSampler
 
 
 def write_jsonl(path: Path, rows: list[dict[str, str]]) -> None:
@@ -28,7 +30,18 @@ class BiVESReadinessTest(unittest.TestCase):
             model = payload["model"]
             self.assertEqual(str(model["family"]).lower(), "qwen3.5")
             self.assertIn("Qwen3.5-", str(model["path"]))
-            self.assertEqual(float(payload["loss"].get("lambda_pair", 0.0)), 0.0)
+            self.assertGreater(float(payload["loss"].get("lambda_pair", 0.0)), 0.0)
+            self.assertGreater(float(payload["loss"].get("lambda_u_pol", 0.0)), 0.0)
+            self.assertEqual(payload["sampling"]["type"], "same_statement_state_group")
+            self.assertEqual(payload["bives"]["mask"]["type"], "soft_topk")
+            self.assertTrue(payload["audit"]["require_complete_statements"])
+        main = yaml.safe_load((config_root / "qwen35_4b_main.yaml").read_text(encoding="utf-8"))
+        self.assertIn("train_locked.jsonl", main["data"]["train_manifest"])
+        self.assertIn("calibration_locked.jsonl", main["data"]["calibration_manifest"])
+        self.assertIn("test_locked.jsonl", main["data"]["test_manifest"])
+        self.assertEqual(main["model"]["statement_embeddings"]["mode"], "frozen_cached")
+        scale = yaml.safe_load((config_root / "qwen35_9b_scale.yaml").read_text(encoding="utf-8"))
+        self.assertEqual(scale["model"]["statement_embeddings"]["mode"], "frozen_cached")
 
     def test_qwen35_path_guard_accepts_only_multimodal_qwen35(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -86,7 +99,7 @@ class BiVESReadinessTest(unittest.TestCase):
                     {
                         "sample_id": f"{split}-{index}",
                         "patient_id": f"{split}-patient-{index}",
-                        "image_path": "unused.png",
+                        "image_path": f"{split}-{index}.png",
                         "canonical_statement_id": "effusion-right",
                         "statement_text": "A right pleural effusion is present.",
                         "state": state,
@@ -103,6 +116,125 @@ class BiVESReadinessTest(unittest.TestCase):
                 require_complete_statements=True,
             )
             self.assertEqual(report["status"], "pass")
+
+    def test_group_sampler_yields_ordered_complete_groups(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            rows = []
+            for statement in ("effusion-right", "opacity-left"):
+                for index, state in enumerate(
+                    ("support", "contradict", "uncertain", "insufficient")
+                ):
+                    rows.append(
+                        {
+                            "sample_id": f"{statement}-{state}",
+                            "patient_id": f"{statement}-patient-{index}",
+                            "image_path": f"{statement}-{state}.png",
+                            "canonical_statement_id": statement,
+                            "statement_text": statement,
+                            "state": state,
+                        }
+                    )
+            manifest = root / "groups.jsonl"
+            write_jsonl(manifest, rows)
+            dataset = BiVESManifestDataset(manifest, root)
+            sampler = SameStatementStateBatchSampler(
+                dataset,
+                groups_per_batch=2,
+                shuffle=False,
+            )
+            batches = list(sampler)
+            self.assertEqual(len(batches), 1)
+            sampled_states = [dataset.rows[index]["state"] for index in batches[0]]
+            self.assertEqual(
+                sampled_states,
+                [
+                    "support",
+                    "contradict",
+                    "uncertain",
+                    "insufficient",
+                    "support",
+                    "contradict",
+                    "uncertain",
+                    "insufficient",
+                ],
+            )
+
+    def test_strict_audit_rejects_semantic_and_label_conflicts(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            rows = []
+            for index, state in enumerate(
+                ("support", "contradict", "uncertain", "insufficient")
+            ):
+                rows.append(
+                    {
+                        "sample_id": f"sample-{index}",
+                        "patient_id": f"patient-{index}",
+                        "image_path": "same.png" if index < 2 else f"image-{index}.png",
+                        "canonical_statement_id": "effusion-right",
+                        "statement_text": "Different wording" if index == 3 else "Effusion present.",
+                        "state": state,
+                    }
+                )
+            path = root / "conflicts.jsonl"
+            write_jsonl(path, rows)
+            report = audit_manifests({"train": path}, require_complete_statements=True)
+            self.assertEqual(report["status"], "fail")
+            self.assertTrue(any("inconsistent text" in error for error in report["errors"]))
+            self.assertTrue(any("conflicting labels" in error for error in report["errors"]))
+
+    def test_strict_audit_passes_complete_provenance_and_images(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            manifests: dict[str, Path] = {}
+            for split in ("train", "val"):
+                rows = []
+                for statement_index, statement_id in enumerate(("effusion-right", "opacity-left")):
+                    for state_index, state in enumerate(
+                        ("support", "contradict", "uncertain", "insufficient")
+                    ):
+                        image_name = f"{split}-{statement_index}-{state_index}.png"
+                        image = Image.new("L", (8, 8))
+                        image.putdata([(pixel + state_index) % 255 for pixel in range(64)])
+                        image.save(root / image_name)
+                        rows.append(
+                            {
+                                "sample_id": f"{split}-{statement_id}-{state}",
+                                "patient_id": f"{split}-patient-{statement_index}-{state_index}",
+                                "study_id": f"{split}-study-{statement_index}-{state_index}",
+                                "image_path": image_name,
+                                "image_sha256": (
+                                    f"{0 if split == 'train' else 1:x}"
+                                    f"{statement_index:x}"
+                                    f"{state_index:x}"
+                                ).ljust(64, "0"),
+                                "group_id": f"{split}-{statement_id}",
+                                "canonical_statement_id": statement_id,
+                                "statement_text": statement_id,
+                                "state": state,
+                                "label_source": "expert",
+                                "annotation_status": "expert_reviewed",
+                                "insufficient_kind": (
+                                    "natural" if statement_index == 0 else "synthetic"
+                                )
+                                if state == "insufficient"
+                                else None,
+                            }
+                        )
+                path = root / f"{split}.jsonl"
+                write_jsonl(path, rows)
+                manifests[split] = path
+            report = audit_manifests(
+                manifests,
+                data_root=root,
+                check_images=True,
+                check_decodable=True,
+                reject_constant_images=True,
+                require_complete_statements=True,
+                require_provenance=True,
+            )
+            self.assertEqual(report["status"], "pass", report["errors"])
 
 
 if __name__ == "__main__":

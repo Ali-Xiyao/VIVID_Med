@@ -8,9 +8,9 @@ import torch
 import torch.nn as nn
 
 from .decoder import EvidenceStateDecoder
-from .gates import EvidenceGate
+from .gates import EvidenceGate, exact_topk_mask
 from .interventions import (
-    build_equal_area_control_mask,
+    build_matched_control_masks,
     delete_control,
     delete_evidence,
     retain_evidence,
@@ -29,6 +29,8 @@ class BiVESModelConfig:
     tau_a: float = 1.0
     tau_d: float = 1.0
     tau_p: float = 1.0
+    num_controls: int = 4
+    control_mode: str = "random_disjoint"
 
 
 class BiVESCXR(nn.Module):
@@ -58,7 +60,6 @@ class BiVESCXR(nn.Module):
             temperature=config.gate_temperature,
         )
         self.decoder = EvidenceStateDecoder(config.tau_a, config.tau_d, config.tau_p)
-        self.mask_token = nn.Parameter(torch.zeros(config.visual_dim))
 
     def score_tokens(
         self,
@@ -90,6 +91,7 @@ class BiVESCXR(nn.Module):
             "evidence_maps": evidence_maps,
             "evidence_pos": aggregated[:, 0],
             "evidence_neg": aggregated[:, 1],
+            "valid_mask": valid_mask,
             **decoder,
         }
 
@@ -105,12 +107,45 @@ class BiVESCXR(nn.Module):
         if not run_interventions:
             return output
 
-        keep_tokens = retain_evidence(patch_tokens, original["gate"], self.mask_token)
-        drop_tokens = delete_evidence(patch_tokens, original["gate"], self.mask_token)
-        control_mask = build_equal_area_control_mask(original["gate"], valid_mask, self.config.topk)
-        control_tokens = delete_control(patch_tokens, control_mask, self.mask_token)
-        output["keep"] = self.score_tokens(keep_tokens, statement_embeddings, valid_mask)
-        output["drop"] = self.score_tokens(drop_tokens, statement_embeddings, valid_mask)
-        output["control"] = self.score_tokens(control_tokens, statement_embeddings, valid_mask)
-        output["control_mask"] = control_mask
+        evidence_hard_mask = exact_topk_mask(
+            original["gate"].detach(),
+            valid_mask,
+            self.config.topk,
+        ).bool()
+        keep_valid = valid_mask.bool() & evidence_hard_mask
+        drop_valid = valid_mask.bool() & ~evidence_hard_mask
+        keep_tokens = retain_evidence(patch_tokens, original["gate"])
+        drop_tokens = delete_evidence(patch_tokens, original["gate"])
+        control_masks = build_matched_control_masks(
+            evidence_hard_mask.to(original["gate"].dtype),
+            valid_mask,
+            self.config.topk,
+            num_controls=self.config.num_controls,
+            mode=self.config.control_mode,
+        )
+        output["keep"] = self.score_tokens(keep_tokens, statement_embeddings, keep_valid)
+        output["drop"] = self.score_tokens(drop_tokens, statement_embeddings, drop_valid)
+
+        controls: list[dict[str, torch.Tensor]] = []
+        control_valid_masks: list[torch.Tensor] = []
+        for control_index in range(control_masks.shape[1]):
+            control_mask = control_masks[:, control_index]
+            control_valid = valid_mask.bool() & ~(control_mask > 0.5)
+            control_valid_masks.append(control_valid)
+            control_tokens = delete_control(patch_tokens, control_mask)
+            controls.append(self.score_tokens(control_tokens, statement_embeddings, control_valid))
+        output["controls"] = controls
+        output["control"] = {
+            key: (
+                torch.stack([branch[key] for branch in controls], dim=0).mean(dim=0)
+                if controls[0][key].is_floating_point()
+                else torch.stack([branch[key] for branch in controls], dim=0).any(dim=0)
+            )
+            for key in controls[0]
+        }
+        output["evidence_hard_mask"] = evidence_hard_mask
+        output["control_masks"] = control_masks
+        output["keep_valid_mask"] = keep_valid
+        output["drop_valid_mask"] = drop_valid
+        output["control_valid_masks"] = torch.stack(control_valid_masks, dim=1)
         return output

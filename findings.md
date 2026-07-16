@@ -157,3 +157,39 @@
 - The old VinDr UMS builder referenced an archived Qwen3-VL mapping and therefore cannot define BiVES labels. It is archived; only ZIP extraction and integrity audit remain active until a patient-disjoint four-state BiVES manifest passes the new readiness audit.
 - Same-statement pair ranking is implemented in the loss but disabled in every active config until a locked group sampler and coverage audit exist. This prevents the 9B scale config from silently advertising a loss term the current loader does not supply.
 - Current validation evidence: active Python compilation passed; 12/12 BiVES unit tests passed; the synthetic core smoke produced normalized four-state probabilities with no flat state head and finite gradients; a local Qwen3.5-0.8B processor-only smoke produced uniform `image_grid_thw=[[1,28,28],[1,28,28]]` from two differently shaped letterboxed CXRs without loading model weights.
+
+## 2026-07-16 BiVES-CXR Code-Review Repair Findings
+
+- The review was correct that the prior implementation was an architecture
+  prototype rather than a P0-ready real-Qwen training path.
+- Qwen3.5 merger-pre tokens are merge-block-major. The active adapter now
+  restores row-major order before TV, content masks, controls, heatmaps, or
+  pixel mapping.
+- Both dtype boundaries are explicit: processor pixels are cast to the frozen
+  vision-tower dtype, then merger-pre visual tokens are cast to the FP32 BiVES
+  head dtype.
+- Direct `Qwen3_5VisionModel.from_pretrained` is unsafe for the parent
+  checkpoint because it does not strip `model.visual.` and initially produced
+  missing/random visual weights. The final loader selectively reads
+  `model.visual.*` safetensors, strips the prefix, and loads with `strict=True`.
+  A direct tensor comparison against the source safetensor passed.
+- Active training now requires complete same-statement S/C/U/I groups.
+  Positive pair/U-polarity coefficients without aligned indices are hard
+  errors, not silent no-ops.
+- The evidence intervention forward path is exact-K with straight-through
+  gradients. Keep/drop/control use zero replacement and branch-specific
+  validity masks; controls are multiple random-disjoint exact-area masks.
+- Letterbox padding is excluded by a row-major content-patch mask. A processor
+  smoke over four aspect ratios produced content counts
+  `[392, 392, 784, 392]` on a `28 x 28` grid and emitted no text tensors.
+- Formal 4B/9B configs now use locked train/validation/calibration/test
+  manifests and require frozen cached Qwen3.5 canonical statement embeddings.
+  The 2B P0 config retains learned IDs as an explicitly bounded P0 ablation.
+- Training now performs the strict manifest gate before visual weight loading,
+  uses vision-only weights, saves resolved configuration, best/last/final
+  checkpoints, resume/scheduler state, per-sample split outputs, manifest
+  hashes, Git revision, and package/GPU metadata.
+- Local validation after repair: Python compile passed, `20/20` BiVES tests
+  passed, synthetic smoke passed, and the real Qwen3.5-0.8B vision-only smoke
+  returned one finite `1 x 784 x 768` patch tensor with zero language
+  parameters. No formal experiment was started.

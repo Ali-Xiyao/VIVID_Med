@@ -7,9 +7,14 @@ Each JSONL row must contain:
   "sample_id": "unique-row-id",
   "patient_id": "patient-or-subject-id",
   "image_path": "relative/or/absolute/path",
+  "image_sha256": "lowercase-sha256",
+  "study_id": "source-study-id",
+  "group_id": "canonical-statement-group-id",
   "canonical_statement_id": "pleural_effusion|right",
   "statement_text": "A right pleural effusion is present.",
-  "state": "support"
+  "state": "support",
+  "label_source": "expert|rule|adjudicated",
+  "annotation_status": "expert_reviewed"
 }
 ```
 
@@ -19,6 +24,17 @@ Allowed state values:
 - `contradict`
 - `uncertain`
 - `insufficient`
+
+Required for `insufficient` rows:
+
+```json
+{
+  "insufficient_kind": "natural"
+}
+```
+
+Both `natural` and `synthetic` insufficient examples must be present in each
+formal split.
 
 Recommended additional fields:
 
@@ -48,3 +64,7 @@ Rules:
    insufficient examples.
 6. Horizontal flips are disabled unless laterality text and annotations are
    changed consistently.
+7. A canonical statement ID must map to exactly one normalized statement text.
+8. The same image/study/hash cannot cross patient-disjoint splits.
+9. The same image-statement pair cannot carry conflicting state labels.
+10. Every formal canonical statement group must cover S/C/U/I before training.

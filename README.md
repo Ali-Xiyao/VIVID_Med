@@ -24,6 +24,7 @@ There is no flat four-class prediction head in the active model.
 - Active configs: [`configs/bives_cxr/`](configs/bives_cxr/)
 - Training entry: [`scripts/train_bives_cxr.py`](scripts/train_bives_cxr.py)
 - CPU smoke: [`scripts/smoke_bives_cxr.py`](scripts/smoke_bives_cxr.py)
+- Real-weight vision smoke: [`scripts/smoke_qwen35_vision.py`](scripts/smoke_qwen35_vision.py)
 - Manifest audit: [`scripts/audit_bives_manifest.py`](scripts/audit_bives_manifest.py)
 - Tests: [`tests/test_bives_core.py`](tests/test_bives_core.py)
 - Handoff index: [`docs/README.md`](docs/README.md)
@@ -49,10 +50,14 @@ are not active model defaults. Their source/config/docs are preserved under
 pip install -r requirements.txt
 python scripts/smoke_bives_cxr.py
 python -m unittest discover -s tests -p "test_bives_*.py" -v
+python scripts/smoke_qwen35_vision.py \
+  --model-path /path/to/Qwen3.5-0.8B \
+  --dtype fp32
 ```
 
-These checks use synthetic CPU tensors and do not load model weights or run a
-formal local experiment.
+The first two checks use synthetic CPU tensors. The third is a read-only
+real-weight vision-tower check and does not retain the language model or start
+training.
 
 ## Server training
 

@@ -7,6 +7,8 @@ data:
   data_root: /ipfs/inspurfileset/home/dqxy/dqxy11/projects/xiyaowang/021_260129VIVID/data
   train_manifest: data/bives_cxr/manifests/train_locked.jsonl
   val_manifest: data/bives_cxr/manifests/val_locked.jsonl
+  calibration_manifest: data/bives_cxr/manifests/calibration_locked.jsonl
+  test_manifest: data/bives_cxr/manifests/test_locked.jsonl
   image_size: 448
   num_workers: 4
 
@@ -16,27 +18,46 @@ model:
   path: /ipfs/inspurfileset/home/dqxy/dqxy11/projects/xiyaowang/model/Qwen3.5-9B
   dtype: bf16
   freeze_backbone: true
-  statement_dim: 512
+  statement_embeddings:
+    mode: frozen_cached
+    path: data/bives_cxr/statement_embeddings/qwen35_canonical.pt
 
 bives:
   fusion_dim: 512
   evidence_max: 8.0
   mask:
-    type: hard_concrete
+    type: soft_topk
     topk: 16
     temperature: 0.5
   decoder:
     tau_a: 1.0
     tau_d: 1.0
     tau_p: 1.0
+  interventions:
+    replacement: zero
+    num_controls: 4
+    control_mode: random_disjoint
+
+sampling:
+  type: same_statement_state_group
+  states: [support, contradict, uncertain, insufficient]
+  groups_per_batch: 1
+  require_complete_groups: true
+
+audit:
+  check_images: true
+  check_decodable: true
+  reject_constant_images: true
+  require_complete_statements: true
+  require_provenance: true
 
 loss:
   lambda_ies: 0.5
   lambda_nec: 1.0
   lambda_ctrl: 0.5
-  # Disabled until the locked same-statement group sampler passes audit.
-  lambda_pair: 0.0
+  lambda_pair: 0.1
   pair_margin: 0.2
+  lambda_u_pol: 0.1
   lambda_i_mag: 0.1
   lambda_min: 0.001
   lambda_tv: 0.0001
@@ -46,8 +67,6 @@ training:
   lr_backbone: 0.00001
   weight_decay: 0.05
   max_steps: 5000
-  batch_size: 1
-  eval_batch_size: 1
   eval_interval: 250
   max_grad_norm: 1.0
   output_dir: outputs/bives_cxr/qwen35_9b_scale

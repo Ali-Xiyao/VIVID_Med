@@ -4,6 +4,7 @@ torch>=2.0.0
 torchvision>=0.15.0
 transformers>=5.5.3
 accelerate>=0.27.0
+safetensors>=0.4.3
 
 # Vision
 timm>=0.9.0

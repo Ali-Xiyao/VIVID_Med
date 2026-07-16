@@ -16,10 +16,22 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--train", type=Path, required=True)
     parser.add_argument("--val", type=Path, required=True)
+    parser.add_argument("--calibration", type=Path)
     parser.add_argument("--test", type=Path)
     parser.add_argument("--data-root", type=Path, default=Path("."))
-    parser.add_argument("--check-images", action="store_true")
-    parser.add_argument("--require-complete-statements", action="store_true")
+    parser.add_argument("--check-images", action=argparse.BooleanOptionalAction, default=True)
+    parser.add_argument(
+        "--require-complete-statements",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+    )
+    parser.add_argument("--check-decodable", action=argparse.BooleanOptionalAction, default=True)
+    parser.add_argument(
+        "--reject-constant-images",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+    )
+    parser.add_argument("--require-provenance", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--output", type=Path)
     return parser.parse_args()
 
@@ -27,6 +39,8 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
     manifests = {"train": args.train, "val": args.val}
+    if args.calibration is not None:
+        manifests["calibration"] = args.calibration
     if args.test is not None:
         manifests["test"] = args.test
     report = audit_manifests(
@@ -34,6 +48,9 @@ def main() -> None:
         data_root=args.data_root,
         check_images=args.check_images,
         require_complete_statements=args.require_complete_statements,
+        check_decodable=args.check_decodable,
+        reject_constant_images=args.reject_constant_images,
+        require_provenance=args.require_provenance,
     )
     rendered = json.dumps(report, indent=2, ensure_ascii=False)
     print(rendered)

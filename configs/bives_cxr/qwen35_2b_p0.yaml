@@ -7,6 +7,8 @@ data:
   data_root: /ipfs/inspurfileset/home/dqxy/dqxy11/projects/xiyaowang/021_260129VIVID/data
   train_manifest: data/bives_cxr/manifests/p0_train.jsonl
   val_manifest: data/bives_cxr/manifests/p0_val.jsonl
+  calibration_manifest: data/bives_cxr/manifests/p0_calibration.jsonl
+  test_manifest: data/bives_cxr/manifests/p0_test.jsonl
   image_size: 448
   max_train_samples: 256
   max_val_samples: 128
@@ -19,6 +21,8 @@ model:
   dtype: bf16
   freeze_backbone: true
   statement_dim: 256
+  statement_embeddings:
+    mode: learned_id
 
 bives:
   fusion_dim: 256
@@ -31,13 +35,31 @@ bives:
     tau_a: 1.0
     tau_d: 1.0
     tau_p: 1.0
+  interventions:
+    replacement: zero
+    num_controls: 4
+    control_mode: random_disjoint
+
+sampling:
+  type: same_statement_state_group
+  states: [support, contradict, uncertain, insufficient]
+  groups_per_batch: 1
+  require_complete_groups: true
+
+audit:
+  check_images: true
+  check_decodable: true
+  reject_constant_images: true
+  require_complete_statements: true
+  require_provenance: true
 
 loss:
   lambda_ies: 0.5
   lambda_nec: 1.0
   lambda_ctrl: 0.5
-  lambda_pair: 0.0
+  lambda_pair: 0.1
   pair_margin: 0.2
+  lambda_u_pol: 0.1
   lambda_i_mag: 0.1
   lambda_min: 0.001
   lambda_tv: 0.0001
@@ -47,8 +69,6 @@ training:
   lr_backbone: 0.00001
   weight_decay: 0.05
   max_steps: 100
-  batch_size: 1
-  eval_batch_size: 1
   eval_interval: 20
   max_grad_norm: 1.0
   output_dir: outputs/bives_cxr/qwen35_2b_p0
