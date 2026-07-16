@@ -254,14 +254,17 @@ this repair phase.
 - [x] R6: Load and retain only the Qwen3.5 vision module for training, update
   locked 4B/9B data/config boundaries, and improve resolved-config/checkpoint
   metadata.
-- [ ] R7: Run compile, BiVES unit tests, synthetic smoke, and a bounded
+- [x] R7: Run compile, BiVES unit tests, synthetic smoke, and a bounded
   Qwen3.5 vision-only load/inference gate; then commit, push, and sync source
   changes to the server project.
 
-Local R7 evidence is complete: compile passed, `20/20` BiVES unit tests passed,
-the synthetic smoke passed, and the real Qwen3.5-0.8B vision-only smoke
-returned `784` finite row-major patches with `100,592,896` visual parameters
-and `0` language parameters. Git/server handoff remains.
+R7 is complete. Local and server validation both passed compile, `20/20`
+BiVES unit tests, and the synthetic smoke. The real Qwen3.5-0.8B vision-only
+server smoke returned `784` finite row-major patches with `100,592,896`
+visual parameters and `0` language parameters. Repair commit `eac1144` was
+pushed to `origin/main` and its source archive was hash-verified and extracted
+into the matching server project without touching `data/`, `outputs/`,
+`pretrained/`, or shared `model/`.
 
 ### New errors / environment notes
 
