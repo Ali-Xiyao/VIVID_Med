@@ -1,1294 +1,348 @@
-# VIVID-Med Execution Progress
-
-## 2026-07-06 SAMEQ-CVCP v4 takeover
-
-- Loaded `superpowers:using-superpowers`, `planning-with-files`, and `executing-plans` because the user asked to execute the paper-ready SAMEQ-CVCP v4 document end to end.
-- Confirmed the active goal already points at `vivid_med_sameq_cvcp_next_experiment_plan_v4.md`, so no new goal object was created.
-- Re-read `docs/README.md`, `task_plan.md`, `findings.md`, `progress.md`, the old `vivid_med_cvcp_ccsh_full_next_experiment_plan.md`, and the new `vivid_med_sameq_cvcp_next_experiment_plan_v4.md` with UTF-8 decoding.
-- Ran planning session catchup; it returned no unsynced-context payload.
-- Audited current SAMEQ/CVCP assets: script inventory, config inventory, final tables, old closure markdown, module-combo manifest, model comparison audit, external evaluation boundary table, and current GPU state.
-- Verified both RTX 3090 GPUs are idle (`0 MiB`, `0%`) and no compute process is running.
-- Identified the exact v4 gap set: the repo already closes the broad CVCP/CCSH route, but it still needs exact SAMEQ-full/CF bridge rows and pure SAMEQ multi-seed evidence to match the new v4 wording more literally.
-- Updated `task_plan.md` and `findings.md` so the active source of truth is now the SAMEQ-CVCP v4 document rather than only the older v3 closure chain.
-- Updated `docs/README.md` so the current active entry point now points to `vivid_med_sameq_cvcp_next_experiment_plan_v4.md`, while keeping the old v3 CVCP/CCSH document as a prior closure reference.
-- Patched `scripts/prepare_cvcp_ccsh_module_combos.py` to add the exact v4 bridge rows: `SAMEQ-10k+CCSH`, `SAMEQ-full+CCSH`, `SAMEQ-full+CEQ+CCSH`, `SAMEQ-CF-20+CCSH`, and `SAMEQ-CF-20+CEQ+CCSH`.
-- Patched `scripts/run_multiseed_manifest.py` so CVCP/SAMEQ configs from `outputs/final_tables/cvcp_ccsh_training_manifest.csv` can be turned into queue-compatible seed manifests with unique per-seed IDs.
-- Rebuilt the full module-combo manifest (`23` rows total) and wrote the focused v4 bridge subset manifest `outputs/final_tables/sameq_v4_missing_module_manifest.csv`.
-- Generated SAMEQ pure multi-seed configs and manifest for `cvcp_v1_sameq_10k` and `cvcp_v1_sameq_full` seeds `0/1/2` under `configs/qwen3vl_instruction/sameq_v4_multiseed/` and `outputs/final_tables/sameq_v4_multiseed_manifest.{csv,md}`.
-- Launched four hidden background queue processes at about `2026-07-06T13:47:43+08:00`:
-  - Training queue GPU0 lane0/2 PID `34984`
-  - Training queue GPU1 lane1/2 PID `10044`
-  - Module queue GPU0 lane0/2 PID `1616`
-  - Module queue GPU1 lane1/2 PID `7052`
-- First queue-log snapshot shows the expected v4 starts:
-  - Training lane GPU0 started `cvcp_v1_sameq_10k_seed0`
-  - Training lane GPU1 started `cvcp_v1_sameq_10k_seed1`
-  - Module lane GPU0 started `sameq_10k_ccsh export_train_embeddings`
-  - Module lane GPU1 started `sameq_full_ccsh export_train_embeddings`
-- A 30-second post-launch GPU check at `2026-07-06T13:49:27+08:00` showed both RTX 3090s active with about `994 MiB` memory each and live Python compute processes:
-  - GPU0 processes included `train_qwen3vl_clinical_instruction.py` for `cvcp_v1_sameq_10k_seed0` and `export_qwen3vl_instruction_embeddings.py` for `sameq_10k_ccsh`
-  - GPU1 processes included `train_qwen3vl_clinical_instruction.py` for `cvcp_v1_sameq_10k_seed1` and `export_qwen3vl_instruction_embeddings.py` for `sameq_full_ccsh`
-- A deeper live-state check around `2026-07-06T13:58:xx+08:00` confirmed the new SAMEQ-v4 manifests are wired correctly:
-  - `configs/qwen3vl_instruction/sameq_v4_multiseed/cvcp_v1_sameq_10k_seed{0,1}.yaml` each point to isolated seed output dirs under `F:/Xiyao_Wang/021_260129VIVID_cvcp_ccsh_outputs/qwen3vl_sameq_v4_multiseed/`.
-  - `outputs/final_tables/sameq_v4_multiseed_manifest.csv` and `sameq_v4_multiseed_postprocess_manifest.csv` both reference the same seed-specific success/checkpoint paths and no longer rely on the old base-run directories.
-- The two active SAMEQ seed runs are not stalled at initialization:
-  - `cvcp_v1_sameq_10k_seed0` wrote `training_log.txt`, `progress.json`, `config_snapshot.json`, and reached at least `global_step=125`.
-  - `cvcp_v1_sameq_10k_seed1` wrote `training_log.txt`, `progress.json`, `config_snapshot.json`, and reached at least `global_step=125`.
-- `nvidia-smi --query-compute-apps` confirmed both GPUs are simultaneously carrying one seed-training process plus one bridge-export process:
-  - GPU0 hosts `cvcp_v1_sameq_10k_seed0` and `sameq_10k_ccsh`.
-  - GPU1 hosts `cvcp_v1_sameq_10k_seed1` and `sameq_full_ccsh`.
-- The corrected SAMEQ-v4 postprocess watchers are alive and now waiting exactly where expected:
-  - GPU0 watcher PID `7380` is waiting on `cvcp_v1_sameq_10k_seed0 training_not_ready`.
-  - GPU1 watcher PID `15684` is waiting on `cvcp_v1_sameq_10k_seed1 training_not_ready`.
-- The two bridge-export jobs still have only `START` in the wrapper logs and no finished output files yet, but their Python worker processes have sustained CPU time and multi-GB working sets, so they are active rather than dead-on-arrival.
-- A follow-up check about two minutes later showed the SAMEQ-10k seed runs still advancing cleanly:
-  - `cvcp_v1_sameq_10k_seed0` reached at least `global_step=300` by `2026-07-06T14:04:12+08:00`.
-  - `cvcp_v1_sameq_10k_seed1` reached at least `global_step=300` by `2026-07-06T14:04:21+08:00`.
-- `nvidia-smi --query-compute-apps` also resolved the apparent `cuda:0` ambiguity in the module queue: one export worker is attached to GPU0 and the other to GPU1, so the bridge exports are truly split across both 3090s instead of colliding onto a single visible device.
-- As of `2026-07-06T14:03:22+08:00`, the repaired SAMEQ-v4 postprocess watchers are still correctly waiting on `training_not_ready` for the two active seed runs, which is the expected state before the first `metrics_step_500.json`/final package appears.
-- Began synchronizing exact legacy evidence back into the authoritative source markdown `vivid_med_sameq_cvcp_next_experiment_plan_v4.md` instead of waiting for the full queue to finish:
-  - Prefilled the Phase 1 SAMEQ result table with exact completed rows for `SAMEQ-3k-5k`, `SAMEQ-10k-8k`, and `SAMEQ-full-12k`.
-  - Prefilled the Phase 2 CCSH result table with exact completed comparison rows for `Base+CCSH`, `SHUF-K4+CCSH`, and `Replay-CVCP+CCSH`.
-  - Marked `SAMEQ-10k+CCSH` and `SAMEQ-full+CCSH` as actively in progress in the source table instead of pretending those bridge rows are already closed.
-  - Added explicit notes in the source markdown that current NIH appendix values are not being promoted into the formal `External AUC` cells.
-- The two active SAMEQ-10k seed runs reached the first formal eval boundary:
-  - `cvcp_v1_sameq_10k_seed0` reached at least `global_step=500`.
-  - `cvcp_v1_sameq_10k_seed1` reached at least `global_step=500`.
-  - Postprocess watchers are still correctly waiting, which implies the queue logic is gating on final training completion rather than mid-run eval snapshots.
-- The first SAMEQ-v4 bridge wave completed end to end for the two highest-priority CCSH rows:
-  - `sameq_10k_ccsh` finished train/val embedding export, `train_module_ccsh`, and summarize.
-  - `sameq_full_ccsh` finished train/val embedding export, `train_module_ccsh`, and summarize.
-  - The module queue then advanced automatically to `sameq_full_ceq_ccsh` on one lane and `sameq_cf20_ccsh` on the other.
-- Updated the authoritative source markdown again after those artifacts landed:
-  - Replaced the in-progress placeholders for `SAMEQ-10k+CCSH` and `SAMEQ-full+CCSH` with exact metrics.
-  - Added `SAMEQ-CF-20` and `SAMEQ-CF-30` rows to the CF-compatible result table with explicit boundary notes about missing main-external and option-pair diagnostics.
-  - Completed the `Consistency F1` and `ECE` cells for the exact completed `Base+CCSH`, `SHUF-K4+CCSH`, and `Replay-CVCP+CCSH` baselines.
-- Ran another live-state verification after the first bridge write-back:
-  - GPU0 is still running `cvcp_v1_sameq_10k_seed0` plus `sameq_full_ceq_ccsh` export; GPU1 is still running `cvcp_v1_sameq_10k_seed1` plus `sameq_cf20_ccsh` export.
-  - `nvidia-smi` now shows the co-scheduled wave at about `14.0 GiB` on GPU0 and `13.6 GiB` on GPU1, so the two-GPU execution plan remains healthy.
-- Confirmed the first formal eval artifacts for the active pure SAMEQ seed sweep:
-  - `cvcp_v1_sameq_10k_seed0/metrics_step_500.json` exists with `val_loss=0.218644`, and `progress.json` has advanced to at least `global_step=600`.
-  - `cvcp_v1_sameq_10k_seed1/metrics_step_500.json` exists with `val_loss=0.159660`, and `progress.json` has advanced to at least `global_step=575`.
-  - The SAMEQ-v4 postprocess watchers are still waiting on final training completion, which confirms the watcher gate is `metrics_final.json` / final package readiness rather than the step-500 eval event.
-- Confirmed the second bridge wave has entered real work:
-  - GPU0 module lane is exporting train embeddings for `sameq_full_ceq_ccsh`.
-  - GPU1 module lane is exporting train embeddings for `sameq_cf20_ccsh`.
-  - The currently active embedding directories still look empty from the filesystem, which matches the existing export script behavior of writing artifacts late rather than streaming partial `.npz` files from step zero.
-- Continued synchronizing the authoritative v4 markdown with exact already-completed Phase 4 evidence instead of leaving those rows blank:
-  - Updated the `SAMEQ-10k-8k` and `SAMEQ-full-12k` notes so the document distinguishes active seed-refresh evidence from rows that are still queued.
-  - Replaced the stale `queued` wording for `SAMEQ-CF-20+CCSH` with the current exact runtime state: the bridge row is active and GPU1 is exporting `sameq_cf20_ccsh` train embeddings.
-  - Filled the CEQ table rows that already have exact evidence: `SAMEQ+CEQ`, `SAMEQ+CEQ+CCSH`, and `SAMEQ-K4+CEQ+CCSH`.
-  - Kept `SAMEQ-CF+CEQ+CCSH` explicitly pending and left `Attention quality` blank on purpose, because no exact same-row qualitative casebook/attention review artifact exists yet.
-- Short-interval recheck after a 180-second wait showed the remaining live work moving cleanly:
-  - `cvcp_v1_sameq_10k_seed0` and `seed1` both wrote `metrics_step_1000.json`; step-1000 eval losses are `0.137901` and `0.182700`.
-  - Both active pure-SAMEQ seeds continued well past that boundary and had reached at least `global_step=1500` by the recheck.
-  - GPU utilization dropped to the training-only footprint (`~9.6 GiB` on GPU0 and `~9.2 GiB` on GPU1), which indicated the bridge-export workers had already moved off the cards.
-- Verified that the second bridge wave fully closed during that interval:
-  - `sameq_full_ceq_ccsh` now has complete `ceq/metrics_final.json` and `ccsh/metrics_final.json`; its exact row is `complete` in `module_combo_results.csv`.
-  - `sameq_cf20_ccsh` now has `ccsh/metrics_final.json` and is `complete`.
-  - `sameq_cf20_ceq_ccsh` also landed both module metrics and is `complete`.
-- Updated the authoritative v4 markdown again to reflect those newly completed exact rows:
-  - Filled `SAMEQ-CF-20+CCSH` with the exact CCSH metrics.
-  - Refined the CEQ section from generic placeholders into the actual completed paper-ready rows, including `SAMEQ-full+CEQ+CCSH` and `SAMEQ-CF-20+CEQ+CCSH`.
-  - Left the qualitative `Attention quality` column intentionally blank because there is still no same-row formal qualitative review artifact to justify a paper-ready number or label.
-- Tightened a couple of remaining narrative mismatches in the source markdown:
-  - The `SAMEQ-CF-20` baseline note now says its paired `+CCSH` and `+CEQ+CCSH` bridge rows are closed, instead of still describing them as running.
-  - The locked-family shortlist now names the actual completed v4 finalists (`SAMEQ-full+CCSH`, `SAMEQ-CF-20+CCSH`, `SAMEQ-full+CEQ+CCSH`, `SAMEQ-CF-20+CEQ+CCSH`) instead of the older generic placeholders.
-- Brought the multiseed wording in the Phase 1 SAMEQ result table up to date as well: the live refresh note now references the current `step-1000` eval artifacts for seed0/seed1 rather than the older `step-500` checkpoint.
-- Continued source-markdown write-back beyond the bridge/core tables so the back half of the paper-ready document is no longer mostly placeholders:
-  - Added formal boundary notes to the HNMB and AUCH sections, making it explicit that the currently completed replay-backed stacks are not being mislabeled as exact SAMEQ-stack rows.
-  - Filled the curriculum table with exact `Direct-SAMEQ`, `CVCP-prog`, `CVCP-replay`, `CVCP-replay-CCSH`, and `CDCS-SAMEQ` evidence, while preserving a bounded note for the unnamed `CVCP-prog-SHUF` gap.
-  - Converted the external-evaluation table from blank cells into an explicit paper-ready boundary table: no accepted main external exists yet, and NIH stays appendix-only.
-  - Converted the model-comparison section from placeholders into an exact Qwen3-VL result row plus explicit architecture-boundary rows for InternVL, LLaVA, and text-only scaffolds.
-  - Filled the locked-comparison table with provisional finalists and added a note that true `mean±std` locking still depends on the in-flight pure-SAMEQ multiseed refresh.
-- Ran a fresh live audit after the previous write-back pass and confirmed the SAMEQ seed sweep kept moving:
-  - `cvcp_v1_sameq_10k_seed0` still has formal eval files through `metrics_step_2000.json` (`val_loss=0.201574`) and its `training_log.txt` has now advanced through `global_step=2500`.
-  - `cvcp_v1_sameq_10k_seed1` still has formal eval files through `metrics_step_2000.json` (`val_loss=0.204979`) and its `training_log.txt` has now advanced through `global_step=2450`.
-  - The latest GPU snapshot is back to the training-only footprint (`GPU0 36%, 9609 MiB`; `GPU1 32%, 9161 MiB`), which is consistent with the bridge/export wave already being closed and only the pure SAMEQ seeds remaining active.
-  - Postprocess watcher PIDs `7380` and `15684` are still alive and intentionally blocked on final training completion rather than the intermediate step-1000/1500/2000 eval milestones.
-- Patched the remaining stale SAMEQ-refresh wording across the source markdown, findings, and plan files so they now reference the step-2000 formal boundary instead of the older step-1000 snapshot.
-- Ran another 120-second live recheck to distinguish steady progress from a stall:
-  - `cvcp_v1_sameq_10k_seed0` wrote `metrics_step_2500.json` with `val_loss=0.206988`, and its `training_log.txt` continued through `global_step=2675`.
-  - `cvcp_v1_sameq_10k_seed1` also wrote `metrics_step_2500.json` with `val_loss=0.156731`, and its `training_log.txt` continued through `global_step=2600`.
-  - GPU utilization remained in the training-only regime (`GPU0 27%, 9609 MiB`; `GPU1 42%, 9161 MiB`), which is consistent with healthy continued training rather than a hung wrapper state.
-  - `cvcp_v1_sameq_10k_seed2` and all `cvcp_v1_sameq_full_seed*` output directories were still absent, so the queue has not yet advanced beyond the first active 10k pair.
-- Updated the authoritative v4 markdown and planning files again so the current multiseed note now references the stronger step-2500 evidence instead of the older step-2000 snapshot.
-- Patched `scripts/run_multiseed_manifest.py` with filesystem-backed status inference (`completed_existing` / `active` / `queued` / `output_dir_created`) so multiseed manifests can reflect live execution rather than leaving every non-final row at `planned`.
-- Refreshed `outputs/final_tables/sameq_v4_multiseed_manifest.{csv,md}` to match the current queue state: `cvcp_v1_sameq_10k_seed0/seed1` are `active`, while `cvcp_v1_sameq_10k_seed2` and all `cvcp_v1_sameq_full_seed*` rows remain `queued`.
-- Verified `python scripts\run_multiseed_manifest.py ...` now reproduces that same `active/queued` state directly from the CLI instead of requiring a manual rewrite path.
-- Patched `scripts/summarize_multiseed_results.py` so its boundary note matches the current SAMEQ v4 reality (`planned/queued/active` rows are not yet stability evidence), then wrote `outputs/final_tables/sameq_v4_multiseed_stability.{csv,md}` as the current paper-ready seed-sweep status artifact.
-- Updated `docs/README.md` so the active handoff index now points directly to the SAMEQ v4 multiseed manifest and stability snapshot alongside the main v4 source markdown.
-- Stayed with the live sweep long enough to capture the next formal boundary:
-  - `cvcp_v1_sameq_10k_seed0` wrote `metrics_step_3000.json` with `val_loss=0.173802` and then continued to `global_step=3025`.
-  - `cvcp_v1_sameq_10k_seed1` also wrote `metrics_step_3000.json` with `val_loss=0.216326`; its log has reached at least `global_step=3000`.
-  - The active SAMEQ result-table wording in the source markdown, findings, and task plan is now synchronized to the stronger step-3000 formal evidence instead of the older step-2500 snapshot.
-- Rechecked the active SAMEQ-10k pair again after the step-3000 milestone and confirmed both lanes are still moving without queue takeover yet:
-  - `cvcp_v1_sameq_10k_seed0` has now written `metrics_step_4000.json` with `val_loss=0.196355` and then continued to `global_step=4375`.
-  - `cvcp_v1_sameq_10k_seed1` has now also written `metrics_step_4000.json` with `val_loss=0.249366` and then continued to `global_step=4275`.
-  - No `metrics_final.json` exists yet for either run, and `cvcp_v1_sameq_10k_seed2` plus all `cvcp_v1_sameq_full_seed*` directories are still absent, so the queue has not yet advanced beyond the first active 10k pair.
-- Audited the multiseed configs and queue/watcher logic to separate “still running” from “possibly stuck”:
-  - `configs/qwen3vl_instruction/sameq_v4_multiseed/cvcp_v1_sameq_10k_seed0.yaml` confirms the active 10k seed family is configured for `max_steps: 8000`.
-  - `configs/qwen3vl_instruction/sameq_v4_multiseed/cvcp_v1_sameq_full_seed0.yaml` confirms the queued full-scale family is configured for `max_steps: 12000`.
-  - `scripts/run_cvcp_ccsh_training_queue.ps1` still advances only after a row writes `metrics_final.json`; `scripts/run_cvcp_ccsh_postprocess_queue.ps1` still waits for both `metrics_final.json` and `checkpoints/final.pt`.
-  - Fresh tails of `postprocess_gpu0_lane0_of2.log` and `postprocess_gpu1_lane1_of2.log` continue writing `WAIT ... training_not_ready` every two minutes, which confirms the postprocess lanes are alive and correctly gated instead of having exited.
-- Strengthened the live SAMEQ status artifacts so they now capture more than `active/queued`:
-  - Patched `scripts/run_multiseed_manifest.py` to expose `latest_formal_eval_step`, `latest_formal_val_loss`, and `latest_live_step` per seed row.
-  - Patched `scripts/summarize_multiseed_results.py` to carry those fields through into the paper-ready stability snapshot, with a defensive fallback that recomputes them from `output_dir` if the manifest row is missing them.
-  - Regenerated `outputs/final_tables/sameq_v4_multiseed_manifest.{csv,md}` and `sameq_v4_multiseed_stability.{csv,md}`; the active `SAMEQ-10k` rows now show formal step-4000 eval losses plus live train-log steps (`4275` and `4175`) without overstating them as final multiseed evidence.
-  - A later live recheck showed the same formal step-4000 boundary still holds, while the training logs continued on to `global_step=4375` for seed0 and `4275` for seed1; the queue still has not produced `metrics_final.json` or created the `seed2` directory yet.
-- Ran a tighter live-state refresh after the later step-4000 boundary:
-  - `progress.json` now reaches `global_step=4500` for `cvcp_v1_sameq_10k_seed0`, while `cvcp_v1_sameq_10k_seed1` has continued at least to `global_step=4475`; no `metrics_step_4500.json`, `metrics_final.json`, or `checkpoints/final.pt` exists yet for either run.
-  - `outputs/logs/cvcp_ccsh_postprocess/postprocess_gpu0_lane0_of2.log` and `postprocess_gpu1_lane1_of2.log` continue writing `WAIT ... training_not_ready` every two minutes through `2026-07-06T15:51:23+08:00`, so the watcher gate is healthy rather than stalled.
-  - `cvcp_v1_sameq_10k_seed2` and all `cvcp_v1_sameq_full_seed*` output directories are still absent, confirming the queue has not handed off beyond the first active 10k pair.
-  - After correcting one mistaken parallel regeneration, reran `sameq_v4_multiseed_manifest` and then `sameq_v4_multiseed_stability` sequentially; both artifacts now consistently report the active `SAMEQ-10k` rows at `latest_formal_eval_step=4000`, `latest_formal_val_loss=0.196355/0.249366`, and `latest_live_step=4500/4500`.
-- A rapid post-edit recheck immediately moved the boundary again:
-  - `cvcp_v1_sameq_10k_seed0` wrote `metrics_step_4500.json` with `val_loss=0.23758074538430074` and then continued to `latest_live_step=4575`.
-  - `cvcp_v1_sameq_10k_seed1` still had no `metrics_step_4500.json`, but its `progress.json` had reached `latest_live_step=4500`.
-  - Postprocess watchers remained healthy through `2026-07-06T15:55:23+08:00`, still writing `WAIT ... training_not_ready` for both active seeds.
-  - Reran `sameq_v4_multiseed_manifest` and then `sameq_v4_multiseed_stability` sequentially again so the published artifacts now match the asymmetric current state: `seed0=step-4500/loss 0.237581/live 4575`, `seed1=step-4000/loss 0.249366/live 4500`.
-- A final short recheck removed that asymmetry again:
-  - `cvcp_v1_sameq_10k_seed1` then wrote `metrics_step_4500.json` with `val_loss=0.17097222052484137`, while `cvcp_v1_sameq_10k_seed0` continued beyond the eval boundary.
-  - The newest sequential manifest/stability refresh now reports both active seeds at the shared formal `step-4500` boundary, with `latest_formal_val_loss=0.237581/0.170972` and `latest_live_step=4625/4525`.
-  - `metrics_final.json`, `checkpoints/final.pt`, `cvcp_v1_sameq_10k_seed2`, and all `cvcp_v1_sameq_full_seed*` outputs are still absent, so the queue has still not handed off beyond the first active 10k pair.
-- Continued the SAMEQ multiseed monitoring loop without any handoff yet:
-  - A fresh live-state check showed no new final-package evidence, no `seed2` / `SAMEQ-full` output directories, and postprocess watchers still writing healthy `WAIT ... training_not_ready` lines every two minutes.
-  - `progress.json` has now advanced to `latest_live_step=4750` for `cvcp_v1_sameq_10k_seed0` and `latest_live_step=4650` for `cvcp_v1_sameq_10k_seed1`, while the strongest shared formal boundary remains `metrics_step_4500.json` for both active seeds.
-  - Reran `sameq_v4_multiseed_manifest` and then `sameq_v4_multiseed_stability` sequentially once more so the published status artifacts now match the newest verified live progress: `seed0=step-4500/loss 0.237581/live 4750`, `seed1=step-4500/loss 0.170972/live 4650`.
-- One more short monitoring window pushed the live boundary forward again without changing the formal evidence:
-  - `cvcp_v1_sameq_10k_seed0` has now reached `latest_live_step=5000`, which places it inside the next eval/checkpoint window, but `metrics_step_5000.json` is still not written yet.
-  - `cvcp_v1_sameq_10k_seed1` has advanced to `latest_live_step=4950` while still holding the same formal `step-4500` eval artifact.
-  - Reran `sameq_v4_multiseed_manifest` and then `sameq_v4_multiseed_stability` sequentially again so the published status artifacts now match the newest verified live progress: `seed0=step-4500/loss 0.237581/live 5000`, `seed1=step-4500/loss 0.170972/live 4950`.
-- 2026-07-06T16:08:35+08:00 user changed the monitoring cadence again: estimate remaining time from current evidence, then switch to a direct foreground Codex sleep loop with `Start-Sleep -Seconds 3600` after each check. No automation/scheduler should be used for this SAMEQ v4 closeout loop.
-- 2026-07-06T17:09:29+08:00 one-hour foreground sleep check showed a true phase transition rather than another minor live-step update:
-  - `cvcp_v1_sameq_10k_seed0` completed training at `2026-07-06T16:47:37+08:00`, wrote `metrics_final.json`, `checkpoints/final.pt`, and `metrics_step_8000.json`, and the training lane immediately advanced to `cvcp_v1_sameq_10k_seed2`.
-  - `cvcp_v1_sameq_10k_seed1` completed training at `2026-07-06T16:49:07+08:00`, wrote `metrics_final.json`, `checkpoints/final.pt`, and `metrics_step_8000.json`, and the other lane immediately advanced to `cvcp_v1_sameq_full_seed0`.
-  - Postprocess watchers crossed the readiness gate for both completed 10k seeds: LP and NIH appendix 1k finished for both rows, visual-dependence finished for both rows, and both rows were running `counterfactual` by `17:09`.
-  - Sequentially reran `sameq_v4_multiseed_manifest` and `sameq_v4_multiseed_stability`; the published status artifacts now show `seed0/seed1=completed_existing`, `seed2=active (step-1000 loss 0.215413, live 1500)`, `full_seed0=active (step-1000 loss 0.137901, live 1275)`, and `full_seed1/2=queued`.
-- 2026-07-06T18:12:35+08:00 the next hourly foreground check showed continued clean queue execution rather than a stall:
-  - `cvcp_v1_sameq_10k_seed0` and `seed1` both remained fully complete at the training layer (`metrics_final.json + final.pt + step-8000 eval`).
-  - Downstream postprocess for the completed 10k pair also finished end to end: `seed0` reached `DONE ... summarize` at `17:17:42+08:00`, and `seed1` reached `DONE ... summarize` at `17:18:25+08:00`.
-  - Active training has progressed materially on the next two rows: `cvcp_v1_sameq_10k_seed2` now shows `step-5500` eval loss `0.226057` with live step `5700`, and `cvcp_v1_sameq_full_seed0` now shows `step-5000` eval loss `0.144361` with live step `5500`.
-  - Sequentially reran `sameq_v4_multiseed_manifest` and `sameq_v4_multiseed_stability` again after the check; the published artifacts still show `seed0/1=completed_existing`, while `seed2` and `full_seed0` remain the two active rows and `full_seed1/2` remain queued.
-- 2026-07-06T18:17:48+08:00 a short follow-up refresh closed the remaining artifact lag and tightened the remaining-time estimate:
-  - Sequentially reran `sameq_v4_multiseed_manifest` and `sameq_v4_multiseed_stability` in the correct order again; the published artifacts now match the live queue instead of the older `step-1000` snapshot.
-  - `cvcp_v1_sameq_10k_seed2` now publishes as `active (step-5500 loss 0.226057, live 6000)`, and `cvcp_v1_sameq_full_seed0` now publishes as `active (step-5500 loss 0.185037, live 5775)`.
-  - Postprocess watchers are still healthy and writing `WAIT ... training_not_ready` every two minutes for those two active rows, so there is no evidence of a silent gate failure.
-  - Using the active-run start times and current step rates, the training critical path is now approximately `5h10m` from this check if throughput stays steady and the even/odd lane split continues normally; that projects full training plus final downstream summarize closeout around `2026-07-06 23:25-23:35 +08:00`.
-- 2026-07-06T19:20:34+08:00 the next hourly foreground check confirmed a second real queue handoff instead of a stall:
-  - `cvcp_v1_sameq_10k_seed2` has now completed formal training with `metrics_final.json + final.pt + step-8000 eval` (`val_loss=0.184094`), and the GPU0 postprocess lane has already started its downstream package (`lp` and `nih_appendix_1k` done, `visual` running).
-  - GPU0 training immediately handed off again to `cvcp_v1_sameq_full_seed1`, which now shows formal `step-500` loss `0.159660` and live step `975`.
-  - GPU1 remains on `cvcp_v1_sameq_full_seed0`, which has progressed to formal `step-8500` loss `0.213160` and live step `8750`; `cvcp_v1_sameq_full_seed2` is still not started.
-  - Sequentially reran `sameq_v4_multiseed_manifest` and `sameq_v4_multiseed_stability` again after the check; the published artifacts now show the full 10k triplet as `completed_existing`, `full_seed0/full_seed1` as `active`, and only `full_seed2` as `queued`.
-  - The queue critical path is now the full-scale family. If the current full-seed throughput and postprocess tail stay stable, the remaining wall-clock is roughly `4h40m-5h00m` from this check, which projects total closeout around `2026-07-07 00:00-00:20 +08:00`.
-- 2026-07-06T20:25:54+08:00 the next hourly foreground check confirmed a third real queue handoff and effectively closed the 10k family:
-  - `cvcp_v1_sameq_10k_seed2` finished its full downstream package through `summarize` at `2026-07-06T19:44:11+08:00`, so the 10k triplet is now closed end to end rather than only training-complete.
-  - `cvcp_v1_sameq_full_seed0` has completed formal training with `metrics_final.json + final.pt + step-12000` and the GPU1 postprocess lane has already started `lp`.
-  - GPU0 training is now on `cvcp_v1_sameq_full_seed1` with formal `step-4500` loss `0.170972` and live step `4525`, while GPU1 training has already handed off again to newly started `cvcp_v1_sameq_full_seed2` (`live step 300` at refresh time).
-  - Sequentially reran `sameq_v4_multiseed_manifest` and `sameq_v4_multiseed_stability` again after the handoff; the published artifacts now show `10k_seed0/1/2 + full_seed0 = completed_existing`, with only `full_seed1/full_seed2` remaining active.
-  - The critical path is now almost entirely `full_seed2` plus its postprocess tail. If the current throughput holds, total closeout is still most likely around `2026-07-07 00:10-00:30 +08:00`.
-- 2026-07-06T21:28:35+08:00 the next hourly foreground check narrowed the closeout path again:
-  - `cvcp_v1_sameq_full_seed0` finished its downstream package through `summarize` at `2026-07-06T20:55:34+08:00`, so both the entire 10k family and `full_seed0` are now fully closed end to end.
-  - `cvcp_v1_sameq_full_seed1` has progressed to formal `step-8000` loss `0.205080` with live step `8500`.
-  - `cvcp_v1_sameq_full_seed2` has progressed to formal `step-3500` loss `0.242523` with live step `4000`.
-  - Sequentially reran `sameq_v4_multiseed_manifest` and `sameq_v4_multiseed_stability` again after the check; the published artifacts now match the live state with `full_seed1/full_seed2` as the only remaining active rows.
-  - At the current rates, the likely finish window has tightened further to about `2026-07-07 00:05-00:15 +08:00`, with `full_seed2` plus its postprocess tail remaining the longest path.
-- 2026-07-06T22:30:26+08:00 the next hourly foreground check moved both remaining training rows deep into the final window:
-  - `cvcp_v1_sameq_full_seed1` has advanced to formal `step-11500` loss `0.222070` with live step `11875`, so it is only a short distance from formal training completion.
-  - `cvcp_v1_sameq_full_seed2` has advanced to formal `step-7000` loss `0.203718` with live step `7375`.
-  - Postprocess watchers remain healthy and idle-gated on the two remaining full-scale rows: GPU0 is waiting on `full_seed1`, and GPU1 is waiting on `full_seed2`.
-  - Sequentially reran `sameq_v4_multiseed_manifest` and `sameq_v4_multiseed_stability` again after the check; the published artifacts now reflect the `step-11500` / `step-7000` boundary.
-  - The projected finish window remains centered on `2026-07-07 00:10-00:20 +08:00`, with `full_seed2` plus its downstream package still the longest path.
-- 2026-07-06T23:32:19+08:00 the next hourly foreground check reduced the queue to a single remaining active row:
-  - `cvcp_v1_sameq_full_seed1` has completed formal training and downstream package through `summarize`; the GPU0 postprocess lane ended with `QUEUE_DONE`.
-  - `cvcp_v1_sameq_full_seed2` is now the only remaining active row, with formal `step-10000` loss `0.197462` and live step `10375`.
-  - Sequentially reran `sameq_v4_multiseed_manifest` and `sameq_v4_multiseed_stability` again after the check; the published artifacts now show `full_seed2` as the only active row and every other seed as `completed_existing`.
-  - The remaining wall-clock is now essentially `full_seed2` plus its postprocess tail, which keeps the likely final closeout window around `2026-07-07 00:20-00:35 +08:00`.
-- 2026-07-07T00:34:14+08:00 user stopped the hourly sleep loop and requested dense completion checking instead:
-  - `cvcp_v1_sameq_full_seed2` has now completed formal training with `metrics_final.json + final.pt`; the postprocess log shows `lp`, `nih_appendix_1k`, and `visual` all completed, and `counterfactual` is currently running.
-  - GPU0 now only shows a small postprocess footprint, while GPU1 carries the active `counterfactual` worker; this matches the expected final-tail behavior rather than a stalled queue.
-  - The queue has therefore fully exited the training phase. The only remaining work is the last downstream chain for `full_seed2`: `counterfactual -> ab_swap_jsonl -> ab_swap_config -> ab_swap_counterfactual -> paraphrase -> summarize`.
-- 2026-07-07T00:46:26+08:00 dense completion checking reached the final closeout boundary:
-  - `cvcp_v1_sameq_full_seed2` finished `counterfactual -> ab_swap_jsonl -> ab_swap_config -> ab_swap_counterfactual -> paraphrase -> summarize`, and the GPU1 postprocess lane ended with `QUEUE_DONE`.
-  - Sequentially reran `sameq_v4_multiseed_manifest` and `sameq_v4_multiseed_stability`; all six rows now publish as `completed_existing`.
-  - All SAMEQ-v4 experiment workers are done. A residual `Python312` process remains on GPU0, but it is outside the `conda env vivid` experiment chain and is treated as unrelated host noise rather than an unclosed SAMEQ-v4 worker.
-
-## 2026-06-28
-
-- Resumed active Qwen3-VL v2 objective while preserving old MIMIC V1-V4 closure as baseline-only evidence.
-- Re-read `vivid_med_qwen3vl_proposal_v2_modification_plan.md`, `vivid_med_clinical_instruction_proposal_v2_qwen_vlm.md`, and the current planning files.
-- Verified official docs: Coding Plan uses `https://open.bigmodel.cn/api/coding/paas/v4`; the key remains environment-only and must not be written to files/logs.
-- Audited current Qwen3-VL artifacts: P2/P3/P4/P5 instruction `metrics_final.json` and base/P2/P3/P4/P5 CheXpert LP `metrics_final.json` exist.
-- Found extraction manifests still report the language decoder as trainable; extraction must be rerun after the freeze-plan patch.
-- Found LP metrics are nested under `metrics`, so final aggregation must not read top-level `macro_auc`/`macro_f1`/`micro_f1`.
-- Restored `task_plan.md` as an active Qwen3-VL execution plan and recorded current gaps.
-- Re-ran Qwen3-VL vision-side extraction for P2/P3/P4/P5. Refreshed manifests now report `language_decoder.trainable=0` and `total.trainable=406957056`.
-- Added and ran `scripts/summarize_qwen3vl_results.py`; it wrote Qwen3-VL instruction training, CheXpert LP, extraction manifest, pilot matrix, and cost tables under `outputs/final_tables`.
-- Verified generated Qwen3-VL tables: P2-P5 reached 1000 instruction steps; base/P2-P5 LP macro-AUC values are 0.679003/0.666206/0.685911/0.689561/0.681452; extraction manifests contain frozen language decoder counts.
-- Added `scripts/evaluate_qwen3vl_visual_dependence.py`. A 4-record smoke failed because all records had the same `sample_id`, so image-shuffle had no valid partner; reran a 32-record smoke successfully.
-- Launched two visual-dependence queues: GPU0 runs P2 then P3, GPU1 runs P4 then P5. Logs are under `outputs/logs/qwen3vl_visual_*.log`; outputs target `outputs/qwen3vl_diagnostics/*_visual_dependence.json`.
-- Visual-dependence queues completed with `EXITCODE 0` for P2/P3/P4/P5; both GPUs returned idle and no Python experiment process remained.
-- Re-ran Qwen3-VL summary script and wrote `outputs/final_tables/qwen3vl_visual_dependence_results.{csv,md}`.
-- Visual-dependence readout: P2/P3/P4/P5 question-only deltas are +0.571060/+1.836000/+1.777182/+1.781887; image-shuffle deltas are +0.008150/+0.017665/+0.008729/+0.007566, so image presence matters but strong image-specific grounding is still not validated.
-- Added `scripts/evaluate_qwen3vl_counterfactual_diagnostics.py`; a 32-record P4 smoke completed, including answer-type NLL and option-formatted counterfactual pairwise scoring.
-- Launched full Qwen3-VL counterfactual diagnostics: P4 on GPU0 and P5 on GPU1, with logs under `outputs/logs/qwen3vl_counterfactual_p{4,5}.log`.
-- Full Qwen3-VL counterfactual diagnostics completed with `EXITCODE 0` for P4/P5; outputs are `outputs/qwen3vl_diagnostics/p4_counterfactual_diagnostics.json` and `p5_counterfactual_diagnostics.json`.
-- Re-ran Qwen3-VL summary script and wrote `qwen3vl_counterfactual_results`, `qwen3vl_counterfactual_results_by_type`, and `qwen3vl_answer_type_diagnostics` tables.
-- Counterfactual readout: P4/P5 option-subset pairwise accuracy is 0.789954/0.767123 with positive mean margins 0.168356/0.185934, but only 219/724 counterfactual-choice rows are explicit option-formatted records.
-
-- User requested old-document closure and no continuation afterward.
-- Verified old MIMIC V1-V4 final tables: `instruction_main_results`, `instruction_mimic_v1_v2_v3_v4_comparison`, `visual_dependence_results`, `counterfactual_results`, and `instruction_answer_type_diagnostics`.
-- Checked process/GPU state: GPU0/GPU1 idle with 0 MiB and 0% utilization; no active Python training/evaluation process found.
-- Wrote closure artifacts to `outputs/final_tables/instruction_old_document_closure.{md,csv}`.
-- Updated `task_plan.md` and `findings.md` to mark the old document closed and stop further old-document/Qwen3-VL continuation unless explicitly reopened.
-- Marked the remaining Qwen3-VL output and pilot-matrix sections in `task_plan.md` as historical/not active so they do not drive follow-up execution.
-
-- User superseded the old clinical-instruction proposal with `vivid_med_qwen3vl_proposal_v2_modification_plan.md`; stopped old-objective continuation.
-- Confirmed no old instruction training/evaluation/generation process was running and both GPUs were idle at takeover.
-- Rewrote `task_plan.md` for the Qwen3-VL Proposal v2 objective and marked the old MIMIC V1-V4 work as prior baseline/closure evidence only.
-- Read the new v2 modification plan: main method must be Qwen3-VL-coupled clinical instruction pretraining, with frozen language decoder and trainable vision tower/visual connector.
-- Audited local model root: `qwen3-vl-2b-thinking-new` is available and has `model_type=qwen3_vl`; `Qwen3-VL-4B-Instruct` and `Qwen3-VL-8B-Instruct` are also present.
-- Verified conda env `vivid` has `transformers 5.0.0`, CUDA available, and can load `Qwen3VLConfig` plus `Qwen3VLProcessor` from the local 2B candidate.
-- Added Qwen3-VL proposal v2 document, clinical instruction dataset/collator, GLM wrapper, validator, Qwen3-VL instruction trainer, vision extractor, vision LP script, and P2-P5 configs.
-- Ran Qwen3-VL data validation on V1/V2/V3 instruction splits. V1 proxy accepted 8000/8000 train and 8000/8000 val rows with no hard rejects; V2 accepted 3837/3993 train and 763/796 val rows; V3 accepted 3858/3978 train and 773/797 val rows.
-- Preserved V2/V3 rejected rows under `outputs/instruction_data/glm_rejected` and wrote auto-validated rows under `outputs/instruction_data/glm_validated`; P2-P5 configs now point at validated data.
-- Ran P3 Qwen3-VL instruction training debug: 1 step, 4 train records, 2 val records, best_val_loss 4.604638576507568, with 306,242,560 vision parameters and 100,714,496 connector parameters trainable while 1,720,574,976 language decoder parameters stayed frozen.
-- Ran Qwen3-VL vision LP debug with the correct CheXpert public data root: 2 steps, feature_dim 1024, best_val_loss 2.3491147894354603, macro_auc 0.75 on a tiny 4-sample debug val slice.
-- Wrote `outputs/final_tables/qwen3vl_pilot_matrix.md` and `outputs/final_tables/qwen3vl_empty_result_tables.md`.
-- Final process check after Qwen3-VL debug gates: both GPUs idle and no Python process remains.
-- Generated true D0 fixed-JSON Qwen3-VL instruction data from CheXpert splits: `outputs/instruction_data/glm_raw/d0_train.jsonl` and `outputs/instruction_data/glm_raw/d0_val.jsonl`, 1000 records each.
-- Re-ran instruction data audit with D0 included: D0 train/val accepted 1000/1000 each with 0 rejected and 0 warnings.
-- Launched formal Qwen3-VL two-GPU queue. P2 D0 fixed JSON completed: global_step 1000, best_val_loss 0.026329545818269254, train_records 1000, val_records 1000.
-- P4 D3 counterfactual completed: global_step 1000, best_val_loss 0.8866412587292772, train_records 3858, val_records 773.
-- Queue wrappers did not continue to P3/P5 and logs only retained START lines; preserve as a runner issue and relaunch P3/P5 directly with explicit exit-code logs.
-
-- Started persistent tracking for the active objective.
-- Loaded `AGENTS.md`, `planning-with-files`, and `superpowers:using-superpowers`.
-- Ran planning session catchup.
-- Confirmed no existing `task_plan.md`, `findings.md`, or `progress.md` were present before creating these files.
-- Read `vivid_med_clinical_instruction_proposal.md` and extracted the proposal-level requirements into `findings.md`.
-- Also skimmed `vivid_med_revision_execution_plan.md`; it records extensive old revision/data-scaling completion, but the new proposal requires a separate instruction-data/GLM pipeline audit.
-- Audited current state: both GPUs idle, no training/GLM processes running, no instruction pipeline files found.
-- Confirmed CheXpert split JSONL contains UMS labels/answerability/uncertainty and image paths, but no original report text.
-- Logged PowerShell heredoc and broad-search timeout errors in `task_plan.md`.
-- Implemented G0-G4 data-side scaffolding: instruction schema/docs, GLM/local generator, filter, stats summarizer, and audit sampler.
-- Confirmed official Coding Plan base URL and ran a successful `glm-5.2` connectivity smoke test with the user-provided key injected via environment variable.
-- Ran `scripts/generate_clinical_instructions.py --mode glm` on 1 sample; generated 4 records and 0 errors under `data/instructions/raw/glm_v1_smoke`.
-- Verified no raw key was written to generated instruction/log/script/doc/planning files.
-- Ran local deterministic V1 train/val generation from UMS: 1000 images and 8000 instruction rows for each split, 0 errors.
-- Filtered V1 train/val: 8000/8000 kept for each split, 0 drops, 0 duplicates.
-- Generated `instruction_dataset_stats_train/val.{csv,md}` and audit samples of 200 and 500 rows.
-- Compiled the four new data-side scripts successfully with `python -m py_compile`.
-- Added `CXRInstructionDataset`, `instruction_collate_fn`, `scripts/train_cxr_instruction.py`, and a local Qwen2.5-Coder debug config.
-- First instruction debug with local Qwen3.5-0.8B failed due unsupported `model_type=qwen3_5`; switched to local Qwen2.5-Coder-7B without changing the environment.
-- Ran `conda run -n vivid python scripts/train_cxr_instruction.py --config configs/debug_instruction_v1_qwen25_coder_7b.yaml --debug`; completed 2 steps with best_val_loss 1.009125 and saved checkpoints/final metrics.
-- Verified no instruction training process remains and both GPUs are idle.
-- Added `data/instructions/` to `.gitignore`.
-- Added formal 1k V1 instruction config/wrapper for local Qwen2.5-Coder-7B.
-- Launched `scripts/run_instruction_v1_qwen25_coder_7b_1k_gpu0.cmd` at 2026-06-28 01:52; GPU0 is occupied by the run and GPU1 remains idle.
-- Formal V1 run wrote `outputs/instruction_runs/v1_qwen25_coder_7b_1k/checkpoints/step_250.pt` and `best.pt`; training is past initialization and still active.
-- Added `scripts/evaluate_instruction_visual_dependence.py` for instruction normal/question-only/image-shuffle teacher-forced loss comparison; py_compile passes.
-- Subagent audits confirmed V2/V3 report-grounded generation is blocked by missing original report text, while old no-LM schema 1k/LP comparator metrics already exist.
-- Ran GPU1 visual-dependence smoke from `step_250.pt` on 64 V1 val rows: normal 1.628535, question-only 1.910276, image-shuffle 1.629220.
-- Added downstream LP config/wrapper for V1 instruction checkpoint: `configs/lp_instruction_v1_qwen25_coder_7b_1k.yaml` and `scripts/run_lp_instruction_v1_qwen25_coder_7b_1k_gpu1.cmd`.
-- LP YAML parse check passed; LP target `metrics_final.json` does not exist yet.
-- V1 formal run completed: global_step 1000, best_val_loss 1.5295005306452514, elapsed_seconds 1400.525, train_records 8000, val_records 1000.
-- Launched full V1 best-checkpoint visual-dependence eval on GPU0 and downstream LP on GPU1 at 2026-06-28 02:18.
-- Full V1 visual-dependence eval completed: normal loss 1.529542, question-only delta +0.464086, image-shuffle delta -0.0000235.
-- Downstream LP completed: macro_auc 0.589397, macro_f1 0.831865, micro_f1 0.805191.
-- Wrote consolidated evidence to `outputs/final_tables/instruction_v1_execution_summary.{csv,md}`.
-- User pointed to `H:\Xiyao_Wang\000_Public Dataset`; confirmed local MIMIC-CXR has report text and image files.
-- Added `scripts/prepare_mimic_report_manifest.py` and report-grounded prompt `prompts/glm_instruction_generation_report_grounded_v2.txt`.
-- Updated `scripts/generate_clinical_instructions.py` so samples with `report` are marked `report_text_available` instead of `no_report_text`.
-- Generated MIMIC report manifests: `data/instructions/manifests/mimic_report_train_1k.jsonl` with 1000 rows and `data/instructions/manifests/mimic_report_val_200.jsonl` with 200 rows.
-- Manifest structure check passed without printing report text: image paths and report paths exist; train report length range 150-2006 chars, val 221-1857 chars.
-- GLM report-grounded smoke generated 20/20 records; after whitespace-normalized evidence filtering and generator empty-value fix, 20/20 filtered records were kept.
-- Added `--stream-output`, `--resume`, and `--skip-samples` to the generator for long-running API jobs.
-- Launched four V2 MIMIC train1k GLM shards at 2026-06-28 11:59; first 90-second check showed 0 parse errors and active streaming output in all shards.
-- 2026-06-28 22:15 接管新目标：执行 `vivid_med_qwen3vl_p4v2_scale_experiment_plan.md`，最终结果写回该文档。
-- 2026-06-28 22:15 Skill pre-flight complete: loaded using-superpowers, planning-with-files, executing-plans, and verification-before-completion. `session-catchup.py` returned no unsynced context.
-- 2026-06-28 22:16 Read new P4-v2 / scale plan and existing planning files. Existing `task_plan.md` describes the older Qwen3-VL v2 objective as completed, so this run must re-audit against the new plan instead of inheriting completion.
-- 2026-06-28 22:17 Updated planning files with the active P4-v2 / scale scope, evidence rules, and initial takeover findings.
-- 2026-06-28 22:20 Resource audit: GPUs idle; `ZHIPU_API_KEY` present; no matching scheduled tasks listed by `Get-ScheduledTask`; four old GLM generation shards were active for `v3_train_extra4k`.
-- 2026-06-28 22:21 Paused old `v3_train_extra4k` shard0-3 API jobs because they do not match the new D6/D7 plan and API concurrency is limited. Preserved partial JSONL/API logs; processes matching `v3_train_extra4k` are now gone.
-- 2026-06-28 22:30 Added P4-v2 fact extraction, D6/D7 construction, and instruction quality audit scripts plus the GLM fact extraction prompt.
-- 2026-06-28 22:32 Static verification passed: `python -m py_compile scripts\generate_p4v2_facts_with_glm.py scripts\build_p4v2_d6_d7.py scripts\audit_p4v2_instruction_quality.py`.
-- 2026-06-28 22:33 GLM facts smoke on 2 MIMIC report samples completed with 2 written and 0 errors.
-- 2026-06-28 22:34 D6/D7 smoke built 10 records each; audit smoke reported 100% accepted, 0% leakage, A/B answer A 50%; validator cross-check accepted 10/10 D6 smoke records with 0 rejects.
-- 2026-06-28 22:35 Launched `facts_1k` generation as four 250-sample shards using `ZHIPU_API_KEY`; old extra4k generation remains paused.
-- 2026-06-28 22:38 Added hard-shuffle evaluation mode, D7 hard-negative loading, and configurable image-shuffle margin loss. `py_compile` passed for changed dataset/training/eval files.
-- 2026-06-28 22:39 Added core P4-v2 configs for CF/S-P4/SHUF runs; YAML parsing passed via `python -c`.
-- 2026-06-28 22:40 `facts_1k` shard3 hit `RemoteDisconnected`; patched the fact generator to catch this network error and relaunched shard3 with `--resume`.
-- 2026-06-28 22:44 Added LP configs for CF/S-P4/SHUF P4-v2 runs; YAML parsing passed.
-- 2026-06-28 22:45 Launched `S-P4-3k` old-P4 step-scaling control through `conda run -n vivid` on GPU1. Initial GPU check shows PID 20476 using GPU1.
-- 2026-06-28 22:47 Added and ran `scripts/summarize_p4v2_results.py`; it generated `outputs/final_tables/qwen3vl_p4v2_*` tables with current completed/missing statuses.
-- 2026-06-28 22:49 `facts_1k` shard2 also exited from the pre-patch `RemoteDisconnected` path; relaunched shard2 with the patched script and `--resume` (PID 22036).
-- 2026-06-28 22:57 Monitoring milestone: `S-P4-3k` wrote `step_1000.pt` and refreshed `best.pt`; `facts_1k` reached 144 fact rows across four live shards with only one early timeout error.
-- 2026-06-28 23:00 Added `S-P4-5k`/`S-P4-8k` old-P4 step-scaling configs and LP configs; launched `S-P4-5k` on GPU0 while `S-P4-3k` continues on GPU1.
-- 2026-06-28 23:04 Monitoring milestone: `S-P4-3k` reached `step_1500.pt`; `S-P4-5k` wrote `best.pt`; `facts_1k` reached 189 fact rows across four live shards.
-- 2026-06-28 23:10 Monitoring milestone: `S-P4-3k` reached `step_2000.pt`; `S-P4-5k` reached `step_2000.pt`; `facts_1k` reached 235 fact rows across four live shards.
-- 2026-06-28 23:15 `S-P4-3k` completed: `global_step=3000`, `best_val_loss=0.8201575026007666`, `language_decoder.trainable=0`, checkpoints include `best.pt`, `step_3000.pt`, and `final.pt`.
-- 2026-06-28 12:07 shard check: shard raw lines 100/112/116/96, API success samples 25/28/29/24, 0 parse errors; estimated remaining time is roughly hour-scale.
-- Added `scripts/combine_instruction_shards.py` for post-generation shard merge with duplicate protection.
-- MIMIC V2 train1k GLM shards completed: each shard produced 1000 rows from 250 API-success samples, with 0 parse-error lines.
-- Combined MIMIC V2 train shards into `data/instructions/raw/v2_mimic_report_grounded_train1k/train.jsonl`: 4000 rows, 0 duplicate drops.
-- Filtered MIMIC V2 train data into `data/instructions/filtered/v2_mimic_report_grounded_train1k/train.jsonl`: 3993/4000 kept, 7 evidence-substring drops.
-- Generated MIMIC V2 val200 in four shards; combined output has 800 rows and 0 duplicate drops.
-- Filtered MIMIC V2 val data into `data/instructions/filtered/v2_mimic_report_grounded_val200/val.jsonl`: 796/800 kept, 4 evidence-substring drops.
-- Wrote train/val stats tables under `outputs/final_tables/mimic_v2_instruction_dataset_stats_*`.
-- Ran V2 MIMIC debug instruction training successfully: global_step 2, best_val_loss 2.3839718103408813, train_records 16, val_records 4.
-- Launched formal V2 MIMIC train1k instruction run via `scripts/run_instruction_v2_mimic_qwen25_coder_7b_1k_gpu0.cmd`; initial GPU check shows GPU0 active and GPU1 idle.
-- Added V3 report-grounded counterfactual prompt and ran a 2-sample GLM smoke: 8/8 records kept after filtering, all `counterfactual_choice`, 0 parse errors.
-- Added and launched four V3 MIMIC train1k GLM shard wrappers; first health check shows all shards streaming, 0 parse errors.
-- Formal V2 MIMIC training has written `step_250.pt` and `best.pt`; GPU0 remains active.
-- Added V3 MIMIC val200 shard wrappers for later launch after train shard stability/completion; not launched yet to avoid excessive concurrent API calls.
-- Formal V2 MIMIC training completed: global_step 1000, best_val_loss 1.5185097228342563, elapsed_seconds 875.8268134593964, train_records 3993, val_records 796.
-- V2 checkpoints now include `best.pt`, `final.pt`, and `step_1000.pt`; both GPUs were idle immediately after completion.
-- Launched V2 visual-dependence evaluation on GPU0 and V2 downstream LP on GPU1; first GPU check shows both jobs active.
-- V2 visual-dependence evaluation completed on 796 val rows: normal loss 1.5181669605586996, question-only delta +0.0026753411146265282, image-shuffle delta +0.002212008115035191.
-- V3 train shard2 recorded one `TimeoutError`; keep it as evidence and use resume/retry rather than deleting the failure.
-- V2 downstream LP completed: macro_auc 0.6076272728674769, macro_f1 0.827882392711578, micro_f1 0.8021211275467486, val_loss 0.41386821558551184.
-- Wrote consolidated V2 evidence to `outputs/final_tables/instruction_v2_mimic_execution_summary.{csv,md}`.
-- V3 train generation monitoring: shards have reached roughly 100/121/122/105 API-success samples out of 250, with only the earlier shard2 timeout.
-- V3 train generation completed after one shard2 timeout and one resume retry; combined raw train has 4000 rows and 0 duplicate drops.
-- Filtered V3 train keeps 3978/4000 records across 1000 samples, with 3783 `counterfactual_choice` rows and all rows carrying `report_text_available` plus `v3_counterfactual`.
-- Wrote V3 train stats and audit sample to `outputs/final_tables/mimic_v3_counterfactual_instruction_dataset_stats_train.*` and `outputs/audit/mimic_v3_counterfactual_instruction_audit_sample_200.csv`.
-- Generated V3 val200 with two network-level failures that were fixed via resume; combined raw val has 800 rows and 0 duplicate drops.
-- Filtered V3 val keeps 797/800 records across 200 samples, with 747 `counterfactual_choice` rows and all rows carrying `report_text_available` plus `v3_counterfactual`.
-- Wrote V3 val stats to `outputs/final_tables/mimic_v3_counterfactual_instruction_dataset_stats_val.*`.
-- Added V3 debug/formal training configs plus visual-dependence and downstream LP wrappers.
-- V3 debug training completed: global_step 2, best_val_loss 0.20210855454206467, train_records 16, val_records 4.
-- Launched formal V3 MIMIC counterfactual 1k instruction training on GPU0; initial GPU check shows the job active.
-- Formal V3 MIMIC counterfactual training completed: global_step 1000, best_val_loss 1.0704705653511417, elapsed_seconds 942.9986770153046, train_records 3978, val_records 797.
-- V3 checkpoints now include `best.pt`, `final.pt`, and `step_1000.pt`; both GPUs were idle immediately after completion.
-- Launched V3 visual-dependence evaluation on GPU0 and V3 downstream LP on GPU1.
-- V3 visual-dependence evaluation completed on 797 val rows: normal loss 1.0706396021434998, question-only delta +0.13083389097616682, image-shuffle delta +0.0013180705187012531.
-- V3 downstream LP completed: macro_auc 0.5572995973253796, macro_f1 0.8365447527869113, micro_f1 0.8057493720346078, val_loss 0.4120377451181412.
-- Wrote consolidated V3 evidence to `outputs/final_tables/instruction_v3_mimic_counterfactual_execution_summary.{csv,md}`.
-- Wrote V1/V2/V3 comparison table to `outputs/final_tables/instruction_mimic_v1_v2_v3_comparison.{csv,md}`.
-- Final verification: all V2/V3 train, visual, and LP artifacts exist; GPUs are idle; no active generation/training/eval process remains; py_compile passed; simple key scan found no raw key in checked code/config/doc/table files.
-- Current boundary: V2/V3 MIMIC baselines are complete; V4 report-evidence token weighting remains pending; image-shuffle deltas remain near zero, so strong image-specific grounding is not validated.
-- Resumed V4 MIMIC work after context compaction; re-read planning files and confirmed V1/V2/V3 evidence is complete while V4 remains open.
-- Re-ran `python -m py_compile training\trainer.py scripts\train_cxr_instruction.py data\cxr_instruction_dataset.py`; compile passed after the instruction-token-weighting trainer patch.
-- Confirmed `outputs\instruction_runs\v4_mimic_counterfactual_weighted_qwen25_coder_7b_1k\metrics_final.json` does not exist yet and both GPUs are idle before launching formal V4.
-- Launched formal V4 MIMIC counterfactual weighted training on GPU0 via `scripts\run_instruction_v4_mimic_counterfactual_weighted_qwen25_coder_7b_1k_gpu0.cmd`; GPU0 reached about 23.8 GiB memory and active utilization.
-- V4 formal training has written `checkpoints\best.pt` and `checkpoints\step_250.pt`; `metrics_final.json` is not present yet, so training remains in progress.
-- Formal V4 MIMIC counterfactual weighted training completed: global_step 1000, best_val_loss 1.0197519861665882, elapsed_seconds 1011.7742536067963, train_records 3978, val_records 797.
-- V4 checkpoints now include `best.pt`, `final.pt`, and `step_1000.pt`; both GPUs were idle immediately after completion.
-- Launched V4 visual-dependence evaluation on GPU0 and V4 downstream LP on GPU1.
-- V4 visual-dependence evaluation completed on 797 val rows: normal loss 1.0831622853711564, question-only delta +0.13674618338598155, and image-shuffle delta +0.000021105833174051014.
-- V4 downstream LP completed: macro_auc 0.5646456277698648, macro_f1 0.832328792498657, micro_f1 0.8040747976555959, val_loss 0.412356522348192.
-- Wrote consolidated V4 evidence to `outputs/final_tables/instruction_v4_mimic_counterfactual_weighted_execution_summary.{csv,md}`.
-- Updated the comparison entry point to include V4 at `outputs/final_tables/instruction_mimic_v1_v2_v3_comparison.{csv,md}` and also wrote `instruction_mimic_v1_v2_v3_v4_comparison.{csv,md}`.
-- Final V4 verification: V4 train, visual, and LP artifacts exist; both GPUs are idle; no V4 training/evaluation process remains. Wrapper logs did not include `EXITCODE` lines, so artifact JSONs and completed log text are the strong completion evidence.
-- Added `scripts/evaluate_instruction_counterfactual_diagnostics.py` for instruction-specific answer_type NLL and counterfactual-choice option NLL diagnostics; `py_compile` passed.
-- Ran an 8-record V4 smoke diagnostic successfully, producing `counterfactual_diagnostics_smoke.json` and confirming option parsing/pairwise scoring works.
-- Ran full V4 counterfactual diagnostics, then revised the parser/reporting to distinguish explicit A/B/C/D option records from `counterfactual_choice` rows with no options.
-- Re-ran full V4 counterfactual diagnostics after the reporting fix: 747 counterfactual_choice rows, 231 option-formatted, 513 no-option, 3 correct-letter failures, pairwise accuracy 0.45021645021645024, mean best-negative minus correct NLL 0.004010261470901575.
-- Ran full V3 counterfactual diagnostics for comparison: 747 counterfactual_choice rows, 231 option-formatted, 513 no-option, 3 correct-letter failures, pairwise accuracy 0.4199134199134199, mean best-negative minus correct NLL -0.003256428250992896.
-- Wrote `outputs/final_tables/instruction_main_results.{csv,md}`, `visual_dependence_results.{csv,md}`, `counterfactual_results.{csv,md}`, `counterfactual_results_by_type.{csv,md}`, and `instruction_answer_type_diagnostics.{csv,md}`.
-- Resumed Qwen3-VL v2 after compaction; re-read planning files and confirmed the old MIMIC document line remains closed.
-- Verified both GPUs were idle and no `qwen3vl_paraphrase` target JSON existed before launching paraphrase robustness queues.
-- Launched `scripts/run_qwen3vl_paraphrase_gpu0_queue.ps1` for P2 then P3 and `scripts/run_qwen3vl_paraphrase_gpu1_queue.ps1` for P4 then P5.
-- Initial 30-second health check showed GPU0 and GPU1 active with `evaluate_qwen3vl_paraphrase_robustness.py` processes and P2/P4 paraphrase log files created.
-- P2/P4 paraphrase runs completed first and wrote `p2_paraphrase_robustness.json` plus `p4_paraphrase_robustness.json`, each with `EXITCODE 0`.
-- P3/P5 paraphrase runs then completed and wrote `p3_paraphrase_robustness.json` plus `p5_paraphrase_robustness.json`, each with `EXITCODE 0`; final GPU/process check showed both GPUs idle and no paraphrase process remained.
-- Extended and ran `scripts/summarize_qwen3vl_results.py`; it now writes `qwen3vl_paraphrase_robustness_results.{csv,md}` and `qwen3vl_paraphrase_robustness_by_answer_type.{csv,md}`.
-- Added NIH transfer support for Qwen3-VL LP: `UMSPILDataset` now resolves NIH `extensions.image_index`, and `scripts/evaluate_qwen3vl_lp_transfer.py` evaluates a saved CheXpert probe head on an external UMS split.
-- Ran an 8-sample NIH smoke transfer with `--verify-images`; image audit checked 8 records with 0 missing images.
-- Launched NIH 1k transfer queues: GPU0 runs Base/P2/P3 and GPU1 runs P4/P5, each with image verification enabled.
-- Queue wrappers wrote Base/P4 and then P2/P5 NIH transfer JSONs but did not reliably continue through all queued items or write exit codes; preserved this as a runner issue and ran P3 directly with explicit `EXITCODE 0`.
-- Completed NIH 1k transfer for Base/P2/P3/P4/P5: each evaluated 1000 NIH records with image audit missing count 0.
-- Added P6 data-only no-LM debug/formal configs. The 2-step debug passed, then formal P6 CheXpert 1k completed with global_step 1000, macro-AUC 0.663100, macro-F1 0.788543, micro-F1 0.761230.
-- Completed P6 NIH 1k transfer with `EXITCODE 0`, 1000 evaluated records, 0 missing images, macro-AUC 0.526401, macro-F1 0.120954, micro-F1 0.527625.
-- Extended final summarization to include P6, NIH transfer, subgroup rows, steps/sec in cost rows, and `qwen3vl_final_requirement_audit.{csv,md}`.
-- Final audit generated 15 requirement rows; all required Qwen3-VL v2 items are either completed with artifact evidence or explicitly marked as a boundary/optional skip.
-- Final process check showed GPU0/GPU1 idle and no active Qwen3-VL train/eval/transfer process.
-- Appended Section 11 to `vivid_med_qwen3vl_proposal_v2_modification_plan.md` so the final execution status, metrics, scientific claim boundary, and artifact index are written back into the user-specified plan file itself.
-- Verified the write-back: `vivid_med_qwen3vl_proposal_v2_modification_plan.md` contains Section 11.1-11.8, references the final audit and NIH transfer tables, and includes the strong image-specific grounding boundary.
-- Verified `outputs/final_tables/qwen3vl_final_requirement_audit.csv` has 15 rows and 0 statuses outside `completed` / `optional_skipped`.
-- Verified all referenced final result tables in the write-back exist, and no Qwen3-VL Python experiment process remains.
-- P4-v2 live execution resumed after compaction: `facts_1k` shards are active under API priority, old `v3_train_extra4k` generation remains paused, S-P4-5k training completed at 5000 steps, S-P4-3k CheXpert LP completed with macro-AUC 0.6811373789120363, and S-P4-8k was launched on GPU0 after correcting its device field to avoid GPU1.
-- S-P4-3k evaluation chain completed: NIH transfer macro-AUC 0.5521399072539604 with 1000 checked images and 0 missing, visual-dependence question-only delta +1.7757073796895197 and image-shuffle delta +0.013089180334843409, counterfactual option-formatted pairwise accuracy 0.8082191780821918, and paraphrase style delta +0.020189917601403713.
-- Launched S-P4-5k CheXpert LP on GPU1 while S-P4-8k continues on GPU0.
-- After the 2026-06-29 resume audit, S-P4-8k training was complete at `global_step=8000`, `best_val_loss=0.8146158855837344`, and language decoder trainable count 0.
-- S-P4-5k CheXpert LP completed with macro-AUC 0.6938991512921441, macro-F1 0.7423816429996104, and 1000 validation records.
-- Launched S-P4-5k NIH transfer on GPU0 and S-P4-8k CheXpert LP on GPU1; `facts_1k` shards continued under P4-v2 API priority at roughly 699/1000 fact rows.
-- S-P4-5k NIH transfer completed with macro-AUC 0.5503468055406144, macro-F1 0.18311711484342014, 1000 evaluated records, and 0 missing images; launched S-P4-5k visual-dependence on GPU0 while S-P4-8k LP continued on GPU1.
-- S-P4-8k CheXpert LP completed with macro-AUC 0.7085345664671382, macro-F1 0.8144268677764412, and 1000 validation records; launched S-P4-8k NIH transfer on GPU1.
-- S-P4-5k visual-dependence completed with question-only delta +1.7532855180570466 and image-shuffle delta +0.016448272649984275.
-- S-P4-8k NIH transfer completed with macro-AUC 0.568478316512721, macro-F1 0.22099031162630542, 1000 evaluated records, and 0 missing images.
-- Launched S-P4-5k counterfactual diagnostics on GPU0 and S-P4-8k visual-dependence on GPU1.
-- S-P4-5k counterfactual diagnostics completed with option-formatted pairwise accuracy 0.771689497716895 and mean best-negative-minus-correct NLL 0.21143620002084643; launched S-P4-5k paraphrase robustness on GPU0.
-- S-P4-5k paraphrase robustness completed with clinical delta +0.0043301768887153425 and style delta +0.010673094483823488.
-- Launched S-P4-8k counterfactual diagnostics on GPU0 while S-P4-8k visual-dependence continued on GPU1.
-- S-P4-8k visual-dependence completed with question-only delta +1.8003747896959987 and image-shuffle delta +0.017660417679557505.
-- S-P4-8k counterfactual diagnostics completed with option-formatted pairwise accuracy 0.7945205479452054 and mean best-negative-minus-correct NLL 0.26890361253789247.
-- Launched S-P4-8k paraphrase robustness on GPU0.
-- S-P4-8k paraphrase robustness completed with clinical delta +0.001183122259705366 and style delta +0.008609944176521243.
-- Old P4 step-scaling chain now has complete 3k/5k/8k training, CheXpert LP, NIH transfer, visual-dependence, counterfactual, and paraphrase artifacts.
-- P4-v2 `facts_1k` completed after resume retries: four shards of 250 rows, combined into `outputs/instruction_data/facts/facts_1k.jsonl` with 1000 rows and 0 duplicate drops.
-- Built D6/D7 1k from facts: raw D6/D7 each had 4950 records and D7 hard-negative coverage 100%; validator rejected 154 unsupported laterality/severity rows per dataset, preserving rejected rows under `outputs/instruction_data/p4v2_validator_rejected`.
-- Promoted validator-accepted D6/D7 1k to canonical `outputs/instruction_data/glm_validated/d6_hard_cf_1k.jsonl` and `d7_hard_shuffle_1k.jsonl`: 4796 records each, validator canonical rejections 0, leakage-audit heuristic 3.6489%, A/B answer A 50.0%, D7 hard-negative coverage 100%.
-- Launched four val200 fact extraction shards for `mimic_report_val_200.jsonl`; these are required before CF-1k-3k training can start.
-- P4-v2 `facts_val200` completed after resume retry: four shards of 50 rows, combined into `outputs/instruction_data/facts/facts_val200.jsonl` with 200 rows and 0 duplicate drops.
-- Built and validated val D6/D7: canonical `d6_hard_cf_val200.jsonl` and `d7_hard_shuffle_val200.jsonl` each have 953 validator-accepted records, leakage-audit heuristic 3.9874%, A/B answer A 50.0%, and D7 hard-negative coverage 100%.
-- Launched CF-1k-3k training on GPU0 and launched four extra2k fact extraction shards for the 3k-scale D6/D7 datasets.
-- CF-1k-3k training completed with `global_step=3000`, `best_val_loss=0.10112305092599715`, `train_records=4796`, `val_records=953`, and language decoder trainable count 0.
-- Launched CF-1k-3k CheXpert LP on GPU0 and visual-dependence diagnostics on GPU1; extra2k fact extraction continued in four API shards.
-- CF-1k-3k CheXpert LP completed with macro-AUC 0.6786105906069541 and macro-F1 0.7679827918028536.
-- CF-1k-3k visual-dependence completed with question-only delta +4.897535646926811 and image-shuffle delta +0.03919534324536535.
-- Launched CF-1k-3k NIH transfer on GPU0 and counterfactual diagnostics on GPU1.
-- Resumed after compaction: extra2k fact extraction remains active in four API shards, CF-1k-3k paraphrase is active on GPU0, and GPU1 is free.
-- Patched `scripts/evaluate_qwen3vl_counterfactual_diagnostics.py` so D6/D7 records with bare `A`/`B` answers and `option_a`/`option_b` fields are parsed correctly; `conda run -n vivid python -m py_compile` passed, and a D6 val record parsed as correct letter `A` with two letter-only candidates.
-- CF-1k-3k paraphrase robustness completed: clinical rewrite delta +0.022058121444512364 and style rewrite delta +0.01885175420405441 on 953 val records.
-- Re-ran CF-1k-3k counterfactual diagnostics after the D6 parser patch: 882/882 valid A/B records, 0 correct-letter failures, pairwise accuracy 0.8956916099773242, and mean best-negative-minus-correct NLL 1.6599025798380773.
-- CF-1k-3k now has complete train, CheXpert LP, NIH transfer, visual-dependence, counterfactual, and paraphrase artifacts; extra2k fact generation remains the blocker for D6/D7 3k and the main CF/SHUF runs.
-- Extra2k fact-generation monitor: four API shards remain active at 137/142/138/134 rows, with parse-error counts still limited to shard1=1 and shard3=2; both GPUs are idle while waiting for D6/D7 3k data.
-- Extra2k fact-generation monitor: four API shards remain active at 152/160/164/158 rows; parse-error counts are shard1=2 and shard3=3. No GPU task is running while API data remains the blocker.
-- Extra2k fact-generation monitor: four API shards remain active at 209/206/207/206 rows; parse-error counts are shard1=3, shard2=1, and shard3=3. GPUs remain idle while the 3k fact set is still incomplete.
-- Extra2k fact-generation monitor: four API shards remain active at 235/244/246/248 rows; parse-error counts are shard0=2, shard1=3, shard2=1, and shard3=3. The 3k fact set is roughly halfway complete.
-- Extra2k fact-generation monitor: four API shards remain active at 272/290/279/288 rows; parse-error counts are shard0=3, shard1=3, shard2=2, and shard3=3. A monitoring-only `Sort-Object` command failed, then the corrected query verified API jobs were unaffected.
-- Extra2k fact-generation monitor: four API shards remain active at 324/333/320/327 rows; parse-error counts are shard0=4, shard1=3, shard2=2, and shard3=3.
-- Extra2k fact-generation monitor: four API shards remain active at 363/370/351/370 rows; parse-error counts are shard0=6, shard1=4, shard2=3, and shard3=3.
-- Extra2k fact-generation monitor: four API shards remain active at 405/420/405/405 rows; parse-error counts remain shard0=6, shard1=4, shard2=3, and shard3=3.
-- Extra2k fact-generation monitor: four API shards remain active at 464/481/473/481 rows; parse-error counts are shard0=7, shard1=4, shard2=3, and shard3=4. The 2k extra fact set is in its final stretch.
-- Extra2k fact generation completed after short target-count fill runs: shard0/shard1/shard2/shard3 each reached exactly 500 rows; parse-error evidence is preserved at 7/4/3/4.
-- Combined `facts_extra2k.jsonl` with 2000 rows and 0 duplicate drops, then combined `facts_1k` + `facts_extra2k` into `facts_3k.jsonl` with 3000 rows and 0 duplicate drops.
-- Built raw D6/D7 3k from `facts_3k`: 14,809 records each, D7 hard-negative coverage 100%; validator accepted 14,333 and rejected 476 per dataset, preserving rejected rows.
-- Promoted canonical `d6_hard_cf_3k.jsonl` and `d7_hard_shuffle_3k.jsonl`; canonical validation reports 14,333/14,333 accepted and 0 rejected for both. D6/D7 audit: 2,980 images, 4.8097 QA/image, 49.9773% answer A, and D7 hard-negative coverage 100%.
-- Launched CF-3k-5k training on GPU0 and SHUF-3k-5k training on GPU1; 60-second health check showed both GPUs active and both runs wrote current `resolved_config.yaml` files.
-- CF-3k-5k training completed with `global_step=5000`, `best_val_loss=0.0960216852509599`, `train_records=14333`, `val_records=953`, and language decoder trainable count 0.
-- SHUF-3k-5k remained active on GPU1 and had reached `step_2000.pt` when CF-3k-5k finished; launched CF-3k-8k on GPU0.
-- SHUF-3k-5k training completed with `global_step=5000`, `best_val_loss=0.1265630536995151`, `train_records=14333`, `val_records=953`, and language decoder trainable count 0.
-- CF-3k-8k training completed with `global_step=8000`, `best_val_loss=0.09124111575900903`, `train_records=14333`, `val_records=953`, and language decoder trainable count 0.
-- CheXpert LP completed for CF-3k-5k (`macro_auc=0.6991358909301298`, `macro_f1=0.8000024420555041`) and SHUF-3k-5k (`macro_auc=0.7267088289073564`, `macro_f1=0.8091585598511053`).
-- CheXpert LP completed for CF-3k-8k with `macro_auc=0.6915615510303582`, `macro_f1=0.8100713789835076`, and `micro_f1=0.69384765625`.
-- NIH transfer completed for CF-3k-5k (`macro_auc=0.5633581579352777`, `macro_f1=0.20155437839037027`), SHUF-3k-5k (`macro_auc=0.5680449234338893`, `macro_f1=0.1917395979296698`), and CF-3k-8k (`macro_auc=0.5553344877970414`, `macro_f1=0.1934829548175455`); each evaluated 1000 NIH records with 0 missing images.
-- Launched visual-dependence diagnostics for CF-3k-5k and SHUF-3k-5k; SHUF includes the additional `hard_shuffle` mode.
-- Visual-dependence diagnostics completed: CF-3k-5k question-only delta +4.939776128881074 and image-shuffle delta +0.060066468208262294; SHUF-3k-5k question-only delta +5.214734004894299, image-shuffle delta +0.07164294005737254, and hard-shuffle delta +0.08067435596721262; CF-3k-8k question-only delta +4.932863376852791 and image-shuffle delta +0.06913095498763286.
-- Launched counterfactual diagnostics for CF-3k-5k and SHUF-3k-5k.
-- Counterfactual diagnostics completed for CF-3k-5k (`pairwise_accuracy=0.8934240362811792`) and SHUF-3k-5k (`pairwise_accuracy=0.8707482993197279`), each with 882/882 valid A/B records and 0 correct-letter failures.
-- CF-3k-8k counterfactual diagnostics completed with `pairwise_accuracy=0.8990929705215419`, 882/882 valid A/B records, and 0 correct-letter failures.
-- Paraphrase robustness completed for CF-3k-5k (clinical delta +0.02653341443753309, style delta +0.022763895429192237), SHUF-3k-5k (clinical delta +0.019911009901743434, style delta -0.006806962689880271), and CF-3k-8k (clinical delta +0.029445946156738054, style delta +0.020785625033367845).
-- Built QA8 3k data from the same 3k facts: raw 23,376 rows, canonical 22,613 accepted rows, 2,983 images, 7.5806 QA/image, and 49.9649% answer A. Added QA8 training/LP configs and launched QA8-3k-5k training on GPU0.
-- QA8-3k-5k training completed with `global_step=5000`, `best_val_loss=0.10508414212685094`, `train_records=22613`, `val_records=953`, and language decoder trainable count 0.
-- QA8-3k-5k evaluation completed: CheXpert macro-AUC 0.7068732353621726, NIH macro-AUC 0.566924732109416 with 1000 checked images and 0 missing, visual image-shuffle delta +0.0832803920205491, counterfactual pairwise accuracy 0.8605442176870748, and paraphrase clinical delta +0.025482108431204607.
-- Generated final P4-v2 tables under `outputs/final_tables/qwen3vl_p4v2_*`; all 9 run rows are present and the table audit found no missing rows.
-- Wrote Section 21 back into `vivid_med_qwen3vl_p4v2_scale_experiment_plan.md` with completion status, data audit, main results, QA5-vs-QA8 comparison, conclusions, and explicit expansion boundaries.
-- Final verification passed: P4-v2 scripts compile, required fact/D6/D7 artifacts exist, final tables are complete, GPUs are idle, no active P4-v2 train/eval/fact process remains, and a secret scan over scripts/configs/planning/doc files found 0 raw-key hits.
-- Old `v3_mimic_5k/train_extra4k` API-generation resume was investigated after P4-v2 completion. Only API/progress logs were found under `outputs/instruction_generation/v3_mimic_5k/train_extra4k_shard*.jsonl`; the original raw output JSONL path was not discoverable, so the old job was not restarted to avoid duplicating API consumption from scratch.
-- 2026-06-29 Next-stage comprehensive goal resumed from active `/goal`: complete `vivid_med_next_stage_comprehensive_experiment_plan.md` including required and expansion items.
-- Ran skill pre-flight for `superpowers:using-superpowers`, `planning-with-files`, `subagent-plan-decomposer`, and `superpowers:subagent-driven-development`; proceeding with main-agent coordination first because the current worktree has extensive pre-existing experiment artifacts.
-- Ran `planning-with-files` session catchup; no catchup output was emitted.
-- Re-read the target plan with UTF-8 output after initial mojibake from default PowerShell encoding.
-- Audited exact G1 script presence: all seven plan-named next-stage generators/auditors are missing; Qwen3-VL train/eval/P4-v2 trunk scripts are present.
-- Updated `task_plan.md` with the new active next-stage comprehensive execution scope, full phase checklist, evidence rules, artifact-gap snapshot, and current errors.
-- Updated `findings.md` with the new objective boundary, reusable baseline evidence, missing script list, and major requirement groups.
-- Implemented and compiled the next-stage preparation layer: seven G1 scripts, P2 loss-mask variant generator, config matrix generator, Qwen3-VL collator/trainer support for loss masks, token weighting, answer margin, image margin, multi-negative hard negatives, and required per-run progress/config snapshots.
-- Generated formal next-stage data under `outputs/instruction_data/next_stage/`: P2 compact/field-query, Balanced/CF-heavy/SHUF-heavy/Clinical-rich QA8, StoryMix QA5/8/10/12, SAMEQ-SHUF, and SHUF-K2/K4 train/val files.
-- Ran leakage audit 2.0 across current next-stage JSONL files into `outputs/final_tables/next_stage_audits/`; P2 variants are 100% accepted, SAMEQ/SHUF-K retain near-50% A/B balance, and mixture duplicate-question flags are preserved as data-quality evidence.
-- Generated 30 next-stage configs plus token-weight snippets and progressive schedule manifests. Only the two 10k placeholder configs intentionally point to missing `next_stage_missing` paths.
-- Debug-smoked `P2-no-punct` and `SHUF-K4`; both completed one-step runs and wrote `config_snapshot.json`, `metrics_final.json`, `metrics_step_1.json`, `progress.json`, `resolved_config.yaml`, `runtime_summary.json`, and `training_log.txt`.
-- Added `docs/next_stage_requirement_ledger.md` and updated `task_plan.md` so Phases N2/N3 are complete and Phase N4 formal quick diagnostics are the next execution gate.
-- Launched Phase N4 formal queues: GPU0 runs `P2-value-only`, `StoryMix-QA8`, `CF-heavy-QA8`, `SAMEQ-SHUF-3k`; GPU1 runs `P2-field-query`, `SHUF-heavy-QA8`, `SHUF-TW-visual`.
-- Preserved two P2-field-query interruption cases under `outputs/failure_cases/next_stage/`: first from full 14k validation being too slow for quick diagnostics, second from wrapper interruption before checkpoint. Regenerated configs with `data.max_val_samples=1000`, patched queue resume behavior, and relaunched.
-- Patched Qwen3-VL training resume to restore `global_step` and `best_val_loss`; Phase N4 queue scripts now resume from the newest checkpoint if `metrics_final.json` is missing.
-- Added G2 in-batch negative support in the collator/trainer and verified it with a 2-row smoke that produced `negative_input_ids` rows.
-- Generated UMS-derived 10k scale facts and data: `ums_chexpert_10k_facts.jsonl` (10,000 images, 41,338 facts), `shuf_10k_train.jsonl` (49,594 rows), `storymix_10k_train.jsonl` (64,293 rows), and matching val files; audits were written under `outputs/final_tables/next_stage_audits/`.
-- Updated next-stage config/LP manifests to 36 runnable configs, including `InBatch-SHUF`, TRAIN-CONN, TRAIN-LAST4, TRAIN-FULLVISION, SHUF-10k-8k, StoryMix-10k-8k, PROG-Mix-10k-8k, and PROG-Mix-TW-10k.
-- Added AUPRC/ECE/Brier metrics to shared classification metrics, A/B swap diagnostic data generation, per-run packaging scripts, next-stage final-table summarization, external/model availability audit, and qualitative hard-negative casebook generation.
-- Phase N4 P2-value-only formal training completed with `global_step=3000`, `best_val_loss=0.25470546504855157`, `train_records=1000`, `val_records=1000`, and language decoder trainable count 0.
-- Phase N4 P2-field-query formal training completed with `global_step=3000`, `best_val_loss=0.1867514458609803`, `train_records=14000`, `val_records=1000`, and language decoder trainable count 0.
-- Relaunched the Phase N4 GPU queues after the P2 runs because the wrapper did not continue automatically; GPU0 is now running `StoryMix-QA8`, and GPU1 is running `SHUF-heavy-QA8`.
-- Added the missing SHUF++ execution path for `Mined-SHUF`, `SelfHard-SHUF`, and `Progressive-HardNeg`: embedding export, mined-pair conversion, wrong-image NLL scoring, self-hard oversampling, and a progressive-hardneg schedule manifest.
-- Refreshed the next-stage training config manifest to 39 runs; LP configs remain at 36 until mined/self-hard/progressive-hardneg JSONL files are materialized.
-- Implemented real step-window curriculum sampling in `scripts/train_qwen3vl_clinical_instruction.py` for rows carrying `curriculum_start_step` / `curriculum_end_step`; a 4-stage 8-row `progressive_hardneg_smoke.jsonl` verified active-window switching at steps 0/2000/5000/7000.
-- Materialized formal curriculum/progressive train files: `cur_p3_cf_shuf_train.jsonl` (24k rows), `prog_mix_train.jsonl` (24k), `prog_mix_sameq_train.jsonl` (24k), and `prog_mix_10k_train.jsonl` (48k). Updated configs so CUR/PROG runs use these files rather than inert schedule metadata.
-- Ran leakage audit 2.0 for the four materialized curriculum files and refreshed `outputs/final_tables/next_stage_*` summary tables with the 39-run matrix.
-- Added `scripts/audit_next_stage_completion.py` as a read-only final closeout checklist. The first interim run wrote `outputs/final_tables/next_stage_completion_audit.{csv,md}` with 969 rows: 257 completed, 50 missing, and 662 pending, which matches the current state where Phase N4 and downstream postprocess remain active work.
-- Phase N4 formal training added two completed runs: `StoryMix-QA8` finished 5000 steps with `best_val_loss=0.23561777119584532`, `train_records=23269`, `val_records=1000`; `SHUF-heavy-QA8` finished 5000 steps with `best_val_loss=0.20539376246418123`, `train_records=23362`, `val_records=1000`. Refreshed `outputs/final_tables/next_stage_training_results.{csv,md}` and the completion audit.
-- The original Phase N4 queue wrappers stopped after those runs instead of continuing automatically, so the repaired GPU0/GPU1 Phase N4 queues were relaunched. GPU0 is now running `CF-heavy-QA8`; GPU1 is now running `SHUF-TW-visual`.
-- `CF-heavy-QA8` finished formal training with `global_step=5000`, `best_val_loss=0.2099243552631665`, `train_records=23340`, and `val_records=1000`. Refreshed the next-stage summary/audit tables again. The GPU0 queue stopped before SAMEQ, so it was relaunched and `SAMEQ-SHUF-3k` has started.
-- `SHUF-TW-visual` finished formal training with `global_step=5000`, `best_val_loss=0.11704078140271737`, `train_records=14333`, and `val_records=953`. Refreshed summary/audit tables and launched `scripts/run_next_stage_phase1_postprocess_gpu1_queue.ps1` on idle GPU1 for `p2_field_query`, `shuf_heavy_qa8`, and `shuf_tw_visual`; first active postprocess step is `p2_field_query` vision export.
-- The first GPU1 postprocess attempt generated `p2_field_query/vision_export/vision_export_manifest.json` but exited before copying the parent manifest or writing `EXITCODE`. Patched the Phase 1 and generic postprocess `Run-Step` helpers to catch exceptions and always log `EXITCODE`, copied the existing p2 manifest to `p2_field_query/vision_export_manifest.json`, and relaunched GPU1 postprocess. It has advanced to `p2_field_query` CheXpert LP.
-- Filled the remaining leakage-audit files for existing next-stage train/val JSONL paths: 38 unique existing paths checked, 2 newly generated audit summaries, and the completion audit improved to 298 completed / 77 missing / 594 pending.
-- Patched the Phase 1 and generic postprocess queues again so a nonzero command exit is accepted when the expected artifact file exists. This prevents non-fatal library warnings from stopping the chain after a successful LP/transfer/diagnostic output. Relaunched GPU1 postprocess, which skipped completed p2 export/LP and resumed at `p2_field_query` NIH transfer.
-- `SAMEQ-SHUF-3k` finished formal Phase N4 training with `global_step=5000`, `best_val_loss=0.1683466866575386`, `train_records=9238`, `val_records=566`, and language decoder trainable count 0. Refreshed next-stage summary tables and completion audit; audit is now 315 completed / 74 missing / 580 pending.
-- After context compaction, resumed the active next-stage `/goal` and re-ran the skill/session pre-flight. Phase N4 postprocess remains the immediate gate: GPU0 is running `StoryMix-QA8` counterfactual diagnostics, while GPU1 is running `SHUF-TW-visual` A/B-swap counterfactual diagnostics.
-- Verified the generic next-stage training/postprocess queue scripts are manifest-driven and can be reused for Phase N5-N8 batches once Phase N4 packages are complete; the visible `cuda:0` arguments are combined with `CUDA_VISIBLE_DEVICES` per queue.
-- User approved running two postprocess jobs per GPU to improve throughput. Confirmed both GPUs have 24GB VRAM and current Qwen3-VL diagnostic jobs use about 4.8-5.0GB each; launched an additional non-overlapping `sameq_shuf_3k` postprocess lane on GPU1 while leaving `cf_heavy_qa8` to the existing GPU0 queue to avoid duplicate writes.
-- User asked to try two or three postprocess jobs per GPU. Launched `cf_heavy_qa8` postprocess on GPU0 and split out extra visual-dependence diagnostics for `cf_heavy_qa8` on GPU0 plus `sameq_shuf_3k` on GPU1; both GPUs now have three active postprocess/eval-style processes with observed memory still below 15GB/24GB.
-- Three-way postprocess/eval concurrency is memory-feasible on 24GB GPUs, but splitting extra steps inside the same run created a potential duplicate-write race when the main queue reached the same visual-dependence output. Stopped the extra `cf_heavy_qa8` and `sameq_shuf_3k` visual branches and kept the main queues as the artifact owners; future high-concurrency postprocess should shard by distinct run IDs rather than duplicate per-run steps.
-- Added `scripts/merge_next_stage_isolated_outputs.py` so future concurrent postprocess workers can write under an isolated path, validate JSON, and then atomically publish or merge into the canonical output. `python -m py_compile` and `--help` both passed.
-- Current Phase N4 postprocess progress after the concurrency test: `sameq_shuf_3k` CheXpert LP and NIH transfer are complete; `cf_heavy_qa8` CheXpert LP and NIH transfer are complete; `shuf_tw_visual` paraphrase is complete. Remaining Phase N4 work is mainly visual/counterfactual/paraphrase/package completion for `storymix_qa8`, `cf_heavy_qa8`, and `sameq_shuf_3k`, plus package/summarize closeout.
-- Added `scripts/run_next_stage_isolated_eval_step.ps1`, checked its PowerShell syntax, and launched isolated counterfactual workers for `cf_heavy_qa8` on GPU0 and `sameq_shuf_3k` on GPU1. These workers publish through the merge helper, so they do not write canonical diagnostics directly.
-- Under the updated "three per GPU, but isolated" policy, stopped a duplicate direct `cf_heavy_qa8 counterfactual` child that overlapped with the isolated worker. Launched a distinct isolated `cf_heavy_qa8 paraphrase` worker (`gpu0-cfheavy-para`) so GPU0 concurrency is spent on different missing artifacts: counterfactual, A/B-swap counterfactual, and paraphrase.
-- Began Phase N5 hard-negative materialization preflight while Phase N4 diagnostics run. The first 16-row embedding smoke failed because the export script assumed `model.visual`; patched `scripts/export_qwen3vl_instruction_embeddings.py` to resolve both `visual` and `model.visual`, then `python -m py_compile scripts/export_qwen3vl_instruction_embeddings.py` passed.
-- Patched checkpoint metadata serialization in both `scripts/export_qwen3vl_instruction_embeddings.py` and `scripts/score_qwen3vl_hard_negative_loss.py`. The 16-row embedding smoke then passed with `rows=16`, `embedding_shape=[16,1024]`, and a scalar-safe manifest. Launched the full SHUF-3k D7 embedding export on GPU1; log: `outputs/logs/qwen3vl_next_stage/shuf_3k_5k_embedding_export_gpu1.log`.
-- `sameq_shuf_3k` Phase N4 postprocess closed: A/B-swap counterfactual exists, isolated paraphrase worker published `sameq_shuf_3k_paraphrase_robustness.json`, and `scripts/package_next_stage_run_outputs.py --run-id sameq_shuf_3k` completed successfully.
-- Phase N5 self-hard preflight passed: 16-row wrong-image NLL scoring smoke wrote JSONL/CSV under `outputs/next_stage_manifests/hard_negative_mining/smoke/`. Launched the full SHUF-3k self-hard scoring pass on GPU0; log: `outputs/logs/qwen3vl_next_stage/shuf_3k_5k_selfhard_score_gpu0.log`.
-- Phase N4 formal quick diagnostics are complete. `cf_heavy_qa8` isolated A/B-swap and paraphrase diagnostics published successfully, `package_next_stage_run_outputs.py --run-id cf_heavy_qa8` completed, and refreshed summary/audit tables report 382 completed / 7 missing / 580 pending. Updated `task_plan.md` and `docs/next_stage_requirement_ledger.md` so the active gate is now mined/self-hard/progressive-hardneg materialization.
-- Launched the first Phase N5 workflow training queue on GPU0 for `mix_story_qa8` followed by `cur_p3_shuf`, while keeping the self-hard scoring pass isolated under the mining directory. This is a conservative one-training-plus-one-scoring layout rather than three training jobs per GPU.
-- The first `run_next_stage_training_queue.ps1` attempt for `mix_story_qa8` exited quickly with an empty native-command error before producing an output dir. A direct `--debug` smoke for `mix_story_qa8` passed, so the data/trainer path is valid. Relaunched the formal `mix_story_qa8` run via a direct background training command with log `outputs/logs/qwen3vl_next_stage/mix_story_qa8_direct_gpu0.log`.
-- Verified the direct `mix_story_qa8` formal run is alive: `outputs/qwen3vl_instruction/next_stage/mix_story_qa8/progress.json` exists, and GPU0 remains below 15GB while running `mix_story_qa8` plus the isolated self-hard scoring pass.
-- Launched the first independent SHUF++ training run, `shuf_k2`, on GPU1 via direct background command while the SHUF embedding export continues. Log: `outputs/logs/qwen3vl_next_stage/shuf_k2_direct_gpu1.log`.
-- Full SHUF-3k embedding export completed successfully (`rows=14333`, `embedding_shape=[14333,1024]`, exit code 0). Mined hard-negative search produced `outputs/next_stage_manifests/hard_negative_mining/shuf_3k_5k_mined_pairs.jsonl` with 57,332 pairs.
-- Materialized `mined_shuf_train.jsonl` (14,333 rows, all matched to mined pairs) and `mined_shuf_val.jsonl` (953-row D7 validation boundary preserved under the next-stage path).
-- Materialized full `progressive_hardneg_train.jsonl` (66,570 rows) from isolated stage inputs: random D7, SHUF-K2, SHUF-K4, Mined-SHUF, and SAMEQ-SHUF. Refreshed `outputs/next_stage_manifests/progressive-hardneg_schedule.{json,md}`.
-- Patched `scripts/run_next_stage_training_queue.ps1` so native conda stderr no longer becomes a premature PowerShell terminating error; the queue now waits for the real process exit code and artifact checks.
-- Ran leakage audit 2.0 for `mined_shuf_train`, `mined_shuf_val`, and `progressive_hardneg_train`; refreshed the LP manifest to 38 configs with only `selfhard_shuf` skipped until its scored training JSONL is materialized. Completion audit is now 401 completed / 2 missing / 566 pending, where both missing rows are the SelfHard-SHUF train data and its LP manifest entry.
-- Started a second GPU1 workflow lane through the repaired queue wrapper (`cur_p3_shuf -> cur_cf_shuf -> cur_p3_cf_shuf -> prog_mix -> prog_mix_tw -> prog_mix_sameq -> prog_mix_dualmargin`) while direct `shuf_k2` continues. GPU1 memory was about 18.6GB/24GB with the two training processes.
-- Added two waiting lane handoffs: GPU1 will start the SHUF++ lane (`shuf_k4 -> inbatch_shuf -> mined_shuf -> dual_cf_shuf -> progressive_hardneg -> shuf_k4_tw_visual`) after `shuf_k2` writes `metrics_final.json`; GPU0 will start the token/policy/scale lane after `mix_story_qa8` writes `metrics_final.json`.
-- Added fallback isolation for SelfHard-SHUF scoring: `score_qwen3vl_hard_negative_loss.py` now supports `--shard-index/--num-shards`, and `scripts/merge_selfhard_score_shards.py` can merge shard JSONL/CSV outputs with a manifest. `python -m py_compile` and both `--help` checks passed. The already-running full self-hard scorer was left undisturbed.
-- Added `scripts/run_next_stage_ready_postprocess_watcher.ps1` for gated postprocess handoff. It waits for `metrics_final.json` + `best.pt`, checks GPU memory, and then runs the generic postprocess queue for one run at a time. GPU0 watcher waits on the token/policy/scale lane, GPU1 watcher waits on the workflow/SHUF++ lane; package completion is detected from per-run markdown files in the train output directory.
-- Monitored the first concurrent training lanes after watcher launch. `shuf_k2` briefly paused at step 1000 for eval/checkpointing, then resumed; `metrics_step_1000.json` reports `val_loss=0.21097660633021703`, and `checkpoints/step_1000.pt` exists. `mix_story_qa8` reached step 1600 with `metrics_step_1500.json` (`val_loss=0.26372288659844345`), and `cur_p3_shuf` continued past step 1000. The full self-hard scorer still has no final JSONL/CSV yet but remains active.
-- After about one hour without any self-hard output file, stopped the single full self-hard scorer and switched to the isolated shard plan requested by the user. Launched two GPU0 shard workers writing `outputs/next_stage_manifests/hard_negative_mining/shards/shuf_3k_5k_selfhard_scores_shard{0,1}of2.{jsonl,csv}` with separate logs. GPU0 memory with `mix_story_qa8` plus both shard scorers was about 19.8GB/24GB.
-- The two SelfHard-SHUF score shards completed successfully in about 29 minutes each and were merged into `shuf_3k_5k_selfhard_scores.{jsonl,csv}` with 14,333 rows and 0 duplicate drops. Built `selfhard_shuf_train.jsonl` with 21,499 rows by tripling the lowest-NLL 25% hard rows.
-- Ran leakage audit 2.0 for `selfhard_shuf_train`, refreshed the LP manifest to all 39 configs with 0 skipped runs, reran the completion audit, and reduced the data/config gate to 405 completed / 564 pending / 0 missing. Refreshed next-stage summary tables for all 39 runs.
-- Restarted the GPU1 SHUF++ training handoff and ready-postprocess watcher to include `selfhard_shuf` in the sequence after `shuf_k2` completes.
-- After SelfHard-SHUF scoring freed GPU0 memory, launched an early GPU0 P2 lane (`p2_no_punct -> p2_state_only_compact`) alongside `mix_story_qa8`. Restarted the GPU0 post-mix training handoff to exclude those two early P2 runs and avoid duplicate launches. GPU0 memory with the two training processes was about 20GB/24GB.
-- Stopped the early `p2_no_punct` lane when GPU0 reached about 24.2GB during `mix_story_qa8` evaluation. No checkpoint was produced, so `p2_no_punct` remains incomplete and will be rerun from the post-`mix_story_qa8` queue. Restarted the GPU0 handoff with the full token/policy/scale list restored.
-- `shuf_k2` completed formal training at `global_step=5000` with `best_val_loss=0.1286271016288751`. The GPU1 SHUF++ handoff released and started `shuf_k4`; the ready-postprocess watcher also started `shuf_k2` postprocess. GPU1 memory stayed around 19GB with `cur_p3_shuf`, `shuf_k4`, and postprocess activity.
-- Paused `shuf_k2` postprocess during CheXpert LP because GPU1 reached about 24.3GB with `cur_p3_shuf + shuf_k4 + postprocess`. Restarted the GPU1 ready-postprocess watcher with a stricter 12GB memory threshold so postprocess resumes only after a training slot frees up.
-- `mix_story_qa8` completed formal training at `global_step=8000` with `best_val_loss=0.19867724423170557`. The GPU0 post-mix handoff released and restarted the full token/policy/scale queue from `p2_no_punct`; the earlier partial `p2_no_punct` attempt had no checkpoint, so this is a clean rerun.
-- Post-compaction status refresh: `cur_p3_shuf` completed formal training at `global_step=8000` and wrote `metrics_final.json` at 2026-06-29 22:10:24. Its training process released GPU1 shortly afterward, leaving GPU1 with `shuf_k4` only (~11.9GB), so the stricter `ready_post_gpu1` watcher should be able to resume `shuf_k2` postprocess on its next low-memory poll.
-- `mix_story_qa8` postprocess has completed vision export, CheXpert LP, and NIH transfer; it is currently running visual-dependence diagnostics on GPU0 alongside the clean `p2_no_punct` rerun. GPU0 remains high but below full capacity (~19.7GB/24GB).
-- The workflow lane advanced automatically from `cur_p3_shuf` to `cur_cf_shuf`; by the 22:15 poll, `cur_cf_shuf` had reached step 500, `shuf_k4` was around step 1525, and `p2_no_punct` was in its step-1500 evaluation. GPU1 memory was again above the 12GB postprocess threshold with two trainings, so `ready_post_gpu1` correctly kept `shuf_k2` postprocess paused rather than overpacking the card.
-- Active monitor at 22:19: `p2_no_punct` reached step 2000, `shuf_k4` reached step 1850, and `cur_cf_shuf` remained around its step-500 validation/checkpoint window. `mix_story_qa8` visual-dependence diagnostics were still running without a final JSON yet; GPU0/GPU1 memory stayed around 19.8GB/21.1GB, so no extra training or direct postprocess was added.
-- `mix_story_qa8` visual-dependence completed and wrote `outputs/qwen3vl_next_stage_diagnostics/mix_story_qa8_visual_dependence.json`; the postprocess wrapper accepted the artifact and advanced to `mix_story_qa8` counterfactual diagnostics. At the same poll, `p2_no_punct` was step 2075, `cur_cf_shuf` step 850, and `shuf_k4` step 2000.
-- Verified `shuf_k4` was not stalled: step-2000 metrics/checkpoint were written, and training continued past step 2175. `mix_story_qa8_counterfactual_diagnostics.json` completed and the wrapper advanced through A/B swap config into A/B swap counterfactual. `p2_no_punct` reached step 2675 and `cur_cf_shuf` reached step 1150.
-- `p2_no_punct` completed formal training at `global_step=3000` with `best_val_loss=0.041906749743036924`, and both `metrics_final.json` plus `checkpoints/step_3000.pt` are present. The GPU0 token/policy/scale lane advanced automatically to `p2_state_only_compact`, which reached step 275 by the same poll. `mix_story_qa8` A/B-swap counterfactual remained active on GPU0, so postprocess ownership stays with the watcher.
-- Refreshed `scripts/summarize_next_stage_results.py` and `scripts/audit_next_stage_completion.py` after `p2_no_punct` completion. Summary tables cover all 39 runs; the completion audit now reports 434 completed, 42 missing, and 493 pending rows, with the remaining gaps tied to active/queued training and postprocess packages rather than the earlier data/materialization gate.
-- `mix_story_qa8` A/B-swap counterfactual completed with `mix_story_qa8_ab_swap_counterfactual_diagnostics.json` plus answer/counterfactual row CSVs, and the postprocess wrapper advanced to paraphrase robustness. `p2_state_only_compact` reached step 500 and `cur_cf_shuf` reached step 1650 during the same monitoring window.
-- `mix_story_qa8` completed the full postprocess/package sequence: `mix_story_qa8_paraphrase_robustness.json` and rows CSV are present, and the per-run package markdown files (`lp_results.md`, `visual_dependence_results.md`, `counterfactual_results.md`, `paraphrase_results.md`, `instruction_audit.md`, `cost_table.md`) were written under `outputs/qwen3vl_instruction/next_stage/mix_story_qa8/`. Marked Mix-Story-QA8 complete in `task_plan.md`.
-- Refreshed next-stage summary/audit after the `mix_story_qa8` package. Completion audit improved to 443 completed, 34 missing, and 492 pending rows. The GPU0 ready-postprocess watcher exited `mix_story_qa8` with code 0 and automatically started `p2_no_punct` postprocess; its active step is CheXpert LP while `p2_state_only_compact` continues training.
-- `p2_no_punct` postprocess completed vision export and CheXpert LP, then advanced to NIH transfer. `shuf_k4` step-3000 metrics/checkpoint were written and the run continued training; `p2_state_only_compact` reached step 2000 and entered its eval/checkpoint window.
-- `p2_no_punct` NIH transfer completed and the postprocess wrapper advanced to visual-dependence diagnostics. `p2_state_only_compact` reached step 2200, `cur_cf_shuf` step 2850, and `shuf_k4` step 3500; GPU0 memory rose to about 17.7GB with training plus visual diagnostics, still below the 24GB device limit.
-- `p2_state_only_compact` completed formal training at `global_step=3000` with `best_val_loss=0.11669960111193359`; the GPU0 training lane advanced to `balanced_mix_qa8`. `p2_no_punct` visual-dependence completed and the postprocess wrapper advanced to counterfactual diagnostics.
-- Refreshed summary/audit after `p2_state_only_compact` training completion. Completion audit reports 451 completed, 43 missing, and 475 pending rows; the temporary missing increase is expected because a newly completed training run now requires its downstream postprocess package.
-- `p2_no_punct` counterfactual diagnostics completed and the postprocess wrapper advanced to paraphrase robustness. `balanced_mix_qa8` reached step 500, `cur_cf_shuf` reached step 3725, and `shuf_k4` reached step 4100.
-- `p2_no_punct` completed paraphrase, package, and summarize with exit code 0; its per-run markdown package is present. Completion audit after this package reports 461 completed, 34 missing, and 474 pending rows. GPU0 ready-postprocess advanced to `p2_state_only_compact` and is running CheXpert LP while `balanced_mix_qa8` trains.
-- `p2_state_only_compact` postprocess completed vision export and CheXpert LP, then advanced to NIH transfer. `shuf_k4` reached step 5000 and entered final evaluation/checkpointing; `balanced_mix_qa8` reached step 1500 and `cur_cf_shuf` reached step 4500.
-- `shuf_k4` completed formal training at `global_step=5000` with `best_val_loss=0.13191120733298534`, then the SHUF++ queue auto-started `inbatch_shuf`. GPU1 memory immediately rose to about 24.26GB with `cur_cf_shuf + inbatch_shuf`, so `inbatch_shuf` was paused at step 25 to protect the near-complete `cur_cf_shuf` run. This also stopped the SHUF++ wrapper and the GPU1 ready-post watcher because their command lines included `inbatch_shuf`; the GPU1 ready-post watcher was restarted with the same 12GB threshold, while remaining SHUF++ runs will be rescheduled after a safer memory window opens.
-- `shuf_k2` postprocess resumed safely with only `cur_cf_shuf` on GPU1: CheXpert LP completed and NIH transfer started. `p2_state_only_compact` NIH transfer and visual-dependence completed, and its postprocess advanced to counterfactual diagnostics. `cur_cf_shuf` continued past step 5000, confirming it is an 8000-step workflow run rather than a 5000-step SHUF++ run.
-- User confirmed three concurrent jobs per GPU are acceptable if isolated. Added two third-lane isolated SHUF-K4 diagnostics while keeping canonical ownership safe: GPU0 launched `shuf_k4` visual-dependence through `run_next_stage_isolated_eval_step.ps1`, and GPU1 launched `shuf_k4` counterfactual diagnostics through a separate worker. A first GPU0 launch with explicit `-Modes` did not create a log/process, so it was replaced with the script default modes under `gpu0-shufk4-visual2`. Three-lane memory stayed below the 24GB limit (about 18.5GB on GPU0 and 19.2GB on GPU1).
-- `p2_state_only_compact` completed the full postprocess/package sequence: paraphrase robustness, package, and summarize all exited with accepted artifacts. Refreshed next-stage summary/audit tables; the completion audit now reports 479 completed, 33 missing, and 457 pending rows. With GPU0 memory freed by that package, launched a third isolated `shuf_k4` paraphrase worker (`gpu0-shufk4-para`) so SHUF-K4 visual/counterfactual/paraphrase diagnostics can be produced under isolated output paths before the later canonical package step.
-- Three-lane trial produced mixed throughput evidence: `shuf_k2_visual_dependence.json` completed through the official GPU1 postprocess watcher, and the isolated `gpu1-shufk4-cf` worker published `shuf_k4_counterfactual_diagnostics.json` via the merge helper. Training continued during the trial (`balanced_mix_qa8` reached step 4000; `cur_cf_shuf` reached step 6000 eval). The remaining GPU0 `shuf_k4` visual/paraphrase isolated workers are still running, so no additional GPU1 third-lane worker was added to avoid racing the formal `shuf_k2 -> cur_p3_shuf` watcher sequence.
-- The GPU0 `shuf_k4` visual/paraphrase pair ran for an extended window without producing JSON while `balanced_mix_qa8` approached its final segment, so the later `gpu0-shufk4-para` paraphrase worker was stopped and left to rerun later. The first stop command also matched its own PowerShell command line and returned `-1`; a follow-up query excluding the current PID confirmed no `gpu0-shufk4-para` process remained and no partial paraphrase JSON existed. GPU0 memory dropped to about 14.5GB, preserving `balanced_mix_qa8` plus the earlier `shuf_k4` visual worker.
-- The preserved `gpu0-shufk4-visual2` worker completed and published `shuf_k4_visual_dependence.json` through the isolated merge helper. GPU0 memory fell to about 9.6GB with only `balanced_mix_qa8` active, so the deferred SHUF-K4 paraphrase diagnostic was relaunched as `gpu0-shufk4-para2` under a fresh isolated path.
-- `balanced_mix_qa8` completed formal training at `global_step=5000` with `best_val_loss=0.23070101089968556`, then the GPU0 training queue advanced to `clinical_rich_qa8`. The GPU0 ready-postprocess watcher started `balanced_mix_qa8` postprocess; vision export completed and CheXpert LP is active. Current GPU0 ownership is separated as `clinical_rich_qa8` training, `balanced_mix_qa8` canonical postprocess, and `shuf_k4` isolated paraphrase.
-- `shuf_k2` completed its full package: all required per-run markdown markers are present, and fresh summary/audit refreshes report 500 completed, 30 missing, and 439 pending rows. Marked SHUF-K2 complete in `task_plan.md`. Because SHUF-K4 already had visual/counterfactual/paraphrase diagnostics published but would be reached late by the ordered GPU1 watcher, launched a separate `shuf_k4` canonical postprocess lane on GPU1 to fill vision export, CheXpert LP, NIH transfer, package, and summarize.
-- GPU1 ready-postprocess advanced from `shuf_k2` to `cur_p3_shuf` after the SHUF-K2 package. This means GPU1 is intentionally running three distinct owners for now: `cur_cf_shuf` training, `cur_p3_shuf` canonical postprocess via the watcher, and `shuf_k4` canonical postprocess from the manual lane. The run IDs and output roots are disjoint, and observed memory stayed under 19GB/24GB.
-- `shuf_k4` completed its full postprocess/package/summarize sequence after the manual GPU1 lane filled vision export, CheXpert LP, and NIH transfer while reusing the already-published isolated visual/counterfactual/paraphrase diagnostics. Fresh package-marker verification passed and the completion audit improved to 513 completed, 17 missing, and 439 pending rows. Marked SHUF-K4 complete in `task_plan.md`.
-- `cur_cf_shuf` completed formal training at `global_step=8000` with `best_val_loss=0.0850488064964263`; the workflow training queue advanced to `cur_p3_cf_shuf`. This is training evidence only for Phase N5 until the ready-postprocess watcher produces the per-run package and downstream diagnostics.
-- `balanced_mix_qa8` completed its full package, leaving GPU0 with only `clinical_rich_qa8` training. Preserved the earlier `inbatch_shuf` step-25 partial run under `outputs/failure_cases/next_stage/inbatch_shuf_paused_step25_*`, then restarted the remaining SHUF++ training lane on GPU0 using the corrected PowerShell array invocation: `inbatch_shuf -> mined_shuf -> selfhard_shuf -> dual_cf_shuf -> progressive_hardneg -> shuf_k4_tw_visual`. A first `Start-Process -File ... -Ids 'a,b,c'` attempt did not start because the ID list was passed as one string; the `-Command` relaunch worked, and `inbatch_shuf` reached step 50 with GPU0 at about 21.2GB/24GB.
-- `cur_p3_shuf` completed its full postprocess/package/summarize sequence. Marker verification passed, fresh summary/audit reports 538 completed, 11 missing, and 420 pending rows, and `ready_post_gpu1` advanced to `cur_cf_shuf` postprocess. Marked CUR-P3-SHUF complete in `task_plan.md`.
-- `clinical_rich_qa8` completed formal training at `global_step=5000` with `best_val_loss=0.2258319894751562`; the GPU0 main training queue advanced to `storymix_qa5`. Because GPU0 is still running two training processes (`storymix_qa5` plus `inbatch_shuf`, about 22.4GB/24GB), `ready_post_gpu0` is expected to defer `clinical_rich_qa8` postprocess until memory drops below its threshold.
-
-- 2026-06-30T02:30:58.9271059+08:00 orphan cleanup: stopped stale shuf_k2 LP wrapper PIDs 2776,812,21348 after shuf_k2 package completion; not present in nvidia-smi compute apps; preserved package artifacts.
-
-- 2026-06-30T02:32:33.5179136+08:00 launched isolated GPU1 postprocess for clinical_rich_qa8 as third GPU1 lane; worker=gpu1-clinical-rich-20260630T023233; canonical packaging remains per-run and diagnostics publish through isolated merge.
-
-- 2026-06-30T02:44:11.2319627+08:00 clinical_rich_qa8 isolated GPU1 postprocess completed CheXpert LP (metrics_final.json present) and advanced to downstream transfer/diagnostics while GPU1 three-lane memory stayed below 19GB.
-
-- 2026-06-30T02:46:33.7248051+08:00 cur_cf_shuf postprocess completed counterfactual diagnostics and advanced to A/B-swap counterfactual; clinical_rich_qa8 GPU1 third lane completed CheXpert LP and advanced to NIH transfer; active trainings resumed (storymix_qa5/inbatch_shuf/cur_p3_cf_shuf).
-
-- 2026-06-30T02:49:48.1374800+08:00 stopped GPU0 ready watcher PID 19672 before it could duplicate clinical_rich_qa8; relaunched ready_post_gpu0_rebased from storymix_qa5 onward while clinical_rich_qa8 remains owned by isolated GPU1 postprocess.
-
-- 2026-06-30T03:01:43.5398112+08:00 cur_cf_shuf A/B-swap counterfactual diagnostics completed; inbatch_shuf wrote step_3000 metrics/checkpoint; storymix_qa5 and cur_p3_cf_shuf resumed training after eval windows.
-
-- 2026-06-30T03:04:04.7333961+08:00 clinical_rich_qa8 isolated visual-dependence completed and was published to the canonical diagnostics JSON; cur_cf_shuf advanced to paraphrase; clinical_rich_qa8 advanced to counterfactual.
-
-- 2026-06-30T03:13:36.1914952+08:00 clinical_rich_qa8 counterfactual diagnostics completed and advanced toward paraphrase/package; cur_cf_shuf remains in paraphrase; active training progress: storymix_qa5 3300, inbatch_shuf 3550, cur_p3_cf_shuf step-5000 eval.
-
-- 2026-06-30T03:16:34.6179085+08:00 cur_cf_shuf full package verified (LP/visual/counterfactual/A-B swap/paraphrase/audit/cost markers present); completion audit refreshed to 560 completed / 7 missing / 402 pending; marked CUR-CF-SHUF complete in task_plan.md.
-
-- 2026-06-30T03:25:13.3599479+08:00 launched early GPU1 training lane for shuf_tw_role after clinical_rich_qa8 package freed GPU1; later GPU0 main queue will skip if metrics_final exists.
-
-- 2026-06-30T03:28:04.5461142+08:00 shuf_tw_role early GPU1 lane entered active training (step 175 observed) alongside cur_p3_cf_shuf; GPU1 memory about 18.5GB/24GB, leaving no need for a third full-training lane.
-
-- 2026-06-30T03:33:00.2661515+08:00 clinical_rich_qa8 completed full isolated GPU1 postprocess/package/summarize; marker verification passed and completion audit refreshed to 567 completed / 402 pending / 0 missing.
-
-- 2026-06-30T03:44:58.6567264+08:00 storymix_qa5 formal training completed at global_step=5000 with best_val_loss=0.1927440259421088; GPU0 main queue advanced to storymix_qa10. Postprocess remains pending under ready_post_gpu0_rebased due current high GPU0 memory.
-
-- 2026-06-30T04:08:05+08:00 paused storymix_qa5 visual-dependence postprocess for VRAM protection after GPU0 reached ~23.9GB with storymix_qa10 training + mined_shuf training + storymix_qa5 postprocess. Stopped only the storymix_qa5 visual process tree; vision export, CheXpert LP, and NIH transfer artifacts remain present for resume/skip.
-
-- 2026-06-30T04:09:12+08:00 restarted ready_post_gpu0_rebased watcher with the same run order and 16GB threshold; it is waiting on storymix_qa5 GPU0 memory rather than immediately relaunching the paused visual diagnostic.
-
-- 2026-06-30T04:24:11+08:00 cur_p3_cf_shuf formal training completed at global_step=8000 with best_val_loss=0.24603633108222858; workflow queue advanced to prog_mix. CUR-P3-CF-SHUF remains unchecked in Phase N5 until postprocess/package markers and audit pass; ready_post_gpu1 is waiting for GPU1 memory below 12GB.
-
-- 2026-06-30T05:11:06+08:00 storymix_qa10 formal training completed at global_step=5000 with best_val_loss=0.18853277907511165; GPU0 main queue advanced to storymix_qa12, and ready_post_gpu0_rebased resumed storymix_qa5 visual-dependence postprocess.
-
-- 2026-06-30T05:12:07+08:00 shuf_tw_role formal training completed at global_step=5000 with best_val_loss=0.11563157492339854; this early GPU1 lane will be skipped later by the GPU0 main queue because metrics_final.json now exists.
-
-- 2026-06-30T05:25:46+08:00 storymix_qa5 resumed visual-dependence postprocess completed after the earlier VRAM pause; the GPU0 watcher advanced to counterfactual while storymix_qa12 and mined_shuf continued training.
-
-- 2026-06-30T05:24:57+08:00 cur_p3_cf_shuf manual isolated GPU1 postprocess completed visual, counterfactual, and A/B-swap diagnostics and advanced to paraphrase; inbatch_shuf manual isolated GPU1 postprocess also completed CheXpert LP and advanced to NIH transfer.
-
-- 2026-06-30T05:39:11+08:00 resume snapshot: mined_shuf formal training completed at global_step=5000 with best_val_loss=0.08477271557435849; SHUF++ queue advanced to selfhard_shuf, which started training. Active isolated lanes remain separated as GPU0 storymix_qa12 training + selfhard_shuf training + storymix_qa5 postprocess, and GPU1 prog_mix training + cur_p3_cf_shuf postprocess + inbatch_shuf postprocess. No N5/N6 completion checkbox changed because per-run package markers are still absent.
-
-- 2026-06-30T05:41:50+08:00 cur_p3_cf_shuf full package verified: config snapshot, metrics_final, progress/training log, vision export manifest, LP, visual-dependence, counterfactual, paraphrase, instruction audit, and cost markdown markers are present. Refreshed next-stage summary/audit; audit now reports 622 completed / 52 missing / 295 pending rows. Marked CUR-P3-CF-SHUF complete in task_plan.md.
-
-- 2026-06-30T05:46:04+08:00 launched isolated GPU1 postprocess for mined_shuf as the third GPU1 lane; worker=gpu1-mined-20260630T054604. This is separated from inbatch_shuf's worker and the workflow watcher by NEXT_STAGE_ISOLATED_WORKER_ID, with diagnostics staged under the isolated diagnostics tree before canonical merge.
-
-- 2026-06-30T05:49:09+08:00 storymix_qa5 completed the resumed full postprocess/package/summarize path after the earlier VRAM pause. Package markers for LP, visual-dependence, counterfactual, paraphrase, instruction audit, and cost are present; completion audit refreshed to 630 completed / 44 missing / 295 pending rows.
-
-- 2026-06-30T05:50:48+08:00 launched isolated GPU0 postprocess for storymix_qa10 as the third GPU0 lane; worker=gpu0-storyqa10-20260630T055048. The ready watcher was waiting on its 16GB memory threshold, so this manual lane uses an isolated worker id and will let the watcher skip once package markers are present.
-
-- 2026-06-30T05:52:16+08:00 inbatch_shuf isolated GPU1 visual-dependence completed and published to the canonical diagnostics JSON; the worker advanced to counterfactual diagnostics. GPU1 memory dropped back to about 14GB while prog_mix training and mined_shuf LP continued.
-
-- 2026-06-30T05:56:55+08:00 mined_shuf isolated GPU1 CheXpert LP completed with metrics_final.json present and advanced to NIH transfer. Mined-SHUF remains unchecked in Phase N6 until visual/counterfactual/paraphrase package markers and fresh audit pass.
-
-- 2026-06-30T06:02:06+08:00 storymix_qa10 isolated GPU0 CheXpert LP completed with metrics_final.json present and advanced to NIH transfer; GPU0 memory dropped back to about 18.7GB while storymix_qa12 and selfhard_shuf continued training.
-
-- 2026-06-30T06:03:24+08:00 mined_shuf isolated GPU1 NIH transfer completed with transfer_metrics.json present and advanced to visual-dependence diagnostics. Mined-SHUF still remains pending for Phase N6 until full diagnostics/package/audit.
-
-- 2026-06-30T06:08:27+08:00 storymix_qa10 isolated GPU0 NIH transfer completed with transfer_metrics.json present and advanced to visual-dependence diagnostics; GPU0 memory dropped to about 21.2GB.
-
-- 2026-06-30T06:10:50+08:00 inbatch_shuf isolated GPU1 counterfactual diagnostics completed and published to the canonical JSON; A/B-swap config was generated and the worker advanced to A/B-swap counterfactual diagnostics.
-
-- 2026-06-30T06:23:58+08:00 storymix_qa10 isolated GPU0 visual-dependence diagnostics completed and published to the canonical JSON; the worker advanced to counterfactual diagnostics.
-
-- 2026-06-30T03:49:45.3145067+08:00 resume status: inbatch_shuf formal training completed at global_step=5000 with best_val_loss=0.07932007347763817; SHUF++ queue advanced to mined_shuf. InBatch-SHUF remains unchecked until postprocess/package markers and fresh audit pass. Active training: storymix_qa10 on GPU0, mined_shuf on GPU0, cur_p3_cf_shuf on GPU1, shuf_tw_role on GPU1; no extra postprocess launched while GPU0/GPU1 memory are high.
-
-- 2026-06-30T03:56:07.5086225+08:00 GPU0 three-lane isolation active: storymix_qa10 training + mined_shuf training + storymix_qa5 postprocess (vision export done, CheXpert LP active). GPU0 memory observed around 23.2GB/24GB; training continues without OOM, but storymix_qa5 package remains pending.
-
-- 2026-06-30T06:29:30+08:00 post-compaction resume snapshot: using the active file plan and isolated worker policy. GPU0 is intentionally at three lanes (`storymix_qa12` training, `selfhard_shuf` training, `storymix_qa10` isolated postprocess) with memory around 24.0/24.6GB; training progress still advances, so no process was stopped. GPU1 is also at three lanes (`prog_mix` training, `inbatch_shuf` isolated postprocess, `mined_shuf` isolated postprocess) around 19.5/24.6GB. `inbatch_shuf` has published visual/counterfactual/A-B-swap diagnostics and entered paraphrase; `mined_shuf` has published visual and entered counterfactual; `storymix_qa10` has published visual and entered counterfactual. No N5/N6 checkbox changed because package markers and fresh audit are still pending for these runs.
-
-- 2026-06-30T06:36:10+08:00 three-lane polling stayed viable: `storymix_qa12` advanced to step 3850, `selfhard_shuf` to step 2200 after its 2000-step eval, and `prog_mix` to step 6000. `storymix_qa10` published counterfactual diagnostics and entered paraphrase under isolated worker `gpu0-storyqa10-20260630T055048`; `inbatch_shuf` remains in paraphrase and `mined_shuf` remains in counterfactual on GPU1. No package/audit completion mark yet.
-
-- 2026-06-30T06:42:20+08:00 paused only the `storymix_qa10` isolated GPU0 postprocess tree after GPU0 reached about 24.24/24.58GB during paraphrase. Verified no matching `storymix_qa10` postprocess remained and GPU0 memory dropped to about 19.0GB while `storymix_qa12` and `selfhard_shuf` training processes stayed alive. `storymix_qa10` visual and counterfactual diagnostics remain published; later rerun should skip them and resume from paraphrase/package. In the same window, `mined_shuf` published counterfactual diagnostics and advanced to paraphrase on GPU1.
-
-- 2026-06-30T06:43:20+08:00 `inbatch_shuf` completed full isolated GPU1 postprocess/package/summarize. Fresh marker check found config snapshot, metrics, progress/training log, both vision export manifests, LP, visual-dependence, counterfactual, paraphrase, instruction audit, and cost markdown present; diagnostics include visual, counterfactual, A/B-swap counterfactual, and paraphrase JSON. Refreshed completion audit now reports 649 completed / 26 missing / 294 pending. Marked InBatch-SHUF complete in `task_plan.md`.
-
-- 2026-06-30T06:44:16+08:00 launched `shuf_tw_role` isolated postprocess on GPU1 as the newly available third lane after `inbatch_shuf` exited; worker=`gpu1-shuftwrole-20260630T064416`, log=`outputs/logs/qwen3vl_next_stage/manual_shuf_tw_role_gpu1_gpu1-shuftwrole-20260630T064416.log`. This is isolated from `mined_shuf` paraphrase and `prog_mix` training.
-
-- 2026-06-30T06:58:05+08:00 `mined_shuf` completed full isolated GPU1 postprocess/package/summarize with worker exitcode 0. Fresh marker check passed for training, vision export, LP, visual-dependence, counterfactual, paraphrase, instruction audit, and cost artifacts; refreshed audit now reports 658 completed / 17 missing / 294 pending. Marked Mined-SHUF complete in `task_plan.md`.
-
-- 2026-06-30T06:59:33+08:00 launched `storymix_qa10` resume postprocess on GPU1 as isolated worker `gpu1-storyqa10-resume-20260630T065933` after the earlier GPU0 VRAM pause. The worker started directly at paraphrase because LP, NIH transfer, visual-dependence, and counterfactual diagnostics already exist.
-
-- 2026-06-30T07:03:40+08:00 `storymix_qa12` formal training completed at `global_step=5000` with `best_val_loss=0.21272599658050104`; the GPU0 training queue skipped already-completed `shuf_tw_role` and advanced to `shuf_tw_clinical`, which reached step 100. GPU0 ready watcher briefly started a duplicate canonical `storymix_qa10` paraphrase after memory dropped; stopped only the canonical GPU0 paraphrase PIDs and kept the GPU1 isolated resume worker to prevent duplicate canonical writes. `selfhard_shuf` advanced to step 3500 and `prog_mix` was at step 7000.
-
-- 2026-06-30T07:13:05+08:00 `storymix_qa10` GPU1 isolated resume completed paraphrase/package/summarize with worker exitcode 0. Marker verification passed for training, vision export, LP, visual-dependence, counterfactual, paraphrase, instruction audit, and cost artifacts; refreshed audit now reports 672 completed / 21 missing / 276 pending. The increased missing count is expected because `storymix_qa12` has completed training but not yet postprocess/package.
-
-- 2026-06-30T07:15:02+08:00 launched `storymix_qa12` isolated postprocess on GPU1 as worker `gpu1-storyqa12-20260630T071502`, after `storymix_qa10` package freed a lane. This should fill the newly missing `storymix_qa12` LP/NIH/diagnostic/package artifacts.
-
-- 2026-06-30T07:27:40+08:00 `prog_mix` formal training completed at `global_step=8000` with `best_val_loss=0.22582842696501665`; GPU1 workflow queue advanced to `prog_mix_tw` (`curriculum_enabled` event observed). PROG-Mix remains unchecked in Phase N5 until postprocess/package markers and a fresh audit pass.
-
-- 2026-06-30T07:38:05+08:00 launched isolated GPU0 postprocess for `prog_mix` as worker `gpu0-progmix-20260630T073805` while GPU0 had two training lanes and GPU1 already had three active lanes. This uses `NEXT_STAGE_ISOLATED_WORKER_ID` so diagnostics stage under the isolated tree before canonical merge/package; PROG-Mix remains unchecked until marker verification and fresh audit pass.
-
-- 2026-06-30T07:41:48+08:00 `selfhard_shuf` formal training completed at `global_step=5000` with `best_val_loss=0.10788300091775471`; the SHUF++ training queue advanced to `dual_cf_shuf`. SelfHard-SHUF remains unchecked in Phase N6 until postprocess/package markers and fresh audit pass. GPU0 is intentionally at three lanes again: `dual_cf_shuf` training, `shuf_tw_clinical` training, and `prog_mix` isolated postprocess.
-
-- 2026-06-30T07:45:11+08:00 `storymix_qa12` isolated GPU1 postprocess published visual-dependence diagnostics and advanced to counterfactual diagnostics. GPU1 remains at three lanes (`prog_mix_tw` training, `shuf_tw_role` A/B-swap counterfactual, `storymix_qa12` counterfactual); `storymix_qa12` package remains pending.
-
-- 2026-06-30T07:48:25+08:00 `prog_mix` isolated GPU0 postprocess completed CheXpert LP and advanced to NIH transfer. GPU0 three-lane memory rose to about 23.7GB/24.6GB, still below the protection stop line; continue short-interval monitoring and pause only the `prog_mix` postprocess tree if it approaches the prior 24.2GB danger window.
-
-- 2026-06-30T07:50:38+08:00 `shuf_tw_role` isolated GPU1 postprocess published A/B-swap counterfactual diagnostics after visual and primary counterfactual were already canonical. The worker has moved on toward paraphrase/package; no completion mark yet.
-
-- 2026-06-30T07:54:46+08:00 `prog_mix` isolated GPU0 postprocess completed NIH transfer and advanced to visual-dependence diagnostics. GPU0 remains a tight but stable three-lane setup around 23.7GB/24.6GB while `dual_cf_shuf` and `shuf_tw_clinical` continue training.
-
-- 2026-06-30T07:56:14+08:00 `storymix_qa12` isolated GPU1 postprocess published counterfactual diagnostics after the earlier visual-dependence output. Package remains pending until A/B-swap/paraphrase and markdown/cost/audit markers are present.
-
-- 2026-06-30T08:07:39+08:00 `shuf_tw_role` isolated GPU1 postprocess produced paraphrase results and package markdown/cost markers after visual, counterfactual, and A/B-swap diagnostics. Started marker/audit verification before treating it as final evidence.
-
-- 2026-06-30T08:09:05+08:00 launched isolated GPU1 postprocess for `selfhard_shuf` as worker `gpu1-selfhard-20260630T080905` after the `shuf_tw_role` lane freed. This keeps GPU1 at three separated lanes: `prog_mix_tw` training, `storymix_qa12` postprocess, and `selfhard_shuf` postprocess.
-
-- 2026-06-30T08:09:34+08:00 `prog_mix` isolated GPU0 postprocess published visual-dependence diagnostics and advanced to counterfactual diagnostics. GPU0 memory dropped back from the tight 23.9GB window after the visual step, so no protection stop was needed.
-
-- 2026-06-30T08:09:51+08:00 `selfhard_shuf` isolated GPU1 postprocess completed vision export and advanced to CheXpert LP. SelfHard-SHUF remains pending for Phase N6 until the full package and fresh audit pass.
-
-- 2026-06-30T08:10:00+08:00 verified `shuf_tw_role` full package markers: training artifacts, vision export, CheXpert LP, NIH transfer, visual/counterfactual/A-B-swap/paraphrase diagnostics, instruction audit, and cost markdown are present. Fresh next-stage summary/audit reports 702 completed / 27 missing / 240 pending.
-
-- 2026-06-30T08:10:13+08:00 `storymix_qa12` completed full isolated GPU1 postprocess/package/summarize with worker exitcode 0. G3 marker verification passed for training artifacts, vision export, LP/transfer, visual/counterfactual/paraphrase markdown, instruction audit, and cost; fresh completion audit reports 710 completed / 19 missing / 240 pending.
-
-- 2026-06-30T08:13:00+08:00 stopped duplicate canonical GPU1 `prog_mix_counterfactual_diagnostics.json` process tree after the old ready watcher started it while GPU0 isolated `gpu0-progmix-20260630T073805` was already running `prog_mix` counterfactual. Restarted GPU1 ready watcher as `ready_post_gpu1_rebased2` from `prog_mix_tw` onward, excluding manually-owned `prog_mix` and `selfhard_shuf`.
-
-- 2026-06-30T08:21:00+08:00 concurrency audit after user-approved three-lane policy: GPU0 is at three lanes (`shuf_tw_clinical` training, `dual_cf_shuf` training, `prog_mix` isolated postprocess) around 23.6GB/24.6GB, so no additional GPU0 work was launched. GPU1 has `prog_mix_tw` training plus isolated `selfhard_shuf` postprocess; all formal completed-but-unpackaged runs are already owned by isolated workers (`prog_mix`, `selfhard_shuf`), while debug outputs remain out of formal-scope. `prog_mix` published primary counterfactual and advanced to A/B-swap; `selfhard_shuf` completed CheXpert LP and advanced to NIH transfer.
-
-- 2026-06-30T08:26:00+08:00 launched manual GPU1 third training lane for `prog_mix_dualmargin` (`manual_prog_mix_dualmargin_train_gpu1_20260630T082600.log`). This run is far enough downstream in the workflow queue (`prog_mix_tw` then `prog_mix_sameq` precede it) to reduce duplicate-output risk; keep monitoring and rebase/stop the serial queue before it reaches `prog_mix_dualmargin` if the manual lane is still in progress.
-
-- 2026-06-30T08:30:32+08:00 `prog_mix` isolated GPU0 postprocess published A/B-swap counterfactual diagnostics and advanced to paraphrase; GPU0 dropped from the tight three-lane memory window to about 18.9GB while `shuf_tw_clinical` and `dual_cf_shuf` training continued. GPU1 manual third lane `prog_mix_dualmargin` is advancing (step 300 observed) alongside `prog_mix_tw` training and `selfhard_shuf` visual-dependence postprocess, with memory around 23.9GB/24.6GB.
-
-- 2026-06-30T08:44:07+08:00 `prog_mix` completed full isolated GPU0 postprocess/package/summarize with worker exitcode 0. Marker verification passed for training artifacts, vision export, CheXpert LP, NIH transfer, visual/counterfactual/A-B-swap/paraphrase diagnostics, instruction audit, and cost markdown; refreshed completion audit reports 724 completed / 9 missing / 236 pending. Marked PROG-Mix complete in `task_plan.md`.
-
-- 2026-06-30T08:49:00+08:00 patched `scripts/run_next_stage_ready_postprocess_watcher.ps1` so new watcher-launched postprocess runs set a per-run `NEXT_STAGE_ISOLATED_WORKER_ID` and merge isolated diagnostics into canonical JSON only after successful step output. Launched GPU0 watcher `ready_post_gpu0_token_scale_isolated` for `shuf_tw_clinical`, training-policy controls, and 10k-scale runs with a 19000 MiB memory gate.
-
-- 2026-06-30T09:00:00+08:00 `shuf_tw_clinical` training completed at `global_step=5000` with `best_val_loss=0.11096071656241442`; the GPU0 training queue advanced to `train_conn`. The new GPU0 isolated ready watcher is waiting for its next poll/memory gate before starting `shuf_tw_clinical` postprocess. In parallel, `selfhard_shuf` published primary counterfactual diagnostics and continues toward A/B-swap/paraphrase/package.
-
-- 2026-06-30T09:11:09+08:00 GPU0 isolated watcher `ready_post_gpu0_token_scale_isolated` started `shuf_tw_clinical` postprocess with worker `ready_post_gpu0_token_scale_isolated-shuf_tw_clinical-20260630T090056`; vision export and CheXpert LP completed, and NIH transfer started. GPU0 remains at three lanes (`dual_cf_shuf` training, `train_conn` training, `shuf_tw_clinical` postprocess) under the memory guard.
-
-- 2026-06-30T09:19:00+08:00 GPU1 memory guard triggered at 24267 MiB and stopped only the manually added `prog_mix_dualmargin` training lane (`manual_prog_mix_dualmargin_train_gpu1_20260630T082600` process tree), preserving `prog_mix_tw` training and `selfhard_shuf` postprocess. The stopped run had reached about step 2500 and can later resume from its checkpoint. In the same window, `selfhard_shuf` published A/B-swap counterfactual diagnostics and advanced to paraphrase, while `shuf_tw_clinical` completed NIH transfer and advanced to visual-dependence diagnostics.
-
-- 2026-06-30T09:30:12+08:00 `selfhard_shuf` completed full isolated GPU1 postprocess/package/summarize with worker exitcode 0. Marker verification passed for training artifacts, vision export, CheXpert LP, NIH transfer, visual/counterfactual/A-B-swap/paraphrase diagnostics, instruction audit, and cost markdown; refreshed completion audit reports 742 completed / 9 missing / 218 pending. Marked SelfHard-SHUF complete in `task_plan.md`.
-
-- 2026-06-30T09:34:18+08:00 resumed manual GPU1 `prog_mix_dualmargin` training lane after `selfhard_shuf` freed the postprocess lane. This resume should use the existing checkpoint from the earlier protected pause rather than restarting from scratch.
-
-- 2026-06-30T09:50:00+08:00 launched a dedicated GPU0 isolated ready watcher `ready_post_gpu0_shufpp_isolated` for `dual_cf_shuf`, `progressive_hardneg`, and `shuf_k4_tw_visual`, with a 19000 MiB memory gate. This prevents remaining SHUF++ postprocess from being delayed behind the GPU1 workflow watcher order while still letting later watchers skip already packaged runs.
-
-- 2026-06-30T09:58:23+08:00 stopped old non-isolated GPU1 ready watcher `ready_post_gpu1_rebased2` and relaunched GPU1 workflow postprocess as `ready_post_gpu1_isolated_rebased3` for only `prog_mix_tw`, `prog_mix_sameq`, and `prog_mix_dualmargin`, with a 21000 MiB memory gate. GPU0 now exclusively owns SHUF++ postprocess (`dual_cf_shuf`, `progressive_hardneg`, `shuf_k4_tw_visual`), avoiding duplicate canonical writes while preserving the user-approved three-lane policy.
-
-- 2026-06-30T10:11:49+08:00 added and parse-checked `scripts/guard_gpu_memory_process_tree.ps1`, then launched watcher-tree memory guards for GPU0 token/scale postprocess root `19772` and GPU1 isolated workflow postprocess root `15556` at 24200 MiB. `dual_cf_shuf` training completed and `progressive_hardneg` training started on GPU0; `dual_cf_shuf` postprocess is intentionally waiting behind the 19000 MiB memory gate while GPU0 is already at three active lanes.
-
-- 2026-06-30T10:15:29+08:00 `shuf_tw_clinical` completed isolated GPU0 postprocess/package/summarize. Marker verification passed for training artifacts, vision export, CheXpert LP, NIH transfer, visual/counterfactual/A-B-swap/paraphrase diagnostics, instruction audit, and cost markdown; refreshed audit reports 757 completed / 11 missing / 201 pending. The missing count increased because `dual_cf_shuf` had completed training and exposed its still-running postprocess package gap.
-
-- 2026-06-30T10:20:24+08:00 `prog_mix_tw` completed training (`global_step=8000`, `best_val_loss=0.22758387681809655`) and started isolated GPU1 postprocess as worker `ready_post_gpu1_isolated_rebased3-prog_mix_tw-20260630T102024`; the GPU1 training queue advanced to `prog_mix_sameq` while manual `prog_mix_dualmargin` continued, giving GPU1 three isolated lanes under the 24200 MiB guard.
-
-- 2026-06-30T11:03:41+08:00 GPU0 SHUF++ guard triggered at 24201 MiB during `dual_cf_shuf` A/B-swap counterfactual, after LP, NIH transfer, visual-dependence, and primary counterfactual had already published. Stopped only the SHUF++ postprocess watcher tree `ready_post_gpu0_shufpp_isolated` to protect `progressive_hardneg` and `train_last4` training; relaunched as `ready_post_gpu0_shufpp_isolated_r2` with a stricter 18000 MiB memory gate so it can later resume from the missing A/B-swap step.
-
-- 2026-06-30T11:32:40+08:00 `prog_mix_tw` completed isolated GPU1 postprocess/package/summarize with worker exitcode 0. Fresh marker verification passed for training artifacts, both vision export manifests, CheXpert LP, NIH transfer, visual/counterfactual/A-B-swap/paraphrase diagnostics, instruction audit, and cost markdown. Refreshed completion audit reports 789 completed / 16 missing / 164 pending, and `PROG-Mix-TW` is marked complete in `task_plan.md`.
-
-- 2026-06-30T11:34:48+08:00 attempted to rebase SHUF++ ownership so `dual_cf_shuf` could use the newly freed GPU1 lane, but the cleanup command matched its own PowerShell command line while stopping `ready_post_gpu0_shufpp_isolated_r2`. It did stop the intended r2 watcher and guard, then exited `-1` before new watchers launched. Verified no `dual_cf_shuf` postprocess was left running and preserved the r2 wait/guard logs as the failure evidence.
-
-- 2026-06-30T11:35:44+08:00 relaunched ownership with explicit roots: GPU0 `ready_post_gpu0_shufpp_isolated_r3` now owns only `progressive_hardneg,shuf_k4_tw_visual` with guard root `25616`, while GPU1 `ready_post_gpu1_dualcf_isolated` owns `dual_cf_shuf` with guard root `2216`. The GPU1 dualcf watcher resumed from the missing A/B-swap counterfactual step under isolated worker `ready_post_gpu1_dualcf_isolated-dual_cf_shuf-20260630T113544`.
-
-- 2026-06-30T11:57:07+08:00 `prog_mix_dualmargin` training completed (`global_step=8000`, `best_val_loss=0.2275873944198961`), but the serial GPU1 workflow watcher is still waiting on `prog_mix_sameq`. Launched independent GPU1 postprocess watcher `ready_post_gpu1_dualmargin_isolated` with guard root `11716`/`22400` and worker `ready_post_gpu1_dualmargin_isolated-prog_mix_dualmargin-20260630T115707`, keeping the third GPU1 lane isolated while avoiding duplicate ownership.
-
-- 2026-06-30T12:14:30+08:00 `dual_cf_shuf` completed full isolated GPU1 postprocess/package/summarize with worker exitcode 0. Marker verification passed for training artifacts, both vision export manifests, CheXpert LP, NIH transfer, visual/counterfactual/A-B-swap/paraphrase diagnostics, instruction audit, and cost markdown; refreshed completion audit reports 803 completed / 16 missing / 150 pending. Marked `DUAL-CF-SHUF` complete in `task_plan.md`.
-
-- 2026-06-30T12:17:00+08:00 used the GPU1 slot freed by `dual_cf_shuf` to launch manual third-lane training for `shuf_10k_8k` (`manual_shuf_10k_8k_train_gpu1_20260630T1217`, root `14652`). Added a stricter 23600 MiB guard (`1660`) so this new scale lane is stopped before it can endanger the already-running `prog_mix_sameq` training and `prog_mix_dualmargin` postprocess lanes.
-
-- 2026-06-30T12:19:09+08:00 the `shuf_10k_8k` manual third-lane guard triggered at 23831 MiB and stopped only the manual scale training process tree. `prog_mix_sameq` training and `prog_mix_dualmargin` visual-dependence diagnostics remained active, so `shuf_10k_8k` should be resumed later from its partial checkpoint/start state after GPU1 has a wider memory window.
-
-- 2026-06-30T12:31:00+08:00 retried manual GPU1 `shuf_10k_8k` training as a third lane with a less conservative 24000 MiB guard (`manual_shuf_10k_8k_train_gpu1_retry_20260630T1232`, root `25164`, guard `14936`). The first stability check held around 22245 MiB with `prog_mix_sameq` and `prog_mix_dualmargin` still active, so this retry remains running.
-
-- 2026-06-30T12:41:59+08:00 the second `shuf_10k_8k` third-lane attempt was stopped by its 24000 MiB guard when GPU1 reached 24025 MiB during `prog_mix_dualmargin` A/B-swap. The run advanced to about step 475 but produced no checkpoint directory, so it remains a failed/paused scale-start case and should be restarted from scratch after GPU1 frees more memory.
-
-- 2026-06-30T12:51:28+08:00 `train_conn` completed full isolated GPU0 postprocess/package/summarize with worker exitcode 0. Marker verification passed for training artifacts, both vision export manifests, CheXpert LP, NIH transfer, visual/counterfactual/A-B-swap/paraphrase diagnostics, instruction audit, and cost markdown; refreshed completion audit reports 815 completed / 7 missing / 147 pending. This closes one training-policy ablation sub-run, but Phase N8 remains open until `train_last4` and `train_fullvision` are complete.
-
-- 2026-06-30T13:01:28+08:00 `train_last4` training completed (`global_step=5000`, `best_val_loss=0.12741033478622632`) and GPU0 watcher `ready_post_gpu0_token_scale_isolated` started its isolated postprocess worker `ready_post_gpu0_token_scale_isolated-train_last4-20260630T130128`. The GPU0 training queue advanced to `train_fullvision`, keeping GPU0 at three lanes with `progressive_hardneg` training and guarded postprocess.
-
-- 2026-06-30T13:06:38+08:00 `prog_mix_dualmargin` completed full isolated GPU1 postprocess/package/summarize with worker exitcode 0. Marker verification passed for training artifacts, both vision export manifests, CheXpert LP, NIH transfer, visual/counterfactual/A-B-swap/paraphrase diagnostics, instruction audit, and cost markdown; refreshed completion audit reports 828 completed / 11 missing / 130 pending. Marked `PROG-Mix-DualMargin` complete in `task_plan.md`; Phase N5 now only waits on `PROG-Mix-SAMEQ`.
-
-- 2026-06-30T13:08:38+08:00 restarted `shuf_10k_8k` on GPU1 after `prog_mix_dualmargin` freed its postprocess lane (`manual_shuf_10k_8k_train_gpu1_after_dualmargin_20260630T1308`, root `24912`, guard `20688`, 24000 MiB). First stability check held around 18604 MiB with `prog_mix_sameq` still training, so the scale run remains active while `PROG-Mix-SAMEQ` approaches completion.
-
-- 2026-06-30T13:17:04+08:00 `prog_mix_sameq` training completed (`global_step=8000`, `best_val_loss=0.23797558761459087`). It remains unchecked in Phase N5 until the GPU1 isolated watcher completes the full G3 postprocess/package and a fresh audit passes.
-
-- 2026-06-30T13:18:42+08:00 GPU1 watcher `ready_post_gpu1_isolated_rebased3` started `prog_mix_sameq` isolated postprocess as worker `ready_post_gpu1_isolated_rebased3-prog_mix_sameq-20260630T131842`, while the restarted `shuf_10k_8k` scale training remains active under its own guard.
-
-- 2026-06-30T13:30:16+08:00 launched `storymix_10k_8k` as an independent GPU1 third-lane scale training run (`manual_storymix_10k_8k_train_gpu1_20260630T133016`, root `18716`) after confirming GPU1 had only `shuf_10k_8k` training plus `prog_mix_sameq` postprocess active. Added a root-scoped 24000 MiB guard (`24968`) so any memory stop affects only this new distinct-id lane.
-
-- 2026-06-30T13:31:45+08:00 the `storymix_10k_8k` GPU1 third-lane attempt triggered its root-scoped guard at 24253 MiB during model/dataset startup. The guard stopped only the manual `storymix_10k_8k` tree (`18716` descendants), preserving `shuf_10k_8k` training and `prog_mix_sameq` NIH transfer. Treat this as a documented three-lane pressure case; resume `storymix_10k_8k` later after the GPU1 postprocess lane is free.
-
-- 2026-06-30T13:37:07+08:00 `prog_mix_sameq` isolated GPU1 postprocess completed NIH transfer (`transfer_metrics.json`) and advanced to visual-dependence diagnostics under worker `ready_post_gpu1_isolated_rebased3-prog_mix_sameq-20260630T131842`. Keep `storymix_10k_8k` paused until this visual/counterfactual/paraphrase package frees the postprocess lane.
-
-- 2026-06-30T13:44:39+08:00 `train_last4` isolated GPU0 postprocess completed NIH transfer and advanced to visual-dependence diagnostics under worker `ready_post_gpu0_token_scale_isolated-train_last4-20260630T130128`. `train_fullvision` resumed progress after the slow step-500 validation window, so the N8 training-policy lane remains healthy.
-
-- 2026-06-30T13:51:09+08:00 `prog_mix_sameq` isolated GPU1 postprocess published visual-dependence diagnostics to canonical output and advanced to counterfactual diagnostics. Keep the GPU1 scale restart deferred until this N5 package exits, because the previous `storymix_10k_8k` third-lane startup crossed the guard while a postprocess lane was active.
-
-- 2026-06-30T13:59:16+08:00 `prog_mix_sameq` isolated GPU1 postprocess published both primary counterfactual and A/B-swap counterfactual diagnostics to canonical output, then advanced to paraphrase. N5 remains open only until paraphrase/package markers and a fresh audit pass.
-
-- 2026-06-30T14:09:31+08:00 `prog_mix_sameq` completed full isolated GPU1 postprocess/package/summarize with worker exitcode 0. Marker verification passed for training artifacts, both vision export manifests, CheXpert LP, NIH transfer, visual/counterfactual/A-B-swap/paraphrase diagnostics, instruction audit, and cost markdown; refreshed completion audit reports 849 completed / 9 missing / 111 pending. Marked `PROG-Mix-SAMEQ` complete in `task_plan.md`, closing Phase N5.
-
-- 2026-06-30T14:16:53+08:00 resumed `storymix_10k_8k` as an independent GPU1 scale training lane after `prog_mix_sameq` freed the postprocess lane (`manual_storymix_10k_8k_train_gpu1_resume_20260630T141653`, root `3856`). Added a 23600 MiB root-scoped guard (`21116`), lower than the existing `shuf_10k_8k` guard, so a renewed scale-start memory spike stops the new lane first.
-
-- 2026-06-30T14:19:27+08:00 launched a deliberately conservative GPU1 third-training-lane probe for `prog_mix_10k_8k` (`manual_prog_mix_10k_8k_train_gpu1_probe_20260630T141927`, root `7144`) after `shuf_10k_8k + storymix_10k_8k` stabilized near 20.4 GiB. The new root guard uses a lower 22600 MiB threshold and 5-second polling so this probe is the first lane stopped if three scale trainings exceed the safe window.
-
-- 2026-06-30T14:20:19+08:00 the GPU1 third-training-lane probe showed that three concurrent 10k trainings are not safe in this memory window: total memory reached 24209 MiB. The low-threshold probe guard stopped `prog_mix_10k_8k`, and the existing `shuf_10k_8k` 24000 MiB guard also paused `shuf_10k_8k`; `storymix_10k_8k` remained active. `shuf_10k_8k` has `step_2000.pt`, so the interruption is recoverable.
-
-- 2026-06-30T14:21:26+08:00 resumed `shuf_10k_8k` from checkpoint as a second GPU1 scale training lane (`manual_shuf_10k_8k_train_gpu1_resume_after_probe_20260630T142126`, root `25668`) while `storymix_10k_8k` continues. Added a lower 23200 MiB root guard (`24148`) so a renewed two-lane pressure event stops the resumed `shuf_10k_8k` first.
-
-- 2026-06-30T14:43:00+08:00 extended `scripts/summarize_next_stage_results.py` with `next_stage_calibration_auprc.{csv,md}`. The table reuses saved LP/NIH aggregate metrics for macro-AUPRC, macro-ECE, macro-Brier, fixed 0.5 threshold policy, and rare-label AUPRC, while explicitly marking high-null ECE as a sample-level null-stratification boundary. `python -m py_compile` and `conda run -n vivid python scripts\summarize_next_stage_results.py` both passed.
-
-- 2026-06-30T14:45:00+08:00 added `next_stage_calibration_auprc.csv` to `scripts/audit_next_stage_completion.py` final-table checks. `python -m py_compile` and `conda run -n vivid python scripts\audit_next_stage_completion.py` passed; fresh audit now reports 853 completed / 8 missing / 109 pending.
-
-- 2026-06-30T14:43:02+08:00 `train_last4` isolated GPU0 postprocess finally published visual-dependence diagnostics to canonical output after a long three-lane run, then advanced to counterfactual diagnostics. This removes the slowest visible blocker for the second N8 training-policy sub-run; do not mark it complete until counterfactual/A-B/paraphrase/package markers and fresh audit pass.
-
-- 2026-06-30T15:32:45+08:00 `train_last4` isolated GPU0 postprocess published primary counterfactual diagnostics to canonical output and advanced to A/B-swap counterfactual. The run still remains an N8 sub-run in progress until A/B-swap, paraphrase, package markers, and fresh audit pass.
-
-- 2026-06-30T15:54:57+08:00 launched another GPU1 third-training-lane probe for `prog_mix_10k_8k` under a trigger-gated root process (`manual_prog_mix_10k_8k_train_gpu1_isolated_probe_20260630T155455`, root `18152`) with a lower 22400 MiB, 1-second guard (`9444`). This kept the new lane isolated from the already-running `shuf_10k_8k` and `storymix_10k_8k` scale trainings.
-
-- 2026-06-30T15:55:39+08:00 the GPU1 third-training-lane probe triggered at 22609 MiB and stopped `prog_mix_10k_8k` before it reached a training step; `shuf_10k_8k` and `storymix_10k_8k` continued to advance. The guard log also exposed a Windows PID-reuse edge case that accidentally included an older GPU0 token-scale guard in the stop tree, so `scripts/guard_gpu_memory_process_tree.ps1` was patched to ignore child processes created before the guarded root. The GPU0 token-scale guard was immediately restored as PID `24532`.
-
-- 2026-06-30T16:00:55+08:00 proactively replaced the remaining pre-patch memory guards without touching their root jobs: GPU0 SHUF++ guard is now PID `6836`, GPU1 `storymix_10k_8k` guard is now PID `22920`, and GPU1 `shuf_10k_8k` guard is now PID `8336`. All new guards run the creation-time-filtered process-tree script.
-
-- 2026-06-30T16:24:01+08:00 `train_last4` isolated GPU0 postprocess completed and published A/B-swap counterfactual diagnostics (`train_last4_ab_swap_counterfactual_diagnostics.json`, 5352 bytes), then advanced to paraphrase robustness on GPU0 as PID `24964`. The long A/B-swap step was CPU/GPU active and exited with accepted artifact status rather than failing.
-
-- 2026-06-30T17:18:17+08:00 `train_last4` completed its full isolated GPU0 postprocess/package path. Marker verification passed for training artifacts, both vision export manifests, CheXpert LP markdown, NIH transfer, visual/counterfactual/A-B-swap/paraphrase diagnostics, instruction audit, and cost table. This closes the `TRAIN-LAST4` sub-run, but N8 training-policy ablation remains open until `train_fullvision` also completes.
-
-- 2026-06-30T17:25:14+08:00 `shuf_10k_8k` training completed at `global_step=8000` with `best_val_loss=0.1215276519684844`; `final.pt`, `step_8000.pt`, and `metrics_final.json` are present. A refreshed summarize/audit after `TRAIN-LAST4` reported 861 completed / 109 pending rows before this scale run's postprocess package started.
-
-- 2026-06-30T17:26:57+08:00 launched `prog_mix_10k_8k` as the next GPU1 scale lane after `shuf_10k_8k` freed memory (`manual_prog_mix_10k_8k_train_gpu1_after_shuf_20260630T172656`, root `5000`, guard `8308`, threshold 23200 MiB). First stability check held GPU1 around 21.6 GiB with `storymix_10k_8k` still active.
-
-- 2026-06-30T17:28:45+08:00 launched an isolated GPU0 third-lane postprocess watcher for `shuf_10k_8k` (`ready_post_gpu0_shuf10_after_train_isolated_20260630T172844`, root `24584`, guard `3904`, threshold 23600 MiB). The worker completed vision export by 17:29:25 while `progressive_hardneg` and `train_fullvision` continued training.
-
-- 2026-06-30T17:57:30+08:00 resume audit after context compaction: GPU0 is running three isolated lanes (`progressive_hardneg` step 6700, `train_fullvision` step 2700, and `shuf_10k_8k` CheXpert LP postprocess PID 11432) at about 22.75 GiB; GPU1 is running two 10k-scale training lanes (`prog_mix_10k_8k` step 1200 and newly launched `prog_mix_tw_10k` step 125) at about 21.54 GiB. `storymix_10k_8k` training is complete but its postprocess is still intentionally pending until an isolated GPU lane is available.
-
-- 2026-06-30T17:59:00+08:00 first attempt to rebase the GPU0 token/scale postprocess watcher failed before doing any work because `$PID` is a read-only PowerShell variable and was used as a loop variable. Retried with `$oldPid`, stopped only the old waiting watcher root `19772` and its guard `24532`, and relaunched `ready_post_gpu0_train_fullvision_isolated_r2` for only `train_fullvision` (root `11792`, guard `21092`, threshold 24200 MiB). This prevents later duplicate scale-run postprocess ownership.
-
-- 2026-06-30T18:00:00+08:00 launched a dedicated waiting GPU1 postprocess watcher for completed `storymix_10k_8k`: `ready_post_gpu1_story10_after_train_isolated_20260630T180000` (root `18292`, guard `21336`, max-memory gate 20500 MiB, guard threshold 22600 MiB). It should only enter as a third GPU1 lane when memory drops enough; the lower guard is scoped to this watcher tree.
-
-- 2026-06-30T18:01:30+08:00 `shuf_10k_8k` isolated GPU0 postprocess completed the CheXpert LP artifact (`outputs/qwen3vl_next_stage_lp_runs/shuf_10k_8k_chexpert_1k/metrics_final.json`, 3293 bytes). GPU0 is still a three-lane card but memory dropped to about 21.1 GiB; GPU1 remains two 10k training lanes at about 21.7 GiB, so the dedicated `storymix_10k_8k` postprocess watcher is correctly waiting behind its 20500 MiB gate.
-
-- 2026-07-01T12:15:00+08:00 started active goal for `vivid_med_case_study_modules_next_experiment_plan.md`. Skill pre-flight completed with `using-superpowers`, `planning-with-files`, `executing-plans`, and `verification-before-completion`; inspected subagent-related skills but did not spawn agents because this request did not explicitly ask for parallel agents. Memory quick pass used `MEMORY.md` VIVID notes and current planning files; two older rollout-summary paths in memory were stale/missing. Re-read the target plan with UTF-8 after default PowerShell output produced mojibake. Prepended a new active section to `task_plan.md` and recorded takeover findings.
-
-- 2026-06-30T18:05:30+08:00 monitoring window: `shuf_10k_8k` NIH transfer is still running under the isolated GPU0 watcher with no guard stop; GPU0 is about 22.8 GiB. GPU1 remains two training lanes (`prog_mix_10k_8k` at step 1500/eval boundary, `prog_mix_tw_10k` around step 500) and the `storymix_10k_8k` postprocess watcher is still waiting rather than competing for memory.
-
-- 2026-06-30T18:09:30+08:00 `shuf_10k_8k` NIH transfer is still active as PID `9532` with GPU0 utilization around 66%, so no restart is warranted. GPU1 is at about 22.35 GiB with `prog_mix_10k_8k` step 1550 and `prog_mix_tw_10k` in the step-500 eval window; the waiting `storymix_10k_8k` watcher remains below its 22600 MiB guard and has not started GPU work.
-
-- 2026-06-30T18:17:00+08:00 GPU1 rose to 22990 MiB during the two-scale-training window. The low-threshold guards for the waiting `storymix_10k_8k` postprocess watcher and `prog_mix_tw_10k` both wrote `GUARD_TRIGGER`, but neither wrote `STOPPED` lines, exposing a guard robustness bug after trigger. Patched `scripts/guard_gpu_memory_process_tree.ps1` to tolerate process timestamp read failures and fall back to root stop if tree building fails; PowerShell parser check passed. Stopped only the stale waiting story watcher root `18292` and old `prog_mix_10k_8k` guard `8308`, then relaunched fixed guards: `prog_mix_tw_10k` root `3868` guard `13808` at 23200 MiB, and `prog_mix_10k_8k` root `5000` guard `25916` at 23800 MiB.
-
-- 2026-06-30T18:21:13+08:00 `shuf_10k_8k` NIH transfer completed and was accepted with artifact `outputs/qwen3vl_next_stage_transfer/shuf_10k_8k_nih_1k/transfer_metrics.json` (3677 bytes, 1000 records, 0 missing images, macro AUC 0.560986, macro AUPRC 0.143623). The isolated GPU0 watcher advanced to `visual_dependence` with output under its isolated diagnostics directory, to be merged after successful completion.
-
-- 2026-06-30T18:23:00+08:00 proactively replaced pre-patch GPU0 guard processes without touching their roots: SHUF++ watcher root `25616` now has fixed guard `3504`, `shuf_10k_8k` postprocess root `24584` has fixed guard `17064`, and `train_fullvision` postprocess watcher root `11792` has fixed guard `2128`. This keeps future GPU0 memory-trigger evidence on the patched guard implementation.
-
-- 2026-06-30T18:25:30+08:00 monitoring update: `shuf_10k_8k` visual-dependence is still running and has not yet written isolated or canonical JSON. GPU0 is about 22.6 GiB with no fixed-guard trigger. `train_fullvision` reached step 3000/eval boundary; `progressive_hardneg` step 6900. GPU1 fixed guards remain quiet while `prog_mix_10k_8k` reached step 2150 and `prog_mix_tw_10k` reached step 1075.
-
-- 2026-06-30T18:29:00+08:00 `shuf_10k_8k` visual-dependence remains active without JSON output yet; GPU0 stays around 22.5 GiB and the fixed shuf10 guard is quiet. `progressive_hardneg` reached step 6925, `train_fullvision` is still in the step-3000 evaluation window, `prog_mix_10k_8k` reached step 2375, and `prog_mix_tw_10k` reached step 1325.
-
-- 2026-06-30T18:33:30+08:00 `shuf_10k_8k` visual-dependence process tree remains alive on GPU0 with no output JSON yet. GPU0 is around 22.6 GiB, GPU1 around 23.0 GiB; fixed guards remain quiet. `progressive_hardneg` reached step 6950, `train_fullvision` is still in step-3000 eval, `prog_mix_10k_8k` reached step 2500, and `prog_mix_tw_10k` reached step 1500.
-
-- 2026-06-30T18:39:00+08:00 `shuf_10k_8k` visual-dependence still has no isolated/canonical JSON, but the process remains GPU-active and the fixed shuf10 guard is quiet. GPU0 is about 22.6 GiB; `train_fullvision` remains in the slow step-3000 eval window while sharing GPU0 with visual diagnostics. GPU1 remains around 23.0 GiB with quiet fixed guards; `prog_mix_10k_8k` reached step 2625 and `prog_mix_tw_10k` reached step 1600.
-
-- 2026-06-30T18:44:30+08:00 `shuf_10k_8k` visual-dependence still has no output JSON but its process tree remains alive. `train_fullvision` exited the slow step-3000 eval window and advanced to step 3025, so the GPU0 training lane is not stuck. `progressive_hardneg` reached step 7000; GPU1 scale lanes reached `prog_mix_10k_8k` step 2975 and `prog_mix_tw_10k` step 1975 with fixed guards still quiet.
-
-- 2026-06-30T18:51:15+08:00 `shuf_10k_8k` visual-dependence is still running with no output JSON; logs remain at the visual start line, which is expected for this buffered evaluator. GPU0 and GPU1 fixed guards are quiet. `progressive_hardneg` is in the step-7000 eval window, `train_fullvision` reached step 3100, `prog_mix_10k_8k` reached step 3025, and `prog_mix_tw_10k` reached step 2000 eval.
-
-- 2026-06-30T18:59:00+08:00 `shuf_10k_8k` visual-dependence remains GPU-active without output JSON; no guard trigger. GPU0 is about 22.7 GiB at 72% utilization. `progressive_hardneg` is still in the step-7000 eval window, `train_fullvision` reached step 3200, `prog_mix_10k_8k` reached step 3475, and `prog_mix_tw_10k` reached step 2475.
-
-- 2026-06-30T19:07:40+08:00 `shuf_10k_8k` visual-dependence still has no JSON output after a long GPU-active window; GPU0 is about 22.8 GiB at 86% utilization, so the evaluator appears to be doing long buffered forward work rather than idle. `train_fullvision` reached step 3325. `progressive_hardneg` remains in step-7000 eval with latest checkpoint still `step_6000.pt`. GPU1 scale lanes reached `prog_mix_10k_8k` step 3675 and `prog_mix_tw_10k` step 2675.
-
-- 2026-06-30T19:18:30+08:00 `shuf_10k_8k` visual-dependence has been running for about an hour with no output JSON, but GPU0 remains active (about 22.7 GiB, 60% utilization) and the fixed guard is quiet. Because the evaluator writes only at the end and has no checkpoint, it remains better to preserve the run. `train_fullvision` reached step 3475; `progressive_hardneg` remains in the step-7000 eval window. GPU1 scale lanes reached `prog_mix_10k_8k` step 4025 and `prog_mix_tw_10k` step 3000 eval.
-
-- 2026-06-30T19:28:00+08:00 `shuf_10k_8k` visual-dependence still has no output JSON, but GPU0 remains active and no guard triggered. `progressive_hardneg` advanced out of the step-7000 eval window to step 7050; `train_fullvision` reached step 3500. GPU1 scale lanes reached `prog_mix_10k_8k` step 4500 and `prog_mix_tw_10k` step 3500.
-
-- 2026-06-30T19:39:40+08:00 `shuf_10k_8k` visual-dependence still has no isolated/canonical JSON; GPU0 remains active around 22.7 GiB. `progressive_hardneg` reached step 7100, while `train_fullvision` is in the step-3500 eval window. `prog_mix_10k_8k` reached step 4975 and wrote a refreshed `best.pt` at 19:31:38; `prog_mix_tw_10k` reached step 4000 with checkpoints through `step_3000.pt`.
-
-- 2026-06-30T19:42:04+08:00 `shuf_10k_8k` visual-dependence completed after a long buffered run: isolated JSON exists (2003 bytes) and canonical `outputs/qwen3vl_next_stage_diagnostics/shuf_10k_8k_visual_dependence.json` was published (2598 bytes). The watcher advanced immediately to `counterfactual`. `prog_mix_10k_8k` wrote `step_5000.pt` by 19:46:57 and continued training.
-
-- 2026-06-30T19:57:30+08:00 `shuf_10k_8k` counterfactual remains active with no JSON output yet; GPU0 is stable around 22.7 GiB. GPU1 rose to about 23144 MiB, just below the fixed `prog_mix_tw_10k` guard threshold of 23200 MiB, while `prog_mix_10k_8k` reached step 5500 and `prog_mix_tw_10k` reached step 4500. `progressive_hardneg` reached step 7225 and `train_fullvision` reached step 3600.
-
-- 2026-06-30T20:00:30+08:00 short guard check: GPU1 remains at about 23144 MiB, below the `prog_mix_tw_10k` 23200 MiB guard; no trigger lines after the fixed guard start. `prog_mix_10k_8k` and `prog_mix_tw_10k` remain at their eval/checkpoint windows (5500/4500). `shuf_10k_8k` counterfactual still has no output JSON.
-
-- 2026-06-30T20:06:50+08:00 `shuf_10k_8k` counterfactual remains active with no output JSON yet. GPU0 is about 22.8 GiB; GPU1 is about 23.1 GiB and still below the fixed `prog_mix_tw_10k` guard threshold. Training progress: `progressive_hardneg` step 7275, `train_fullvision` step 3725, `prog_mix_10k_8k` step 5725, `prog_mix_tw_10k` step 4850.
-
-- 2026-06-30T20:14:30+08:00 `shuf_10k_8k` counterfactual still has no output JSON, but GPU0 is active at about 83% utilization. `progressive_hardneg` reached step 7350, `train_fullvision` step 3875, `prog_mix_10k_8k` step 6000, and `prog_mix_tw_10k` step 5075; `prog_mix_tw_10k` has a fresh `step_5000.pt`.
-
-- 2026-06-30T20:17:10+08:00 GPU1 crossed the `prog_mix_tw_10k` fixed guard threshold at 23298 MiB. The patched guard triggered and stopped root PID `3868`, but Windows `CreationDate` conversion failed for the root and child processes, so the guard included only the root and left child process PID `18772` alive. Manually stopped only the remaining `prog_mix_tw_10k` child/wrapper PIDs (`18772`, `7128`); GPU1 dropped to about 11.6 GiB while `prog_mix_10k_8k` continued. This pauses `prog_mix_tw_10k` at the recoverable `step_5000.pt` boundary.
-
-- 2026-06-30T20:20:00+08:00 hardened `scripts/guard_gpu_memory_process_tree.ps1` again: if root `CreationDate` cannot be parsed, root creation is treated as `DateTime.MinValue`; if child `CreationDate` cannot be parsed, the child is included in the stop tree instead of skipped. Parser check passed. Replaced `prog_mix_10k_8k` guard with PID `7156` at 23800 MiB and launched dedicated GPU1 `storymix_10k_8k` postprocess watcher `ready_post_gpu1_story10_after_tw_pause_isolated_20260630T202000` (root `7316`, guard `13600`, threshold 23200 MiB).
-
-- 2026-06-30T20:27:43+08:00 `storymix_10k_8k` postprocess started successfully on GPU1 after the `prog_mix_tw_10k` pause. Vision export manifest exists (1440 bytes), and the watcher advanced to CheXpert LP while `prog_mix_10k_8k` continues as the main GPU1 training lane.
-
-- 2026-06-30T20:28:30+08:00 replaced pre-final-patch GPU0 guards without touching their roots: SHUF++ root `25616` now has guard `26084`, `shuf_10k_8k` postprocess root `24584` has guard `18664`, and `train_fullvision` watcher root `11792` has guard `27488`. These guards include timestamp-read-failure children in the stop tree.
-
-- 2026-06-30T20:31:30+08:00 GPU1 stabilized after launching `storymix_10k_8k` LP: `prog_mix_10k_8k` training plus StoryMix LP use about 16.1 GiB, with both fixed guards quiet. `prog_mix_10k_8k` reached step 6825. On GPU0, `shuf_10k_8k` counterfactual still has no output JSON; `progressive_hardneg` reached step 7500 and `train_fullvision` is in the step-4000 eval window.
-
-- 2026-06-30T20:36:37+08:00 `storymix_10k_8k` CheXpert LP completed on GPU1 (`outputs/qwen3vl_next_stage_lp_runs/storymix_10k_8k_chexpert_1k/metrics_final.json`, 3249 bytes) and the watcher should advance to NIH transfer. GPU1 remains safe at about 13.9 GiB with `prog_mix_10k_8k` training at step 7000. `shuf_10k_8k` counterfactual is still active without JSON output.
-
-- 2026-06-30T20:42:49+08:00 `storymix_10k_8k` NIH transfer completed (`outputs/qwen3vl_next_stage_transfer/storymix_10k_8k_nih_1k/transfer_metrics.json`, 3695 bytes), and the GPU1 watcher advanced to visual-dependence. In the same window, `shuf_10k_8k` primary counterfactual published canonical `outputs/qwen3vl_next_stage_diagnostics/shuf_10k_8k_counterfactual_diagnostics.json` (5214 bytes) and advanced to A/B-swap counterfactual. `prog_mix_10k_8k` reached step 7325.
-
-- 2026-06-30T20:54:00+08:00 `shuf_10k_8k` A/B-swap counterfactual is running after `ab_swap_config` exited 0; no A/B JSON yet. `storymix_10k_8k` visual-dependence is still running with no canonical JSON yet. `prog_mix_10k_8k` reached step 7625 and is nearing completion; `train_fullvision` reached step 4250; `progressive_hardneg` is in the step-7500 eval window.
-
-- 2026-06-30T20:55:00+08:00 launched waiting GPU1 postprocess watcher for `prog_mix_10k_8k`: `ready_post_gpu1_prog10_after_train_isolated_20260630T205500` (root `13412`, guard `25916`, max-memory gate 17000 MiB, threshold 23200 MiB). It should wait for `metrics_final.json` and a safe GPU1 memory window before starting, avoiding duplicate ownership with StoryMix visual.
-
-- 2026-06-30T21:00:20+08:00 `storymix_10k_8k` visual-dependence published canonical JSON (`outputs/qwen3vl_next_stage_diagnostics/storymix_10k_8k_visual_dependence.json`, 2672 bytes) and the watcher should advance to counterfactual. `prog_mix_10k_8k` reached step 8000 but `metrics_final.json` is not yet written, so its waiting postprocess watcher has not started. `shuf_10k_8k` A/B-swap counterfactual is still running.
-
-- 2026-06-30T21:03:32+08:00 `prog_mix_10k_8k` training completed: `metrics_final.json`, `final.pt`, and `step_8000.pt` exist. The waiting GPU1 watcher started CheXpert LP for `prog_mix_10k_8k` while `storymix_10k_8k` advanced from visual-dependence to counterfactual. GPU1 memory was about 10.3 GiB, so the two-postprocess window is safe. `shuf_10k_8k` A/B-swap remains active on GPU0.
-
-- 2026-06-30T21:09:30+08:00 `storymix_10k_8k` primary counterfactual published canonical JSON (`outputs/qwen3vl_next_stage_diagnostics/storymix_10k_8k_counterfactual_diagnostics.json`, 5656 bytes) and should advance to A/B-swap. `prog_mix_10k_8k` CheXpert LP is still running. GPU1 remains safe around 10.4 GiB. `progressive_hardneg` reached step 7650 and `train_fullvision` reached step 4500.
-
-- 2026-06-30T21:12:59+08:00 `prog_mix_10k_8k` CheXpert LP completed (`outputs/qwen3vl_next_stage_lp_runs/prog_mix_10k_8k_chexpert_1k/metrics_final.json`, 3297 bytes). Restored `prog_mix_tw_10k` training as a third GPU1 lane at 21:14 with root `19912` and guard `24148` (22800 MiB), resuming from `step_5000.pt`; first stability check shows GPU1 about 20.6 GiB and `prog_mix_tw_10k` step 5025.
-
-- 2026-06-30T21:19:38+08:00 `prog_mix_10k_8k` NIH transfer completed (`outputs/qwen3vl_next_stage_transfer/prog_mix_10k_8k_nih_1k/transfer_metrics.json`, 3713 bytes), and its watcher should move to visual-dependence. GPU1 three-lane window (`prog_mix_tw_10k` training + StoryMix postprocess + Prog10 postprocess) is about 22.4 GiB, below the 22800 MiB `prog_mix_tw_10k` guard; `prog_mix_tw_10k` reached step 5300. GPU0 is about 22.97 GiB with SHUF A/B-swap still active.
-
-- 2026-06-30T21:23:32+08:00 `prog_mix_tw_10k` restore guard triggered at 22983 MiB and, after the final timestamp fallback patch, stopped the full restore tree (root `19912` plus child PIDs) instead of leaving the Python child alive. GPU1 dropped to 0 MiB. The aggressive stop also ended the GPU1 StoryMix/Prog10 postprocess watcher window before their remaining steps finished, so this is preserved as a recoverable guard-pause case: StoryMix still lacks A/B/paraphrase/package, and Prog10 still lacks visual/counterfactual/paraphrase/package.
-
-- 2026-06-30T21:28:00+08:00 relaunched GPU1 postprocess recovery after the guard repatch: StoryMix watcher `ready_post_gpu1_story10_recover_after_guard_repatch_20260630T212800` (root `14792`, guard `23732`) and Prog10 watcher `ready_post_gpu1_prog10_recover_after_guard_repatch_20260630T212800` (root `15804`, guard `23012`). Both are isolated and should skip already completed LP/NIH/visual/primary artifacts before resuming missing steps.
-
-- 2026-06-30T21:29:15+08:00 GPU1 recovery watchers are stable at about 9.8 GiB. StoryMix recovery has advanced to paraphrase robustness; Prog10 recovery is running visual-dependence. StoryMix A/B-swap canonical JSON is still not visible at this check, so keep it as a marker-audit item after the watcher exits.
-
-- 2026-06-30T21:37:30+08:00 GPU1 recovery diagnostics are still running with no new canonical JSON; memory remains healthy around 11.9 GiB. GPU0 is still running `shuf_10k_8k` A/B-swap. Training progress: `progressive_hardneg` step 7800, `train_fullvision` step 4550, and `prog_mix_tw_10k` remains paused at step 5375 after the guard stop.
-
-- 2026-06-30T21:52:53+08:00 generated missing `outputs/instruction_data/next_stage/storymix_10k_val_ab_swap.jsonl` with 3929 swapped A/B rows, then launched an isolated GPU1补跑 worker `manual_storymix10_ab_gpu1_20260630T215252` to fill the skipped `storymix_10k_8k` A/B-swap diagnostic. This avoided ready-watcher package-marker short-circuiting after the previous recovery package.
-
-- 2026-06-30T22:10:45+08:00 `storymix_10k_8k` A/B-swap补跑 completed with canonical `outputs/qwen3vl_next_stage_diagnostics/storymix_10k_8k_ab_swap_counterfactual_diagnostics.json` and refreshed per-run package markers including `ab_swap_results.md`; launcher exited 0 and its root-scoped guard exited on root-missing without a memory stop.
-
-- 2026-06-30T22:17:13+08:00 `prog_mix_10k_8k` A/B-swap counterfactual published canonical JSON (`outputs/qwen3vl_next_stage_diagnostics/prog_mix_10k_8k_ab_swap_counterfactual_diagnostics.json`, 4620 bytes), then advanced to paraphrase; paraphrase completed and the full package refreshed by 22:32:21.
-
-- 2026-06-30T22:29:34+08:00 `train_fullvision` completed training with `global_step=5000`, `best_val_loss=0.10535408026570181`, and `checkpoints/final.pt`; its postprocess watcher is waiting for GPU0 memory to fall under 19000 MiB.
-
-- 2026-06-30T22:31:42+08:00 `progressive_hardneg` completed training with `global_step=8000`, `best_val_loss=0.12196068545648545`; `ready_post_gpu0_shufpp_isolated_r3` started its isolated postprocess at 22:32:06.
-
-- 2026-06-30T22:34:08+08:00 stopped an old GPU0 training-queue root (`12476`) and its current `prog_mix_tw_10k` child tree after it auto-resumed the same run from `step_6000.pt` while the intended manual GPU1 resume lane was already active. The retained GPU1 lane continued from the single owner path and reached step 6275 at the next check.
-
-- 2026-06-30T22:37:15+08:00 `shuf_10k_8k` completed its full package after the long paraphrase diagnostic: canonical paraphrase JSON exists, and package markers now include `lp_results.md`, `visual_dependence_results.md`, `counterfactual_results.md`, `ab_swap_results.md`, `paraphrase_results.md`, `instruction_audit.md`, and `cost_table.md`.
-
-- 2026-06-30T22:38:09+08:00 `train_fullvision` postprocess started after the GPU0 memory gate opened and completed vision export; `progressive_hardneg` postprocess is also active in CheXpert LP. The training queue then launched `shuf_k4_tw_visual`, which reached step 325 by 22:39:32.
-
-- 2026-06-30T23:34:10+08:00 `progressive_hardneg` completed the full postprocess/package path: CheXpert LP, NIH transfer, visual-dependence, primary counterfactual, A/B-swap counterfactual, paraphrase, instruction audit, cost table, and summary refresh are present.
-
-- 2026-06-30T23:38:12+08:00 `train_fullvision` completed the full postprocess/package path with all G3 markers including `ab_swap_results.md`. `train_conn` and `train_last4` were completed before A/B-swap became a first-class package marker, so the final audit must either refresh their packages or fill their A/B marker boundary before closing the training-policy ablation.
-
-- 2026-06-30T23:35:32+08:00 launched dedicated isolated GPU1 postprocess watcher `ready_post_gpu1_prog_mix_tw_10k_after_train_20260630T233531` for `prog_mix_tw_10k` after its training completed at 23:12:13 (`best_val_loss=0.12876368723438328`). Vision export wrote by 23:36:01 and CheXpert LP is active.
-
-- 2026-06-30T23:55:26+08:00 patched A/B-swap completion semantics in `package_next_stage_run_outputs.py`, `summarize_next_stage_results.py`, and `audit_next_stage_completion.py`: canonical diagnostic JSON still means completed, but an existing zero-row A/B input JSONL is now recorded as `not_applicable_no_ab_rows` instead of a false missing GPU diagnostic. After refreshing package/summary/audit, open rows fell to 12 missing and 9 pending: 8 historical rowful A/B backfills, `prog_mix_tw_10k` postprocess diagnostics, and active `shuf_k4_tw_visual`.
-
-- 2026-06-30T23:55:26+08:00 launched three isolated A/B-swap backfill lanes with root-scoped guards: GPU1 `manual_ab_backfill_gpu1_a_20260630T235526` for `balanced_mix_qa8,clinical_rich_qa8,storymix_qa5`, GPU1 `manual_ab_backfill_gpu1_b_20260630T235526` for `storymix_qa10,storymix_qa12`, and GPU0 `manual_ab_backfill_gpu0_c_20260630T235526` for `shuf_k2,shuf_k4,mined_shuf`. Peak observed memory remained safe at about 16.7 GiB on GPU0 and 16.0 GiB on GPU1 with no guard-triggered stops.
-
-- 2026-07-01T00:06:12+08:00 `prog_mix_tw_10k` visual-dependence published canonical `outputs/qwen3vl_next_stage_diagnostics/prog_mix_tw_10k_visual_dependence.json`; its watcher advanced to primary counterfactual. `shuf_k4_tw_visual` continued training and reached step 3950 by 00:09:08, with target `max_steps=5000`.
-
-- 2026-07-01T00:35:41+08:00 A/B-swap backfill produced canonical diagnostics for `balanced_mix_qa8`, `clinical_rich_qa8`, `storymix_qa5`, `storymix_qa10`, `storymix_qa12`, `shuf_k2`, and `shuf_k4`, with package/summary refreshes after each completed run. `prog_mix_tw_10k` also published visual-dependence, primary counterfactual, and A/B-swap canonical diagnostics and advanced to paraphrase. Historical A/B backfill is down to `mined_shuf`; `shuf_k4_tw_visual` reached step 4825/5000.
-
-- 2026-07-01T00:48:27+08:00 user requested GPU0 be freed and all remaining work use GPU1 only. Stopped the GPU0 `mined_shuf` backfill/root guard and the GPU0 `shuf_k4_tw_visual` postprocess watcher/LP tree. Verified GPU0 memory dropped to 0 MiB. The interrupted tasks had already written canonical `mined_shuf` A/B and `prog_mix_tw_10k` paraphrase artifacts, and `shuf_k4_tw_visual` training had written `metrics_final.json` and `checkpoints/final.pt`.
-
-- 2026-07-01T00:49:17+08:00 launched GPU1-only isolated remaining queue `gpu1_only_remaining_after_free_gpu0_20260701T004917` for `prog_mix_tw_10k,mined_shuf,shuf_k4_tw_visual`, with guard `guard_gpu1_only_remaining_after_free_gpu0_20260701T004917.log` at 23200 MiB. GPU0 stayed at 0 MiB. `shuf_k4_tw_visual` completed CheXpert LP at 00:56:58, NIH transfer at 01:01:58, and visual-dependence at 01:18:21 before advancing to primary counterfactual.
-
-- 2026-07-01T01:53:06+08:00 GPU1-only remaining queue exited 0 after completing `shuf_k4_tw_visual` primary counterfactual, A/B-swap counterfactual, paraphrase, package, and summary refresh. To keep the user-requested GPU0-free boundary, repeatedly stopped unrelated `outputs/runs/m1_dense/run_train*.py` GPU0 processes that restarted during the closeout; final controlled next-stage work stayed on GPU1 after the request. Refreshed package, summary, and completion audit: `scripts/audit_next_stage_completion.py` reported `1049` rows and `completed=1049`, with no missing or pending rows.
-
-- 2026-07-01T02:07:00+08:00 final verification pass refreshed package -> summary -> audit successfully: `packaged=39`, final summary tables=`9`, audit rows=`1049`, `completed=1049`. Python syntax check passed for `scripts/package_next_stage_run_outputs.py`, `scripts/summarize_next_stage_results.py`, and `scripts/audit_next_stage_completion.py`. After stopping unrelated `m1_dense/opmem.eval` GPU0 eval restarts, a 20-second GPU check showed GPU0=`0 MiB` and GPU1=`0 MiB`, with no next-stage worker/watcher/guard processes left.
-
-- 2026-07-01T02:10:41+08:00 final GPU0-free closeout handled one more unrelated `m1_dense/opmem.eval` restart wave with a synchronous 60-second narrow matcher; stopped PIDs `22888,24328,25060,26448`. A subsequent 12-second `nvidia-smi` check showed GPU0=`0 MiB` and GPU1=`0 MiB`, with no compute apps listed.
-
-- 2026-07-01T02:12:58+08:00 an external Codex app-launched `m1_dense/opmem.eval` offset loop continued to relaunch GPU0 eval wrappers after the synchronous cleanup. Started a hidden 20-minute narrow guard (PID `12388`, log `outputs/logs/gpu0_free_m1_dense_guard_20260701T021258.log`) that only stops command lines matching `outputs\runs\m1_dense` or `opmem.eval` + `checkpoint_last.pt`. Six seconds after guard start, `nvidia-smi` showed GPU0=`0 MiB` and GPU1=`0 MiB`.
-
-- 2026-07-01T12:15:00+08:00 started the active `/goal` for `vivid_med_case_study_modules_next_experiment_plan.md`. Skill pre-flight used `superpowers:using-superpowers`, `planning-with-files`, `executing-plans`, `verification-before-completion`, `subagent-plan-decomposer`, `subagent-driven-development`, and `finishing-a-development-branch`; current repo state and memory guidance were revalidated rather than trusted as prose-only evidence.
-
-- 2026-07-01T12:35:51+08:00 completed the case-study/module artifact buildout for the plan: source scripts, six TMI-friendly modules, casebook reports, NIH/domain reports, multi-seed manifests, curriculum-v2 manifests/configs, module smoke tables, and locked comparison tables now exist. `docs/case_study_modules_requirement_ledger.md` and the target markdown Part 8 have been refreshed with completion status plus explicit boundaries for seed3, NIH full, missing embeddings, curriculum-v2 long training, and formal module ablations.
-
-- 2026-07-01T12:42:29+08:00 tidied the handoff surface after user request: added `docs/README.md` as the current docs/result index, updated `README.md` and `AGENTS.md` to point to `docs/README.md` and `profile/`, added local agent/cache directories to `.gitignore`, and removed six Python `__pycache__` directories from source paths without touching `outputs/`, `History/`, or medical-data directories.
-
-- 2026-07-01T12:50:32+08:00 user corrected the prior boundary completion: seed stability, NIH full, MMD/UMAP, and formal CEQ/AUCH/HNMB/DRA/CCSH/CDCS ablations must be actually run according to the document. Opened a new active F-series execution plan in `task_plan.md`; previous manifest/config/boundary outputs are now inputs, not completion evidence for this run.
-
-- 2026-07-01T12:58:20+08:00 generated the real seed1/seed2/seed3 execution manifest for `SHUF-3k`, `SHUF-TW-clinical`, `SAMEQ-SHUF-3k`, and `SHUF-K4`, then launched two hidden training lanes: GPU0 lane 0 PID `14636`, GPU1 lane 1 PID `8404`. Also launched postprocess watchers PID `17632` and `27128`; they wait for each run's `metrics_final.json` + `checkpoints/best.pt` before running CheXpert LP, NIH available transfer, visual dependence, counterfactual, and paraphrase diagnostics.
-
-- 2026-07-01T13:00:00+08:00 fixed the NIH transfer wrapper/evaluator path: `evaluate_qwen3vl_lp_transfer.py --max-samples 0` now means all available rows, and `run_nih_full_transfer.py` now calls the external transfer evaluator rather than the LP training script. Added `export_qwen3vl_ums_embeddings.py`, formal `train_case_study_module_ablation.py`, and an extra execution manifest/queue for curriculum-v2 long training, embedding export, MMD/UMAP, and CEQ/AUCH/HNMB/DRA/CCSH/CDCS module ablations. Extra queue PID `7232` is waiting for GPU0 memory below 2000 MiB before starting, so it will not compete with active seed training.
-
-- 2026-07-01T13:14:52+08:00 patched the active execution queues to avoid two false-completion paths: extra execution now has `force_run=1` for embedding-backed MMD/UMAP so old no-embedding boundary reports cannot short-circuit the rerun, and full postprocess now generates/runs A/B-swap diagnostics for each seed. Restarted only the waiting watchers: extra queue PID `7120`, postprocess PIDs `24232` and `12292`. Seed training PIDs `14636` and `8404` were left running.
-
-- 2026-07-01T13:16:00+08:00 added `scripts/summarize_case_study_full_execution.py` and generated current status tables: `case_study_full_execution_status.*`, `multiseed_stability.*`, `multiseed_stability_summary.*`, `case_study_extra_execution_status.*`, and `module_ablation_results.*`. At this check, `SHUF-3k` seed1/seed2 were running at step 600/5000 and had both written `best.pt`; all downstream LP/NIH/visual/CF/A-B-swap/module rows remain pending until metrics artifacts exist.
-
-- 2026-07-01T13:22:00+08:00 extended `scripts/evaluate_qwen3vl_lp_transfer.py` so one NIH available/full pass also exports `subset_metrics` for NIH-1k and NIH-5k alongside `all_available`. This preserves the document's NIH-1k/5k/full diagnostic structure without repeating the expensive 25,596-image transfer pass three times.
-
-- 2026-07-01T13:49:00+08:00 first two real stability runs passed the 2000-step checkpoint: `shuf_3k_seed1` and `shuf_3k_seed2` both have `step_2000.pt`, with live progress at approximately 2225 and 2175 steps respectively. Postprocess watchers remain waiting for final `metrics_final.json`; extra curriculum/embedding/module queue remains gated on GPU0 memory.
-
-- 2026-07-01T14:17:00+08:00 first two real stability runs passed the 4000-step checkpoint: both `shuf_3k_seed1` and `shuf_3k_seed2` have `step_4000.pt`; live progress was about 4200/5000 and 4075/5000. The next expected transition is final `metrics_final.json`, then postprocess LP -> NIH available/full-subset transfer -> visual/CF/A-B-swap/paraphrase.
-
-- 2026-07-01T14:40:54+08:00 `shuf_3k_seed1` completed real long training with `global_step=5000`, `best_val_loss=0.0905677`, `train_records=14333`, and `val_records=953`. The GPU0 training lane accepted the completed metrics artifact despite a PowerShell/conda exit-1 warning from `torch_dtype` deprecation text, then launched `shuf_3k_seed3`; GPU0 postprocess started `shuf_3k_seed1` CheXpert LP.
-
-- 2026-07-01T14:42:54+08:00 `shuf_3k_seed2` completed real long training with `global_step=5000`, `best_val_loss=0.0971451`, `train_records=14333`, and `val_records=953`. The GPU1 training lane launched `shuf_tw_clinical_seed1`, and GPU1 postprocess started `shuf_3k_seed2` CheXpert LP.
-
-- 2026-07-01T14:57:40+08:00 CheXpert LP completed for the first two real seed runs and NIH available/full-subset transfer started for both. Current LP macro-AUC values are `shuf_3k_seed1=0.6313` and `shuf_3k_seed2=0.732086`, showing substantial seed-level spread that must be carried into the final stability table rather than collapsed into a single prior baseline number.
-
-- 2026-07-01T15:08:35+08:00 fixed and restarted the NIH available/full-subset postprocess path after queued commands split `H:/Xiyao_Wang/000_Public Dataset` into a stray `Dataset` argparse token. Manual 2-sample transfer had already validated the evaluator/data boundary, so this was recorded as a nested-PowerShell quoting failure. `scripts/run_case_study_postprocess_queue.ps1` now single-quotes path arguments, `scripts/prepare_case_study_extra_execution.py` regenerates extra commands with single-quoted paths, parser/compile checks passed, postprocess watchers restarted as PIDs `10396`/`14440`, and the extra watcher restarted as PID `24660`; training lanes `14636`/`8404` were left untouched.
-
-- 2026-07-01T15:15:00+08:00 tightened summary semantics for `case_study_extra_execution_status`: force-run rows now require a success file newer than the manifest. Old no-embedding `domain_shift_mmd.md` and projection CSV now correctly show `rerun_required` until the embedding export plus recompute steps actually finish.
-
-- 2026-07-01T15:17:24+08:00 restarted the seed1/seed2 NIH available/full-subset transfer runs after discovering that `subset_metrics` was computed but not written into `transfer_metrics.json`. The evaluator now writes NIH-1k/5k/all `subset_metrics` and a `progress.json` heartbeat; only the postprocess trees were stopped/restarted, while training lanes continued.
-
-- 2026-07-01T15:22:55+08:00 NIH available/full-subset heartbeat confirmed real full-available execution for both first seed runs: `shuf_3k_seed1_nih_available/progress.json` and `shuf_3k_seed2_nih_available/progress.json` each report `processed=500`, `total=25596`. Training also continued after the controlled postprocess restart (`shuf_3k_seed3` step 1325, `shuf_tw_clinical_seed1` step 1175).
-
-- 2026-07-01T15:28:00+08:00 first two NIH available/full-subset passes advanced to `processed=1500/25596` on both GPUs with memory around 13.9 GiB and no OOM. Concurrent training continued (`shuf_3k_seed3` step 1500, `shuf_tw_clinical_seed1` step 1400).
-
-- 2026-07-01T15:38:00+08:00 first two NIH available/full-subset passes advanced to `processed=3500/25596` on both GPUs. Concurrent training remains active and slow-but-moving under the transfer load (`shuf_3k_seed3` step 1825, `shuf_tw_clinical_seed1` step 1650); GPU memory remains about 13.9 GiB per device.
-
-- 2026-07-01T15:48:00+08:00 first two NIH available/full-subset passes reached `processed=5000/25596` on both GPUs, crossing the planned NIH-5k subset boundary while continuing toward all-available metrics. Concurrent training reached the 2000-step checkpoint window for both active runs (`shuf_3k_seed3`, `shuf_tw_clinical_seed1`).
-
-- 2026-07-01T16:03:00+08:00 first two NIH available/full-subset passes advanced to `processed=7000/25596` on both GPUs. Concurrent training is still moving under transfer load: `shuf_3k_seed3` step 2500 and `shuf_tw_clinical_seed1` step 2350.
-
-- 2026-07-01T16:18:00+08:00 first two NIH available/full-subset passes advanced to `processed=9000/25596`; both postprocess watchers and both training lanes remain alive. Concurrent training reached `shuf_3k_seed3` step 2850 and `shuf_tw_clinical_seed1` step 2625.
-
-- 2026-07-01T16:33:00+08:00 first two NIH available/full-subset passes advanced to `processed=11500/25596`. Concurrent training continued to `shuf_3k_seed3` step 3150 and `shuf_tw_clinical_seed1` step 3000.
-
-- 2026-07-01T16:48:00+08:00 first two NIH available/full-subset passes advanced past halfway to `processed=13500/25596`. Concurrent training reached `shuf_3k_seed3` step 3500 and `shuf_tw_clinical_seed1` step 3500; GPU memory stayed within the guarded window.
-
-- 2026-07-01T17:03:00+08:00 first two NIH available/full-subset passes advanced to `processed=15500/25596`. Concurrent training reached `shuf_3k_seed3` step 4000 and `shuf_tw_clinical_seed1` step 3775.
-
-- 2026-07-01T17:18:00+08:00 first two NIH available/full-subset passes advanced to `processed=17500/25596`. Concurrent training reached `shuf_3k_seed3` step 4300 and `shuf_tw_clinical_seed1` step 4025.
-
-- 2026-07-01T17:33:00+08:00 first two NIH available/full-subset passes advanced to `processed=20000/25596`. Concurrent training reached `shuf_3k_seed3` step 4575 and `shuf_tw_clinical_seed1` step 4500.
-
-- 2026-07-01T17:55:00+08:00 resumed after interruption and revalidated current state from artifacts/processes: NIH available/full-subset heartbeats are `processed=21500/25596` for seed1 and seed2; `shuf_3k_seed3` has reached step 5000 but no final metrics yet, and `shuf_tw_clinical_seed1` is at step 4725. Cleared one stale monitor PowerShell left by the interrupted status command; experiment queue roots `14636`, `8404`, `22560`, `25556`, and `24660` remain active.
-
-- 2026-07-01T18:05:43+08:00 `shuf_3k_seed3` completed real long training and was accepted by the training queue via `metrics_final.json`; GPU0 immediately launched `shuf_tw_clinical_seed2`. At the same check, seed1/seed2 NIH available/full-subset passes were at `processed=23000/25596`, and `shuf_tw_clinical_seed1` had reached step 5000 but was still waiting on final metrics acceptance.
-
-- 2026-07-01T18:16:29+08:00 `shuf_tw_clinical_seed1` completed real long training and was accepted by the training queue; GPU1 immediately launched `shuf_tw_clinical_seed3`. `shuf_tw_clinical_seed2` is active on GPU0, and the first two NIH available/full-subset passes reached `processed=24500/25596`.
-
-- 2026-07-01T18:30:00+08:00 first two NIH available/full-subset transfers completed with full available evidence: `shuf_3k_seed1` evaluated 25,596 records with macro-AUC 0.5651078, and `shuf_3k_seed2` evaluated 25,596 records with macro-AUC 0.5854052. Both `transfer_metrics.json` files include `subset_metrics` keys `nih_1000`, `nih_5000`, and `all_available`, so the NIH 1k/5k/available boundary is now artifact-backed for these two seed runs.
-
-- 2026-07-01T18:40:00+08:00 seed1/seed2 postprocess advanced from NIH transfer to visual-dependence diagnostics on both GPUs. No visual JSON has landed yet, but the evaluator processes are active. Concurrent training continued to `shuf_tw_clinical_seed2` step 975 and `shuf_tw_clinical_seed3` step 625.
-
-- 2026-07-01T18:48:48+08:00 active worker trees were externally interrupted during goal continuation/tool interruption: seed1/seed2 visual diagnostics exited with code `1073807364` before JSON output, training queue roots disappeared, and GPU memory dropped to 0 MiB. This is recorded as an interruption/failure case, not a completed diagnostic. Patched `scripts/run_case_study_training_queue.ps1` to auto-resume unfinished runs from the highest `step_*.pt` checkpoint or `best.pt`; verified `shuf_tw_clinical_seed2` can resume from step 1000 and `shuf_tw_clinical_seed3` from step 500.
-
-- 2026-07-01T19:03:36+08:00 restarted training/postprocess queues after adding resume protection. Training GPU0 resumed `shuf_tw_clinical_seed2` from `step_1000.pt`; training GPU1 resumed `shuf_tw_clinical_seed3` from `best.pt` at step 500. Postprocess GPU0/GPU1 skipped existing LP/NIH full metrics and restarted seed1/seed2 visual-dependence diagnostics. Extra queue restarted but is waiting behind the GPU0 2000 MiB memory gate.
-
-- 2026-07-01T19:10:24+08:00 recorded and corrected a postprocess device-mapping mistake: the queue uses `CUDA_VISIBLE_DEVICES=$Gpu`, so child scripts must still receive logical `--device cuda:0`. A temporary `cuda:1` patch made lane1 visual fail with exit 1; this is a controlled scheduler correction, not model/data evidence.
-
-- 2026-07-01T19:11:49+08:00 relaunched clean postprocess watchers after restoring logical-device semantics. Active roots at the check were training GPU0 PID `3648`, training GPU1 PID `11428`, postprocess GPU0 PID `20192`, postprocess GPU1 PID `4820`, and extra queue PID `13812`; postprocess logs show seed1/seed2 LP and NIH transfer skipped from existing artifacts and visual diagnostics restarted.
-
-- 2026-07-01T19:19:00+08:00 monitored the recovered queue: `shuf_tw_clinical_seed2` reached about step 2000 and `shuf_tw_clinical_seed3` about step 1500, while seed1/seed2 visual-dependence workers stayed active but had not yet written JSON outputs. GPU0/GPU1 were both around 14.0-14.6 GiB used; extra curriculum/embedding/module queue correctly remained gated by GPU0 memory.
-
-- 2026-07-01T19:25:00+08:00 continued short-interval monitoring: `shuf_tw_clinical_seed2` advanced to step 2225 and `shuf_tw_clinical_seed3` to step 1675. Seed1/seed2 visual-dependence jobs remained active with no final JSON yet; retained the full 1000-sample diagnostic scope instead of reducing workload.
-
-- 2026-07-01T19:26:45+08:00 seed1/seed2 visual-dependence diagnostics completed and wrote JSON artifacts. Refreshed summary shows hard-shuffle deltas `shuf_3k_seed1=0.0603034` and `shuf_3k_seed2=0.192712`; both postprocess watchers immediately advanced to primary counterfactual diagnostics.
-
-- 2026-07-01T19:35:00+08:00 primary counterfactual diagnostics for seed1/seed2 were still active with no failure lines or output JSON yet. Concurrent resumed training advanced to about `shuf_tw_clinical_seed2` step 2700 and `shuf_tw_clinical_seed3` step 2150 under the same GPU window.
-
-- 2026-07-01T19:37:00+08:00 `shuf_3k_seed1` primary counterfactual wrote `shuf_3k_seed1_counterfactual.json`; postprocess generated `shuf_3k_seed1_ab_swap.jsonl` and `shuf_3k_seed1_ab_swap_config.yaml`, then launched A/B-swap counterfactual. `shuf_3k_seed2` primary counterfactual was still active.
-
-- 2026-07-01T19:38:00+08:00 `shuf_3k_seed2` primary counterfactual wrote `shuf_3k_seed2_counterfactual.json`; postprocess generated its A/B-swap JSONL/config and launched A/B-swap counterfactual. Resumed training reached about `shuf_tw_clinical_seed2` step 3000 and `shuf_tw_clinical_seed3` step 2500.
-
-- 2026-07-01T19:49:00+08:00 `shuf_3k_seed1` A/B-swap counterfactual completed and the watcher launched seed1 paraphrase robustness. `shuf_3k_seed2` A/B-swap counterfactual remained active; resumed training was around `shuf_tw_clinical_seed2` step 3500 and `shuf_tw_clinical_seed3` step 3000.
-
-- 2026-07-01T19:50:00+08:00 `shuf_3k_seed2` A/B-swap counterfactual completed and the watcher launched seed2 paraphrase robustness. Seed1 and seed2 now have LP, NIH available/full-subset transfer, visual-dependence, primary counterfactual, and A/B-swap counterfactual artifacts; paraphrase remains the last seed1/seed2 postprocess step.
-
-- 2026-07-01T20:00:00+08:00 seed1/seed2 paraphrase robustness jobs remained active. Resumed `SHUF-TW-clinical` training continued to about seed2 step 3800 and seed3 step 3225; no postprocess failure lines were present.
-
-- 2026-07-01T20:06:00+08:00 `shuf_tw_clinical_seed2` reached the 4000-step checkpoint window and `shuf_tw_clinical_seed3` reached about step 3425 while seed1/seed2 paraphrase jobs continued running. Queue remains healthy with four GPU worker processes.
-
-- 2026-07-01T20:01:20+08:00 `shuf_3k_seed1` paraphrase robustness completed and GPU0 postprocess advanced to `shuf_3k_seed3` CheXpert LP. `shuf_3k_seed2` paraphrase robustness remained active on GPU1.
-
-- 2026-07-01T20:03:00+08:00 `shuf_3k_seed2` paraphrase robustness completed and GPU1 postprocess advanced to `shuf_tw_clinical_seed1` CheXpert LP. Refreshed summary shows seed1/seed2 `missing_required` empty; seed1 metrics include `cf_acc=0.888889`, `ab_swap_acc=0.878685`, `paraphrase_mean_delta=0.0320774`, and seed2 metrics include `cf_acc=0.882086`, `ab_swap_acc=0.879819`, `paraphrase_mean_delta=0.0174373`.
-
-- 2026-07-01T20:15:00+08:00 next downstream batch remained in CheXpert LP: GPU0 on `shuf_3k_seed3`, GPU1 on `shuf_tw_clinical_seed1`. Concurrent resumed training advanced to about `shuf_tw_clinical_seed2` step 4500 and `shuf_tw_clinical_seed3` step 3925.
-
-- 2026-07-01T20:12:15+08:00 second downstream batch LP completed and NIH transfer began. `shuf_3k_seed3` CheXpert macro-AUC is `0.696885`; `shuf_tw_clinical_seed1` CheXpert macro-AUC is `0.678808`. Both postprocess lanes launched NIH available/full-subset transfer with `max-samples 0`.
-
-# 2026-07-04 CVCP/CCSH Full Plan Goal
-
-- 2026-07-04T14:43:03+08:00 Launched two formal CVCP/CCSH Qwen3VL training lanes on the local RTX 3090s. GPU0 started `cvcp_v1_sameq_3k`; GPU1 started `cvcp_v1_sameq_10k`.
-- 2026-07-04T14:45:46+08:00 Verified both lanes were real GPU training, not wrapper-only starts: GPU0/GPU1 used about 9.6/9.3 GiB and training logs reached roughly step 150.
-- 2026-07-04T14:50:22+08:00 Added CVCP-specific postprocess manifest/queue and launched waiting postprocess watchers: GPU0 PID `2324`, GPU1 PID `23840`. They wait for `metrics_final.json` plus `checkpoints/final.pt`, then run CheXpert LP, NIH appendix 1k stress, visual dependence, counterfactual, A/B-swap where rows exist, paraphrase, and CVCP table refresh.
-- 2026-07-04T14:54:00+08:00 Added `scripts/audit_vlm_teacher_comparison.py` and ran model compatibility audit. Qwen3VL 2B/4B/8B load at config/processor level and are supported by the current Qwen3VL trainer family; InternVL and Llama/Mllama models are local but require architecture-specific trainers; Qwen3.5/Qwen-Coder rows are text-only scaffold controls, not VLM teachers.
-- 2026-07-04T15:00:14+08:00 Added CVCP/CCSH module-combo manifest/summary plus waiting module-combo watchers: GPU0 PID `31452`, GPU1 PID `22352`. They use a conservative `MaxMemoryMiB=5000` so module embedding export/training waits until GPU pressure is low.
-- 2026-07-04T15:05:00+08:00 User requested lower routine monitoring frequency. Switch manual status checks to roughly hourly cadence except around completion, failure, postprocess/module starts, or GPU/process anomalies.
-- 2026-07-04T17:25:53+08:00 First formal row closed end-to-end: `cvcp_v1_sameq_3k` completed 5000 training steps and postprocess status is complete for training, CheXpert LP, NIH appendix 1k, visual dependence, counterfactual, A/B-swap, and paraphrase. `cvcp_ccsh_postprocess_status` now shows `complete=1`, `pending=26`; module combos remain pending by design because idle-GPU gating is set to 5000 MiB.
-- 2026-07-04T18:04:05+08:00 Audited the 17:39 interruption. All previous queue roots are gone and both RTX 3090s are idle at `0 MiB`. `cvcp_v1_sameq_10k` training completed, but its LP postprocess stopped during validation before `metrics_final.json`. `cvcp_v1_sameq_full` reached about step 3450 and `cvcp_v2_shuf_k2` reached step 500, but neither has a resume checkpoint because the generated configs save only `checkpoints/final.pt` on success.
-- 2026-07-04T18:04:05+08:00 Patched `scripts/run_cvcp_ccsh_training_queue.ps1` so no-metrics/no-checkpoint training directories are moved to the F-drive `interrupted_runs/` evidence area before rerun. `train_qwen3vl_vision_lp.py` was checked and can rerun the 10k LP directory because it only exits when `metrics_final.json` already exists.
-- 2026-07-04T18:05:37+08:00 Relaunched CVCP queues: training PIDs `22440`/`21372`, postprocess PIDs `11808`/`21488`, and module-combo PIDs `20656`/`4480`. The queue archived `cvcp_v1_sameq_full` and `cvcp_v2_shuf_k2` into `F:/Xiyao_Wang/021_260129VIVID_cvcp_ccsh_outputs/interrupted_runs/` before clean rerun.
-- 2026-07-04T18:09:30+08:00 Restart health check passed. `cvcp_v1_sameq_full` has new training logs through step 125, `cvcp_v2_shuf_k2` through step 150, and GPU memory remains below capacity (`GPU0=13.7 GiB`, `GPU1=18.3 GiB`). Postprocess GPU1 restarted `cvcp_v1_sameq_10k` LP; module exports for `base_ccsh` and `sameq_ccsh` started while memory was available and will be allowed to finish unless a GPU anomaly appears.
-- 2026-07-04T18:25:32+08:00 Short post-relaunch check passed. `cvcp_v1_sameq_10k` LP and NIH appendix 1k completed, and visual-dependence diagnostics started. Clean reruns passed their first eval windows: `cvcp_v1_sameq_full` step 500 val_loss `0.2971068200904258`; `cvcp_v2_shuf_k2` step 500 val_loss `0.25482548154500406`. Module train embedding export completed for `base_ccsh` and `sameq_ccsh`; both module lanes are now waiting for the 5 GiB idle window before val embedding export.
-- 2026-07-04T19:26:03+08:00 Hourly check: CVCP training summary reports `complete=2/27`, postprocess summary reports `complete=2/27`, `partial=0`, and module-combo summary remains `complete=0/18`. `cvcp_v1_sameq_10k` closed through LP, NIH appendix, visual, counterfactual, A/B-swap, paraphrase, and summary. Current training lanes continue; module lanes are correctly waiting for the 5 GiB idle window while training keeps each GPU near 9-10 GiB.
-- 2026-07-04T20:26:41+08:00 Hourly check: `cvcp_v2_shuf_k2` completed clean rerun at step 5000 with `best_val_loss=0.09710516336301878`; GPU1 training queue advanced to `cvcp_v2_shuf_k8`. `cvcp_v2_shuf_k2` postprocess completed LP, NIH appendix 1k, visual, counterfactual, A/B-swap JSON/config, and was running A/B-swap counterfactual. `cvcp_v1_sameq_full` continued at about step 7975/12000. Module lanes remained gated by training/postprocess memory.
-- 2026-07-04T20:57:24+08:00 Focused postprocess check: summaries show training `complete=3/27`, postprocess `complete=3/27`, and module-combo `complete=0/18`. `cvcp_v2_shuf_k2` completed A/B-swap counterfactual, paraphrase, and summary. Active runs: `cvcp_v1_sameq_full` around step 9850/12000 on GPU0 and `cvcp_v2_shuf_k8` around step 3775/5000 on GPU1; GPU memory remained within range (`GPU0=9307 MiB`, `GPU1=16189 MiB`).
-- 2026-07-04T21:43:10+08:00 Focused completion-window check: `cvcp_v1_sameq_full` finished 12000 training steps at 21:25 and GPU0 advanced to `cvcp_v2_shuf_k4`; `cvcp_v1_sameq_full` postprocess completed LP and NIH appendix and was running visual-dependence. The summary table still reports 3 complete rows because its `status` column means full training-plus-postprocess closure; the `cvcp_v1_sameq_full` row is correctly `partial` until visual/CF/A-B/paraphrase artifacts land. GPU1 was still running `cvcp_v2_shuf_k8`, and module lanes remained memory-gated.
-- 2026-07-04T22:14:06+08:00 Focused completion-window check: full training-plus-postprocess rows reached `complete=4/27` after `cvcp_v1_sameq_full` finished visual, counterfactual, A/B-swap, paraphrase, and summary. `cvcp_v2_shuf_k8` completed training at 22:08 and started LP postprocess at 22:11; GPU1 training lane advanced to `cvcp_v3_prog_10k`. GPU0 continued `cvcp_v2_shuf_k4`. Module lanes remain intentionally gated.
-- 2026-07-04T22:44:53+08:00 Focused check: full rows remain `complete=4/27` with one partial row, `cvcp_v2_shuf_k8`. K8 completed LP and NIH appendix and was running visual-dependence. Active training: `cvcp_v2_shuf_k4` around step 3575/5000 and `cvcp_v3_prog_10k` around step 1375/10000. GPU memory stayed below capacity (`GPU0=12307 MiB`, `GPU1=18392 MiB`).
-- 2026-07-04T23:30:45+08:00 Focused check: full rows remain `complete=4/27` with partial rows `cvcp_v2_shuf_k8` and `cvcp_v2_shuf_k4`. K8 completed visual, counterfactual, A/B-swap JSON/config/counterfactual and was running paraphrase. K4 completed training at 23:23 with `best_val_loss=0.10297720571239458` and started LP. GPU0 training advanced to `cvcp_v3_prog_3k`; GPU1 continued `cvcp_v3_prog_10k`. Module queues made progress: `base_ccsh` val embeddings completed and both first module-head trainings are waiting for memory windows.
-- 2026-07-05T00:01:39+08:00 Focused check: full rows reached `complete=5/27`; `cvcp_v2_shuf_k8` completed paraphrase and summary. The only partial row is `cvcp_v2_shuf_k4`, which completed LP and NIH appendix and was running visual-dependence. Module rows remain pending because head training is correctly waiting for the 5 GiB idle window.
-- 2026-07-05T00:47:18+08:00 Focused check: full rows remain `complete=5/27` with `cvcp_v2_shuf_k4` partial. K4 completed visual, counterfactual, A/B-swap JSON/config/counterfactual and was running paraphrase. `cvcp_v3_prog_3k` and `cvcp_v3_prog_10k` continued training. Module rows are still gated by GPU memory, as intended.
-- 2026-07-05T01:17:53+08:00 Focused check: full rows reached `complete=6/27` and partial rows returned to zero after `cvcp_v2_shuf_k4` completed paraphrase and summary. Active work is training-only again: `cvcp_v3_prog_3k` on GPU0 and `cvcp_v3_prog_10k` on GPU1. Module rows remain pending under the conservative memory gate.
-- 2026-07-05T02:18:30+08:00 Hourly check: full rows remain `complete=6/27` with one partial row, `cvcp_v3_prog_3k`. Prog-3k completed training at step 8000, LP, NIH appendix, and visual-dependence, then entered counterfactual diagnostics. Prog-10k was near completion at step 11925. Module rows remain pending under the memory gate.
-- 2026-07-05T02:49:02+08:00 Focused check: full rows reached `complete=7/27`; `cvcp_v3_prog_3k` completed A/B-swap, paraphrase, and summary. `cvcp_v3_prog_10k` completed training and LP/NIH/visual, then entered counterfactual diagnostics as the only partial row. Training queues advanced to `cvcp_v3_prog_full` on GPU0 and `cvcp_v4_replay_10k` on GPU1.
-- 2026-07-05T03:19:36+08:00 Focused check: full rows reached `complete=8/27` and partial rows returned to zero after `cvcp_v3_prog_10k` completed A/B-swap, paraphrase, and summary. Active training: `cvcp_v3_prog_full` on GPU0 and `cvcp_v4_replay_10k` on GPU1. Module rows remain pending under the 5 GiB idle-window gate.
-- 2026-07-05T04:20:06+08:00 Hourly check: full rows remain `complete=8/27`, no partial rows. `cvcp_v3_prog_full` reached about step 11550 and `cvcp_v4_replay_10k` reached about step 9500; both were near completion. Module rows remain pending under the memory gate.
-- 2026-07-05T04:50:37+08:00 Focused check: `cvcp_v4_replay_10k` completed training and started LP, becoming the only partial row; GPU1 training advanced to `cvcp_v5_cdcs_field`. `cvcp_v3_prog_full` was still training. Full rows remain `complete=8/27`.
-- 2026-07-05T05:21:17+08:00 Focused check: partial rows are `cvcp_v3_prog_full` and `cvcp_v4_replay_10k`. Prog-full completed training at step 16000 and started LP/NIH appendix. Replay-10k completed LP, NIH appendix, visual, counterfactual, A/B JSON/config, and was running A/B-swap counterfactual. GPU0 training advanced to `cvcp_v4_replay_full`; GPU1 training advanced to `cvcp_v5_cdcs_field`.
-- 2026-07-05T05:51:49+08:00 Focused check: full rows reached `complete=10/27` and partial rows returned to zero after `cvcp_v3_prog_full` and `cvcp_v4_replay_10k` completed all postprocess diagnostics and summaries. Active training: `cvcp_v4_replay_full` on GPU0 and `cvcp_v5_cdcs_field` on GPU1.
-- 2026-07-05T06:52:22+08:00 Hourly check: full rows remain `complete=10/27`, no partial rows. `cvcp_v4_replay_full` and `cvcp_v5_cdcs_field` were both around step 9575 and still training cleanly. Module rows remain pending under memory gating.
-- 2026-07-05T07:37:51+08:00 Focused check: `cvcp_v5_cdcs_field` completed training at 07:19 and entered LP/NIH/visual postprocess, becoming the only partial row. GPU1 training advanced to `cvcp_v5_cdcs_full`; `cvcp_v4_replay_full` was still training. Full rows remain `complete=10/27`.
-- 2026-07-05T08:08:20+08:00 Focused check: full rows reached `complete=11/27` after `cvcp_v5_cdcs_field` completed all postprocess diagnostics and summary. `cvcp_v4_replay_full` completed 16000-step training and is the current partial row pending downstream postprocess. GPU1 continued `cvcp_v5_cdcs_full`.
-- 2026-07-05T08:38:58+08:00 Focused check: `cvcp_v4_replay_full` completed LP, NIH appendix, visual, counterfactual, A/B JSON/config/counterfactual and was running paraphrase, remaining the only partial row. GPU0 training advanced to `cvcp_v5_cdcs_hardneg`; GPU1 `cvcp_v5_cdcs_full` reached about step 5500.
-- 2026-07-05T09:09:29+08:00 Focused check: full rows reached `complete=12/27` after `cvcp_v4_replay_full` completed paraphrase and summary. No partial rows. Active training: `cvcp_v5_cdcs_hardneg` around step 5050 and `cvcp_v5_cdcs_full` around step 8425.
-
-- 2026-07-04T14:20:10+08:00 Started active execution for `vivid_med_cvcp_ccsh_full_next_experiment_plan.md` after user requested every required and optional experiment be completed under the formal document framing. Existing Codex goal already matched the request, so no new goal was created.
-- 2026-07-04T14:20:10+08:00 Skill preflight loaded `planning-with-files`, `superpowers:using-superpowers`, `subagent-plan-decomposer`, `subagent-driven-development`, `executing-plans`, and `verification-before-completion`. The active workflow is planning-file based; subagents are reserved for bounded audits/implementation packages, while final decisions and scientific closure stay with the main agent.
-- 2026-07-04T14:20:10+08:00 Read `docs/README.md`, the CVCP/CCSH target plan, current planning-file state, branch/GPU status, and relevant memory. Current branch is `codex/vivid-med-p0-consolidation`; both RTX 3090 GPUs were idle at `0 MiB`.
-- 2026-07-04T14:20:10+08:00 User approved use of both local 3090 GPUs for this goal.
-- 2026-07-04T14:22:00+08:00 Added a new top-level CVCP/CCSH active plan section to `task_plan.md` and logged takeover findings/errors in `findings.md` and `progress.md`.
-- 2026-07-04T14:24:00+08:00 Added `scripts/build_cvcp_ccsh_requirement_ledger.py`, passed `python -m py_compile`, and generated `docs/cvcp_ccsh_requirement_ledger.md` plus `outputs/final_tables/cvcp_ccsh_requirement_ledger.csv`. First-pass ledger has 239 rows: 21 missing exact target scripts, 5 missing exact final tables, 143 open experiment/metric rows, and 36 candidate-evidence rows requiring protocol audit.
-- 2026-07-04T14:31:00+08:00 Added `scripts/audit_cvcp_ccsh_readiness.py`, passed `python -m py_compile`, and generated `docs/cvcp_ccsh_readiness_audit.md` plus `outputs/final_tables/cvcp_ccsh_readiness_audit.csv`. Readiness audit confirms all 21 target scripts are missing as exact files but have reusable analogs, 5 model-comparison buckets exist locally, and old next-stage/case-study/module artifacts are reusable only as prior-protocol evidence.
-- 2026-07-04T14:52:00+08:00 Added `scripts/cvcp_ccsh_driver.py` plus all 21 target-named wrappers from the plan checklist. Batch `py_compile` passed, generation/evaluation wrappers ran, and target-script readiness now reports `exact_exists=21`.
-- 2026-07-04T14:55:00+08:00 Materialized CVCP/CCSH data: 14 CVCP datasets, 3 SAMEQ-CF datasets, 3 SHUF-K-CF datasets, 28,666 CCSH statement rows, and 14,333 CEQ target rows. Ran `audit_instruction_leakage_v3.py` on 7 generated datasets and `audit_false_hard_negatives.py` on 3 hard-negative datasets.
-- 2026-07-04T15:00:00+08:00 Generated target final tables: `casebook.md`, `cvcp_training_results.md`, `module_combo_results.md`, `model_comparison_results.md`, `external_eval_results.md`, refreshed `locked_final_comparison.md`, and verified current ledger exact missing is only PadChest data availability rows.
-- 2026-07-04T15:02:00+08:00 Dry-ran `train_qwen3vl_cvcp.py`, `train_ceq_ccsh.py`, and `train_hnmb_ccsh.py`; wrappers produce the expected underlying train commands. Use `conda run -n vivid python ...` for real GPU training so the wrappers inherit the correct environment.
-
----
-
-- 2026-07-01T20:18:00+08:00 second downstream batch NIH available/full-subset transfer showed real progress: both `shuf_3k_seed3_nih_available` and `shuf_tw_clinical_seed1_nih_available` reached `processed=500/25596`.
-
-- 2026-07-01T20:28:00+08:00 refreshed `scripts/summarize_case_study_full_execution.py` during the active run. `shuf_3k_seed1` and `shuf_3k_seed2` now have complete training + LP + NIH all-available + visual/CF/A-B-swap/paraphrase packages with empty `missing_required`; second-batch NIH available/full-subset transfer for `shuf_3k_seed3` and `shuf_tw_clinical_seed1` reached `processed=2000/25596`. `shuf_tw_clinical_seed2` has reached step 5000 but is still awaiting final metrics artifact acceptance, `shuf_tw_clinical_seed3` is around step 4500, and the curriculum/embedding/MMD/UMAP/module-ablation extra queue remains correctly gated by GPU0 memory rather than being counted complete.
-
-- 2026-07-01T20:31:36+08:00 `shuf_tw_clinical_seed2` completed real long training and wrote `metrics_final.json` with `global_step=5000` and `best_val_loss=0.0987804`; GPU0 lane immediately launched `sameq_shuf_3k_seed1`. Second-batch NIH available/full-subset transfer for `shuf_3k_seed3` and `shuf_tw_clinical_seed1` reached `processed=3000/25596`, while `shuf_tw_clinical_seed3` remained active near its final 500-step window.
-
-- 2026-07-01T20:44:09+08:00 second-batch NIH available/full-subset transfer crossed the planned NIH-5k boundary for both `shuf_3k_seed3` and `shuf_tw_clinical_seed1` (`processed=5000/25596`) and continues toward all-available metrics. `shuf_tw_clinical_seed3` reached step 4975, and `sameq_shuf_3k_seed1` reached about step 450.
-
-- 2026-07-01T20:53:22+08:00 `shuf_tw_clinical_seed3` completed real long training with `global_step=5000` and `best_val_loss=0.112895`; GPU1 lane immediately launched `sameq_shuf_3k_seed2`. Refreshed summary shows all three `SHUF-TW-clinical` seed trainings completed; downstream LP/NIH/visual/CF/A-B/paraphrase remains pending for seed2/seed3 until postprocess lanes reach them. Second-batch NIH available/full-subset transfer reached `processed=6500/25596`.
-
-- 2026-07-01T21:12:12+08:00 `sameq_shuf_3k_seed1` crossed the first real checkpoint boundary and wrote `checkpoints/step_1000.pt`; training continued past step 1050. `sameq_shuf_3k_seed2` is active around its 500-step eval window, and second-batch NIH available/full-subset transfer reached `processed=9000/25596`.
-
-- 2026-07-01T21:17:45+08:00 second-batch NIH available/full-subset transfer reached `processed=10000/25596` for both `shuf_3k_seed3` and `shuf_tw_clinical_seed1`. SAMEQ stability training remains active: `sameq_shuf_3k_seed1` is past step 1175 and `sameq_shuf_3k_seed2` is past step 550.
-
-- 2026-07-01T21:36:50+08:00 second-batch NIH available/full-subset transfer passed the halfway point at `processed=13000/25596`. SAMEQ stability training continues on both GPUs: `sameq_shuf_3k_seed1` passed step 1725 after a completed 1500-step eval, and `sameq_shuf_3k_seed2` passed step 1075 after its 1000-step eval window.
-
-- 2026-07-01T21:50:07+08:00 second-batch NIH available/full-subset transfer reached `processed=15000/25596`. SAMEQ training is still active under shared GPU load: `sameq_shuf_3k_seed1` reached step 2000 and is in the 2000-step eval/checkpoint window, while `sameq_shuf_3k_seed2` reached about step 1450.
-
-- 2026-07-01T22:21:16+08:00 second-batch NIH available/full-subset transfer reached `processed=20000/25596` for both `shuf_3k_seed3` and `shuf_tw_clinical_seed1`. SAMEQ training remains healthy: `sameq_shuf_3k_seed1` reached about step 2950 after its 2500-step eval, and `sameq_shuf_3k_seed2` reached about step 2225 after its 2000-step eval.
-
-- 2026-07-01T22:56:50+08:00 second-batch NIH available/full-subset transfer completed and wrote real `transfer_metrics.json` artifacts for both runs, each with `evaluated_records=25596` and `subset_metrics` keys `nih_1000`, `nih_5000`, and `all_available`. NIH all-available macro-AUC: `shuf_3k_seed3=0.560068`, `shuf_tw_clinical_seed1=0.563949`. Both postprocess lanes immediately advanced to visual-dependence diagnostics for those runs.
-
-- 2026-07-01T23:16:50+08:00 second-batch visual-dependence diagnostics completed for `shuf_3k_seed3` and `shuf_tw_clinical_seed1`, and both postprocess lanes advanced to primary counterfactual diagnostics. SAMEQ stability long training remained active (`sameq_shuf_3k_seed1` about step 4775, `sameq_shuf_3k_seed2` at the 4000-step eval/checkpoint window); curriculum/embedding/MMD/UMAP/module-ablation extra execution remained intentionally gated behind GPU0 memory rather than being counted complete.
-
-- 2026-07-01T23:23:26+08:00 `sameq_shuf_3k_seed1` completed real 5000-step long training and wrote `metrics_final.json` (`best_val_loss=0.156731`); GPU0 training lane immediately launched `sameq_shuf_3k_seed3`. `sameq_shuf_3k_seed2` continued past step 4375 on GPU1. Postprocess lanes for `shuf_3k_seed3` and `shuf_tw_clinical_seed1` remained in primary counterfactual diagnostics with no failure line yet.
-
-- 2026-07-01T23:32:36+08:00 second-batch primary counterfactual diagnostics completed for both `shuf_3k_seed3` and `shuf_tw_clinical_seed1`; each lane generated its A/B-swap JSONL plus override config and launched A/B-swap counterfactual diagnostics. SAMEQ training advanced to `sameq_shuf_3k_seed2` step 4750 and `sameq_shuf_3k_seed3` step 500.
-
-- 2026-07-01T23:39:25+08:00 `sameq_shuf_3k_seed2` completed real 5000-step long training and wrote `metrics_final.json` (`best_val_loss=0.159022`); GPU1 training lane immediately launched `shuf_k4_seed1`. Second-batch A/B-swap counterfactual diagnostics completed for `shuf_3k_seed3` and `shuf_tw_clinical_seed1`, and both postprocess lanes advanced to paraphrase robustness. `sameq_shuf_3k_seed3` continued around step 925.
-
-- 2026-07-01T23:50:54+08:00 `shuf_3k_seed3` paraphrase robustness completed, closing its full downstream package (LP, NIH all-available/subsets, visual, primary CF, A/B-swap CF, paraphrase). GPU0 postprocess lane advanced to `shuf_tw_clinical_seed2` CheXpert LP. `shuf_tw_clinical_seed1` paraphrase remained active on GPU1; concurrent training reached `sameq_shuf_3k_seed3` about step 1375 and `shuf_k4_seed1` about step 500.
-
-- 2026-07-02T00:07:05+08:00 `shuf_tw_clinical_seed1` paraphrase robustness completed, closing its full downstream package. `shuf_tw_clinical_seed2` and `shuf_tw_clinical_seed3` CheXpert LP runs completed (`macro_auc=0.726564` and `0.666855`) and both postprocess lanes launched NIH all-available/full-subset transfer with `max-samples 0`. Training continued with `sameq_shuf_3k_seed3` around step 1900 and `shuf_k4_seed1` around step 1000.
-
-- 2026-07-02T00:28:18+08:00 `shuf_tw_clinical_seed2` and `shuf_tw_clinical_seed3` NIH all-available/full-subset transfer reached `processed=4500/25596` in both lanes, approaching the NIH-5k boundary while continuing toward all available records. Training continued with `sameq_shuf_3k_seed3` around step 2450 and `shuf_k4_seed1` around step 1500. Extra curriculum/embedding/MMD/UMAP/module execution remained gated by GPU0 memory.
-
-- 2026-07-02T00:48:31+08:00 `shuf_tw_clinical_seed2` and `shuf_tw_clinical_seed3` NIH all-available/full-subset transfer crossed NIH-5k and reached `8500/25596` and `8000/25596`, respectively. Training continued without failure lines: `sameq_shuf_3k_seed3` around step 2950 and `shuf_k4_seed1` around step 2000.
-
-- 2026-07-02T01:19:36+08:00 `shuf_tw_clinical_seed2` and `shuf_tw_clinical_seed3` NIH all-available/full-subset transfer passed halfway, reaching `14000/25596` and `13500/25596`. Training remained active with `sameq_shuf_3k_seed3` around step 3650 and `shuf_k4_seed1` around step 2500; no queue failure lines were present.
-
-- 2026-07-02T01:49:48+08:00 `shuf_tw_clinical_seed2` and `shuf_tw_clinical_seed3` NIH all-available/full-subset transfer both reached `19000/25596`; `transfer_metrics.json` had not landed yet, so neither row is counted complete. Training continued with `sameq_shuf_3k_seed3` around step 4475 and `shuf_k4_seed1` around step 3125.
-
-- 2026-07-02T02:11:00+08:00 `shuf_tw_clinical_seed2` and `shuf_tw_clinical_seed3` NIH all-available/full-subset transfer reached `22500/25596`; final `transfer_metrics.json` still pending. `sameq_shuf_3k_seed3` reached step 5000 but had not yet written `metrics_final.json`, so it remains in finalization/eval state rather than completed. `shuf_k4_seed1` continued around step 3525.
-
-- 2026-07-02T02:21:43+08:00 `sameq_shuf_3k_seed3` completed real 5000-step long training and wrote `metrics_final.json` (`best_val_loss=0.186772`); GPU0 training lane launched `shuf_k4_seed2`. `shuf_tw_clinical_seed2` and `shuf_tw_clinical_seed3` NIH all-available/full-subset transfer reached `24500/25596`; final transfer metrics still pending. `shuf_k4_seed1` continued around step 3950 and `shuf_k4_seed2` started.
-
-- 2026-07-02T02:26:48+08:00 `shuf_tw_clinical_seed2` and `shuf_tw_clinical_seed3` NIH all-available/full-subset transfer completed with `evaluated_records=25596` in both lanes. Summary read NIH all-available macro-AUC `shuf_tw_clinical_seed2=0.575123` and `shuf_tw_clinical_seed3=0.570411`. Both postprocess lanes advanced to visual-dependence diagnostics; training continued with `shuf_k4_seed1` around step 4125 and `shuf_k4_seed2` around step 500.
-
-- 2026-07-02T02:54:00+08:00 `shuf_tw_clinical_seed2` and `shuf_tw_clinical_seed3` visual-dependence diagnostics completed and both lanes advanced to primary counterfactual diagnostics. Summary now includes hard-shuffle deltas for both TW seed2/seed3 rows. `shuf_k4_seed1` reached step 5000 but had not yet written `metrics_final.json`; `shuf_k4_seed2` continued around step 1500.
-
-- 2026-07-02T03:06:10+08:00 `shuf_k4_seed1` completed real 5000-step long training and wrote `metrics_final.json` (`best_val_loss=0.140517`); GPU1 lane launched `shuf_k4_seed3`. `shuf_tw_clinical_seed2` and `shuf_tw_clinical_seed3` primary counterfactual diagnostics completed, then both lanes generated A/B-swap JSONL/config artifacts and launched A/B-swap counterfactual diagnostics. `shuf_k4_seed2` continued around step 2000 and `shuf_k4_seed3` around step 500.
-
-- 2026-07-02T03:24:05+08:00 `shuf_tw_clinical_seed2` and `shuf_tw_clinical_seed3` A/B-swap counterfactual plus paraphrase robustness completed, closing the three-seed `SHUF-TW-clinical` downstream package. Postprocess lanes advanced to `sameq_shuf_3k_seed1` and `sameq_shuf_3k_seed2` CheXpert LP. Training continued with `shuf_k4_seed2` around step 2500 and `shuf_k4_seed3` around step 1050.
-
-- 2026-07-02T03:54:25+08:00 `sameq_shuf_3k_seed1` and `sameq_shuf_3k_seed2` CheXpert LP completed (`macro_auc=0.712058` and `0.723722`) and both lanes launched NIH all-available/full-subset transfer, reaching `4000/25596` and `3500/25596`. K4 training continued with `shuf_k4_seed2` around step 3500 and `shuf_k4_seed3` around step 2000. Extra execution remained correctly gated by GPU0 memory.
-
-- 2026-07-02T04:25:30+08:00 `sameq_shuf_3k_seed1` and `sameq_shuf_3k_seed2` NIH all-available/full-subset transfer reached `9000/25596` in both lanes. K4 training continued with `shuf_k4_seed2` around step 4000 and `shuf_k4_seed3` around step 2500. Extra execution remained gated because both GPUs were actively occupied.
-
-- 2026-07-02T04:56:19+08:00 `sameq_shuf_3k_seed1` and `sameq_shuf_3k_seed2` NIH all-available/full-subset transfer reached `14500/25596` and `14000/25596`, respectively. K4 training continued with `shuf_k4_seed2` around step 4525 and `shuf_k4_seed3` around step 3025. No queue failure lines were present.
-
-- 2026-07-02T05:17:00+08:00 `sameq_shuf_3k_seed1` and `sameq_shuf_3k_seed2` NIH all-available/full-subset transfer reached `18000/25596` and `17500/25596`. `shuf_k4_seed2` reached step 5000 but had not yet written `metrics_final.json`, so it remains in finalization/eval state; `shuf_k4_seed3` continued around step 3500.
-
-- 2026-07-02T05:27:21+08:00 `shuf_k4_seed2` completed real 5000-step long training and wrote `metrics_final.json` (`best_val_loss=0.120652`); GPU0 training lane reached `QUEUE_DONE`. `sameq_shuf_3k_seed1` and `sameq_shuf_3k_seed2` NIH all-available/full-subset transfer reached `19500/25596` and `19000/25596`. `shuf_k4_seed3` continued around step 3700. Extra queue still waited because GPU0 memory remained above the 2000 MiB gate.
-
-- 2026-07-02T05:58:14+08:00 `sameq_shuf_3k_seed1` NIH all-available/full-subset transfer completed with `evaluated_records=25596` and summary NIH macro-AUC `0.591142`; GPU0 postprocess lane advanced to visual-dependence diagnostics. `sameq_shuf_3k_seed2` NIH transfer reached `24500/25596`. `shuf_k4_seed3` continued around step 4450. GPU0 memory briefly dropped to 0 MiB, so the extra execution queue may start on its next gate check.
-
-- 2026-07-02T06:02:00+08:00 `sameq_shuf_3k_seed2` NIH all-available/full-subset transfer completed with `evaluated_records=25596`; both `sameq_shuf_3k_seed1` and `sameq_shuf_3k_seed2` postprocess lanes advanced to visual-dependence diagnostics. `shuf_k4_seed3` continued active near the final training window. Extra execution still waited because GPU0 memory stayed around 4.8 GiB during visual diagnostics.
-
-- 2026-07-02T06:17:47+08:00 `shuf_k4_seed3` completed real 5000-step long training and wrote `metrics_final.json` (`best_val_loss=0.155855`), completing all 12 required stability long-training rows. `sameq_shuf_3k_seed1` and `sameq_shuf_3k_seed2` completed NIH all-available transfer, visual-dependence, primary counterfactual, and A/B-swap counterfactual diagnostics; both lanes advanced to paraphrase robustness. Extra queue continued waiting behind the postprocess GPU memory gate.
-
-- 2026-07-02T06:34:42+08:00 `sameq_shuf_3k_seed1` and `sameq_shuf_3k_seed2` full downstream packages completed through paraphrase robustness. `sameq_shuf_3k_seed3` CheXpert LP completed (`macro_auc=0.705695`) and launched NIH all-available/full-subset transfer; `shuf_k4_seed1` CheXpert LP completed (`macro_auc=0.698541`) and launched NIH all-available/full-subset transfer. All 12 long-training rows are complete; downstream remains in progress for SAMEQ seed3 and K4 seed1/2/3. Extra execution remains gated by GPU memory.
-
-- 2026-07-02T06:38:00+08:00 Verified the extra execution manifest routes through real curriculum training, real embedding export, embedding-backed MMD/UMAP, and formal CEQ/AUCH/HNMB/DRA/CCSH/CDCS module ablation training. Patched `scripts/compute_domain_shift_mmd.py` to compute RBF-MMD with pairwise matrix products and chunked kernel means instead of high-dimensional 3D difference tensors, then passed `py_compile` for the MMD/UMAP/module ablation scripts.
-
-- 2026-07-02T07:00:28+08:00 `sameq_shuf_3k_seed3` NIH all-available/full-subset transfer reached `7000/25596`; `shuf_k4_seed1` reached `5500/25596`. No final `transfer_metrics.json` has landed for either row yet, so both remain in-progress full/available transfer runs. K4 seed2/seed3 downstream remains pending behind these lane-owned passes, and extra execution remains correctly gated by GPU0 memory.
-
-- 2026-07-02T07:16:03+08:00 `sameq_shuf_3k_seed3` NIH all-available/full-subset transfer reached `10000/25596`; `shuf_k4_seed1` reached `9000/25596`. Both lanes remain healthy and GPU-backed; no failure logs or premature final metrics are present. K4 seed2/seed3 downstream and the extra curriculum/embedding/module queue remain pending behind GPU lane availability.
-
-- 2026-07-02T07:51:05+08:00 `sameq_shuf_3k_seed3` NIH all-available/full-subset transfer reached `17500/25596`; `shuf_k4_seed1` reached `16000/25596`. Neither row has final `transfer_metrics.json` yet, so no NIH full/available metric is claimed. Extra execution is still waiting for GPU0 memory to drop below the queue gate.
-
-- 2026-07-02T08:31:19+08:00 `sameq_shuf_3k_seed3` NIH all-available/full-subset transfer completed with `evaluated_records=25596`, `macro_auc=0.576859`, and `subset_metrics` for `nih_1000`, `nih_5000`, and `all_available`. GPU0 postprocess immediately advanced to `sameq_shuf_3k_seed3` visual-dependence diagnostics. `shuf_k4_seed1` remained in NIH transfer tail at `24500/25596`.
-
-- 2026-07-02T08:41:48+08:00 `shuf_k4_seed1` NIH all-available/full-subset transfer completed with `evaluated_records=25596`, `macro_auc=0.591866`, and `subset_metrics` for `nih_1000`, `nih_5000`, and `all_available`. GPU1 advanced to `shuf_k4_seed1` visual-dependence diagnostics. `sameq_shuf_3k_seed3` visual-dependence completed with hard-shuffle delta `0.452966` and advanced to counterfactual diagnostics.
-
-- 2026-07-02T08:53:01+08:00 `sameq_shuf_3k_seed3` completed full downstream artifact generation through paraphrase robustness; its CF/A-B JSONs contain `answer_nll` summaries but `counterfactual_option_nll.overall.total_records=0`, so option-pairwise `cf_acc`/`ab_swap_acc` are not applicable rather than missing. GPU0 lane advanced to `shuf_k4_seed2` CheXpert LP. GPU1 continued `shuf_k4_seed1` visual-dependence.
-
-- 2026-07-02T09:04:31+08:00 `shuf_k4_seed1` visual-dependence completed (`hard_shuffle_delta=0.382253`) and advanced to counterfactual diagnostics. `shuf_k4_seed2` CheXpert LP completed (`macro_auc=0.739679`) and advanced to NIH all-available/full-subset transfer, reaching `1000/25596`. `shuf_k4_seed3` downstream remains pending behind the lane queue.
-
-- 2026-07-02T09:31:02+08:00 `shuf_k4_seed1` counterfactual completed (`cf_acc=0.789116`) and A/B-swap counterfactual completed (`ab_swap_acc=0.792517`), then advanced to paraphrase robustness. `shuf_k4_seed2` NIH all-available/full-subset transfer reached `7500/25596`. Extra execution remained gated by GPU0 memory and did not interfere with downstream.
-
-- 2026-07-02T09:51:07+08:00 `shuf_k4_seed1` completed full downstream through paraphrase robustness (`paraphrase_mean_delta=0.00841536`). `shuf_k4_seed3` CheXpert LP completed (`macro_auc=0.690424`) and launched NIH all-available/full-subset transfer. `shuf_k4_seed2` NIH transfer reached `12500/25596`; `shuf_k4_seed3` NIH transfer initialized at `0/25596`.
-
-- 2026-07-02T10:32:52+08:00 Parallel K4 NIH all-available/full-subset passes remained healthy: `shuf_k4_seed2` reached `21500/25596`, and `shuf_k4_seed3` reached `9000/25596`. Neither row has final transfer metrics yet, so no K4 seed2/seed3 NIH full metric is claimed at this point.
-
-- 2026-07-02T10:52:05+08:00 `shuf_k4_seed2` NIH all-available/full-subset transfer completed with `evaluated_records=25596`, `macro_auc=0.576312`, and `subset_metrics` for `nih_1000`, `nih_5000`, and `all_available`. GPU0 advanced to `shuf_k4_seed2` visual-dependence diagnostics. `shuf_k4_seed3` NIH transfer continued on GPU1.
-
-- 2026-07-02T11:47:34+08:00 `shuf_k4_seed2` visual-dependence (`hard_shuffle_delta=0.30992`), counterfactual (`cf_acc=0.812925`), and A/B-swap (`ab_swap_acc=0.807256`) completed; it advanced to paraphrase robustness. `shuf_k4_seed3` NIH all-available/full-subset transfer completed with `evaluated_records=25596`, `macro_auc=0.575115`, and `subset_metrics` for `nih_1000`, `nih_5000`, and `all_available`; GPU1 advanced to `shuf_k4_seed3` visual-dependence.
-
-- 2026-07-02T12:14:22+08:00 GPU0 full downstream lane reached `QUEUE_DONE` after `shuf_k4_seed2` paraphrase completed (`paraphrase_mean_delta=0.0196299`). The extra queue launched real `cur_v2_progressive_replay_train` at 12:05 and has written `progress.json`, `training_log.txt`, `metrics_step_500.json`, and train logs through step 750/12000 with validation loss at step 500. GPU1 continued `shuf_k4_seed3` diagnostics after visual-dependence (`hard_shuffle_delta=0.295052`).
-
-- 2026-07-02T12:40:50+08:00 `shuf_k4_seed3` completed full downstream through paraphrase robustness (`cf_acc=0.816327`, `ab_swap_acc=0.834467`, `paraphrase_mean_delta=0.0226883`). This closes all 12 required stability/downstream rows with real long training, CheXpert LP, NIH all-available/full-subset transfer, visual diagnostics, and paraphrase/CF artifacts or explicit not-applicable diagnostic boundaries. Curriculum v2 continued at step 3325/12000.
-
-- 2026-07-02T13:42:01+08:00 `cur_v2_progressive_replay_train` remained active and reached step `9925/12000` with ongoing `progress.json` updates; `metrics_final.json` had not landed yet, so curriculum v2 remains in-progress rather than complete. GPU1 was idle, but a second extra worker was not launched to avoid duplicate writes to embedding/module output paths while the manifest-owned queue is active.
-
-- 2026-07-02T14:05:05+08:00 `cur_v2_progressive_replay_train` completed real 12000-step formal long training and wrote `metrics_final.json` (`global_step=12000`, `best_val_loss=0.237637`). The extra queue advanced to `export_instruction_train_embeddings`, beginning the real embedding export stage required before MMD/UMAP and formal module ablations.
-
-- 2026-07-02T14:13:11+08:00 Embedding export stage completed `shuf_tw_clinical_instruction_train`, `shuf_tw_clinical_instruction_val`, and `shuf_tw_clinical_chexpert_val` NPZ/metadata/manifest artifacts. The extra queue advanced to `export_nih_available_ums_embeddings`, the required NIH available embedding export for domain-shift MMD/UMAP.
-
-- 2026-07-02T15:39:16+08:00 NIH available embeddings completed and MMD/UMAP were recomputed from real CheXpert/NIH embeddings. The first formal module ablation (`train_module_ceq`) failed before training with `ModuleNotFoundError: No module named 'evaluation'` because `scripts/train_case_study_module_ablation.py` ran as a script with `sys.path[0]=scripts` and lacked the repository root on `sys.path`. Patched the script to insert the repo root before importing local packages and verified `conda run -n vivid python scripts/train_case_study_module_ablation.py --help` plus `py_compile`.
-
-- 2026-07-02T16:15:11+08:00 After the import-path fix, the extra execution queue completed CEQ, AUCH, HNMB, DRA, CCSH, and CDCS formal module ablations. Each module wrote `metrics_final.json` under `outputs/qwen3vl_case_study_module_ablation/*`, and the queue log ended with `QUEUE_DONE`.
-
-- 2026-07-02T16:20:00+08:00 Refreshed `outputs/final_tables/case_study_full_execution_status.*`, `case_study_extra_execution_status.*`, and `module_ablation_results.*`. Final tables now show 12/12 main rows completed, 13/13 extra rows completed, and 6/6 module rows completed. SAMEQ CF/A-B option-pairwise metrics remain explicitly not applicable because the diagnostic option record count is zero.
-
-- 2026-07-02T16:30:00+08:00 Wrote final real-run status and remaining interpretation boundaries back into `vivid_med_case_study_modules_next_experiment_plan.md`, `task_plan.md`, `docs/README.md`, `docs/case_study_modules_requirement_ledger.md`, and `findings.md`. The active conclusion is now mechanism diagnosis and finalist narrowing rather than a `SHUF-TW-clinical` final-best claim.
-
-- 2026-07-03T11:10:00+08:00 Started remote upload handoff from `项目上传与远端运行交接说明_副本.md`. Skill preflight used `superpowers:using-superpowers` and `planning-with-files`; session catchup reported no unsynced context. Read `docs/README.md`, `.gitignore`, current planning tails, and the upload handoff. Planned a code-only upload to `~/projects/xiyaowang/code/021_260129VIVID`, with data/outputs/checkpoints handled separately only if explicitly needed.
-
-- 2026-07-03T11:12:00+08:00 User revised the target: upload the whole repository into a new project folder directly under `~/projects/xiyaowang/`. Updated the working plan to target `~/projects/xiyaowang/021_260129VIVID` and to preserve only the hard credential/private-key safety boundary before full sync.
-
-- 2026-07-03T11:18:00+08:00 SSH auth check reached `172.20.52.10` but all existing local keys were rejected. Generated dedicated local key `C:\Users\Admin\.ssh\sues_hpc_dqxy11` and created local SSH alias `sues-hpc`; upload is blocked until the public key is appended to remote `~/.ssh/authorized_keys`.
-
-- 2026-07-03T11:28:00+08:00 Appended the dedicated public key to remote `~/.ssh/authorized_keys`, fixed local OpenSSH ACLs for `C:\Users\Admin\.ssh\config` and `C:\Users\Admin\.ssh\sues_hpc_dqxy11`, and verified `ssh sues-hpc` with `SSH_OK`. Full-repository size audit found about 1.06 TB total dominated by `outputs/` (896.635 GB) and `data/` (148.712 GB). Remote `/ipfs` has ample capacity. Since local `rsync` is unavailable, the upload method is an uncompressed tar stream over SSH into `~/projects/xiyaowang/021_260129VIVID`.
-
-- 2026-07-03T11:39:00+08:00 User refined scope to skip unused files and pure process records, and requested post-upload conda environment setup plus a GPU smoke run on the approved GPU resource. Stopped the just-started full tar upload before any large remote data landed; remote project dir still measured only 512 bytes. New upload scope is a filtered runnable subset excluding `outputs/`, raw datasets, local env, git metadata, large weights, caches, history/delete folders, and `progress/findings/task_plan` process records.
-
-- 2026-07-03T11:47:00+08:00 Built a filtered upload staging package with 600 files / 444.01 MB, compressed it to 20.66 MB, uploaded it to `sues-hpc:~/projects/xiyaowang/`, and extracted it as `~/projects/xiyaowang/021_260129VIVID`. Remote verification showed 457 MB, 345 files, README/requirements/config/scripts present, and no `outputs/`, `vivid_env/`, or `.git` directory. Removed the remote transfer tarball and local staging/package artifacts after verification.
-
-- 2026-07-03T11:56:00+08:00 Created remote conda env `vivid_med310` and installed CUDA PyTorch `2.9.0+cu128`, torchvision `0.24.0+cu128`, and project requirements. Dispatched GPU smoke to the approved `gpu` tmux session on `gpu02`; log `~/projects/xiyaowang/logs/021_260129VIVID/gpu_smoke_latest.log` shows A800 visible, `cuda_available=True`, CUDA matmul success, and `scripts/smoke_case_study_modules.py` completed. Module smoke table has CEQ/AUCH/HNMB/DRA/CCSH/CDCS all `passed`. Post-smoke GPU check reported `0 MiB, 0%`.
-
-- 2026-07-03T12:38:00+08:00 User clarified the priority is to run code first, then upload large leftovers later. Stopped the in-progress full `data/` upload after it reached a partial 34 GB remote tree. Audit found the minimal runnable data/docs package is roughly 13.2 GB beyond already-uploaded code/outputs/pretrained: processed metadata 427 MB, instructions/splits 229 MB, CheXpert small 10.684 GB, and small auxiliary LIDC/OrganMNIST 1.823 GB. Defer NIH/AMOS/KITS raw data (135.565 GB) and final-weight candidates (315.923 GB) unless a specific run needs them.
-
-- 2026-07-03T13:51:07+08:00 Replaced the interrupted partial remote `data/` tree with a tiny real-image runnable package so the project can run before the 13.2 GB minimal-complete transfer. Final remote verification: project root `4.8G`, `data` `844M`, `outputs` `3.0G`, `pretrained` `982M`, sampled CheXpert image files `2929`, processed files `13`, instruction files `41`, and split files `12`. Remote data smoke passed with CUDA available and batch tensor `(2, 3, 224, 224)`. Remote training smoke passed on approved `gpu` tmux using `vivid_med310` and `scripts/train_ums_classifier.py --config configs/remote_smoke_ums_classifier.yaml --debug`; final metrics exist at `outputs/remote_smoke_ums_classifier/metrics_final.json`. Smoke `.pt` files were removed and final GPU check reported `0 MiB, 0%`.
-
-- 2026-07-03T14:09:32+08:00 Uploaded the active project base model from `H:\Xiyao_Wang\001_models\qwen3-vl-2b-thinking-new` to remote `~/projects/xiyaowang/021_260129VIVID/model/qwen3-vl-2b-thinking-new`. Model scope was chosen from the config/script/docs scan: active Qwen3-VL 2B path appears 141 times, while `Qwen2.5-Coder-7B-Instruct` is legacy text-scaffold-only and BiomedCLIP's converted checkpoint is already in `pretrained/`. Remote model verifies as 14 files / 4.0 GB; project size is now `8.8G`. Added project-local compatibility symlink `H:/Xiyao_Wang/001_models/qwen3-vl-2b-thinking-new` -> `model/qwen3-vl-2b-thinking-new`, and verified the old path loads `model_type=qwen3_vl`. Full GPU model audit passed in `vivid_med310` with `model_class=Qwen3VLForConditionalGeneration`, `processor_class=Qwen3VLProcessor`, `device=cuda`, `dtype=torch.bfloat16`, and `forward_status=ok`; final GPU check reported `0 MiB, 0%`.
-- 2026-07-03T15:00:00+08:00 User requested "把有的先传齐" for A800 readiness. Added an A800 available-data upload checklist to `task_plan.md` and scoped the transfer to local full CheXpert, NIH Chest X-rays, MIMIC-CXR images/reports, mimic-cxr_less, and MIMIC supplementary files. VinDr-CXR/PadChest remain local-data gaps.
-- 2026-07-03T17:08:00+08:00 Switched large-data transfer from direct tar pipes to local chunk tar + `scp` + remote extract because the PowerShell tar pipe failed on CheXpert metadata/valid. CheXpert metadata/valid is already verified remotely; CheXpert train tar generation is running under a continuation helper, and a queued helper will upload NIH/MIMIC chunks after CheXpert train is confirmed.
-- 2026-07-03T17:24:00+08:00 The single full CheXpert train tar stalled at about 6.26 GB, so it was stopped before any train tar was uploaded. Verified a smaller `tar -T` patient-list strategy, manually uploaded the first 2000-patient chunk, then launched `upload_a800_available_data_queue_v3.ps1`; chunk 001 completed tar/scp/extract and chunk 002 started.
-- 2026-07-03T17:46:00+08:00 User requested NIH not be uploaded for now. Marked NIH as `deferred_by_user` in `task_plan.md`, wrote local skip marker `.remote_upload_tmp/skip_nih_by_user_20260703.txt`, wrote remote marker `data/dataset/NIH_DEFERRED_BY_USER_20260703.txt`, and patched the active upload queue to skip NIH and avoid treating missing NIH as a final verification failure.
-- 2026-07-03T18:58:00+08:00 User requested the upload pause. Stopped A800/chexpert-related local `powershell`/`tar`/`scp`/`ssh` processes and verified `REMAINING_A800_PROCS=0`. Wrote `.remote_upload_tmp/PAUSED_BY_USER_20260703.txt`. Last known transfer state: CheXpert metadata/valid uploaded; CheXpert train chunks 000-008 have done markers; chunk 009 tar remains local but is not marked done because SSH command-layer disconnects interrupted verification. NIH remains explicitly deferred by user.
-- 2026-07-03T19:05:00+08:00 User resumed upload. Confirmed no old A800 transfer process remained, kept NIH deferred, changed CheXpert status back to `in_progress`, and patched the upload queue's remote extract/verify commands to use forced TTY because non-TTY SSH commands authenticate but hang before returning.
-- 2026-07-03T23:12:00+08:00 Continued A800 available-data upload after pause. Manually recovered CheXpert train chunk 009 with `scp` plus forced-TTY remote extract, wrote its done marker, and relaunched `upload_a800_available_data_queue_v3.ps1`. The queue skipped chunks 000-009 and completed chunks 010-016; chunk 017 was in progress. NIH remains explicitly deferred by user via local and remote marker files.
-- 2026-07-04T00:46:00+08:00 A800 available-data queue completed all CheXpert train chunks 000-032 and skipped NIH via the user-requested deferred marker. MIMIC reports p10-p19 completed; `scp` for reports p19 failed twice with remote connection closure but succeeded on the queue's third retry. MIMIC images p10-p12 completed and p13 was in progress.
-- 2026-07-04T02:45:00+08:00 MIMIC reports p10-p19 and images p10-p19 completed. The original single `mimic_cxr_less` tar was stopped locally near the H: drive safety floor (about 30 GB free) before upload, and the partial tar was removed. Added `.remote_upload_tmp/` to `.gitignore` after local Git attempted to index the temporary transfer files. Started `.remote_upload_tmp/upload_a800_mimic_less_tail_queue.ps1` to upload `mimic-cxr_less` as CSV plus p10-p19 chunks and then upload the corrected MIMIC supplementary directory.
-- 2026-07-04T04:54:00+08:00 Completed A800 available-data tail upload after switching `mimic-cxr_less` to 50 patient-directory chunks. Remote lightweight verification passed: NIH deferred marker present, CheXpert train has 64540 patient dirs, `mimic-cxr_less` p10-p19 remote patient-dir counts match local (`4478,4576,4608,4631,4509,4572,4484,4594,4553,4557`), both `mimic_cxr_aug_*.csv` files exist, and corrected MIMIC supplementary directory `mimic-cxr附加文件` exists remotely.
-- 2026-07-03T17:31:50+08:00 Downloaded Kaggle `xhlulu/vinbigdata` into `data/dataset/vinbigdata_xhlulu_512png`. The first foreground download timed out and left an invalid 77 MiB partial zip; it was removed after the retry completed. The successful Kaggle retry resumed after `ChunkedEncodingError`, wrote `vinbigdata.zip` at 2,085,748,086 bytes, passed `python -m zipfile -t`, and extracted 15,000 train PNGs, 3,000 test PNGs, plus `train_meta.csv`. Validation shows the package has image pixels and original dimensions only, with no label/bbox CSV, so it does not by itself satisfy the A800 plan's required VinDr-CXR/PadChest external evaluation manifest.
-- 2026-07-04T05:20:00+08:00 Started the final "whole project remainder" upload phase after A800 available-data verification. Local inventory shows `outputs/` 896.635 GiB, of which 511.159 GiB are repeated intermediate `step/checkpoint/probe_step` weights and 385.476 GiB are retained final/results artifacts; `data/dataset` still has AMOS22, KITS21, LIDC, OrganMNIST, and VinBigData locally while NIH remains user-deferred. Created `.remote_upload_tmp/upload_whole_project_remainder.ps1` to upload in resumable 16 GiB chunks, excluding `.git`, `vivid_env`, `.remote_upload_tmp`, `History`, `delete`, already-uploaded CheXpert/MIMIC trees, deferred NIH, and intermediate weights.
-- 2026-07-04T05:24:00+08:00 First whole-project remainder script pass generated the manifest (`296930` files / `484.482` GiB) but stopped before any chunk upload because PowerShell captured the manifest summary text along with the intended manifest path return value. Patched `.remote_upload_tmp/upload_whole_project_remainder.ps1` so manifest/chunk summaries write to log while functions return only the path.
-- 2026-07-04T05:56:00+08:00 Whole-project remainder upload relaunched successfully. Manifest/chunk planning produced 31 chunks; chunk `0000` (`15.945` GiB / 904 files) tarred, uploaded by `scp`, remote-extracted, and wrote both local/remote `whole_project_chunk_0000.done` markers. The script removed the local chunk tar and advanced to chunk `0001`.
-- 2026-07-04T06:35:00+08:00 Whole-project remainder chunk `0001` (`15.786` GiB / 44,962 AMOS/KITS-style files) completed `tar -> scp -> remote extract` and wrote local/remote done markers. The script removed the local tar and advanced to chunk `0002`; completed chunks are now `2/31`.
-- 2026-07-04T07:11:00+08:00 Whole-project remainder chunk `0002` (`15.810` GiB / 9,363 files) completed `tar -> scp -> remote extract` and wrote local/remote done markers. The script advanced to chunk `0003`; completed chunks are now `3/31` (about `47.5` GiB of the 484.482 GiB filtered remainder).
-- 2026-07-04T07:46:00+08:00 Whole-project remainder chunk `0003` (`15.990` GiB / 9,067 files) completed and wrote done markers. The script advanced to chunk `0004`; completed chunks are now `4/31` (about `63.5` GiB of the 484.482 GiB filtered remainder).
-- 2026-07-04T08:22:00+08:00 Whole-project remainder chunk `0004` (`15.959` GiB / 9,408 files) completed and wrote done markers. The script advanced to chunk `0005`, the largest small-file-count chunk (`16.000` GiB / 212,026 files); completed chunks are now `5/31` (about `79.5` GiB of the 484.482 GiB filtered remainder).
-- 2026-07-04T09:14:00+08:00 Whole-project remainder chunk `0005` (`16.000` GiB / 212,026 files) completed and wrote done markers after the expected slow small-file tar/extract phases. The script advanced to chunk `0006`; completed chunks are now `6/31` (about `95.5` GiB of the 484.482 GiB filtered remainder).
-- 2026-07-04T09:51:00+08:00 Whole-project remainder chunk `0006` (`15.894` GiB / 3,559 files) completed and wrote done markers. The script advanced to chunk `0007` (`15.960` GiB / 53 large files); completed chunks are now `7/31` (about `111.4` GiB of the 484.482 GiB filtered remainder).
-- 2026-07-04T10:25:00+08:00 Whole-project remainder chunk `0007` (`15.960` GiB / 53 large files) completed and wrote done markers. The script advanced to chunk `0008`; completed chunks are now `8/31` (about `127.4` GiB of the 484.482 GiB filtered remainder).
-- 2026-07-04T11:01:00+08:00 Whole-project remainder chunk `0008` (`15.753` GiB / 514 files) completed and wrote done markers. The script advanced to chunk `0009`; completed chunks are now `9/31` (about `143.1` GiB of the 484.482 GiB filtered remainder).
-- 2026-07-04T11:20:00+08:00 User added a follow-up request to upload all models from `H:\Xiyao_Wang\001_models` that are not already under the remote project `model/` folder. Local model inventory totals `364.772` GiB / 3,664 files; remote `model/` currently contains only the previously verified `qwen3-vl-2b-thinking-new`. Created `.remote_upload_tmp/upload_missing_001_models.ps1`, a resumable 16 GiB chunk uploader that skips the already-present Qwen3-VL model and non-model download logs/scripts, then uploads remaining model directories into `/ipfs/inspurfileset/home/dqxy/dqxy11/projects/xiyaowang/021_260129VIVID/model` after the current project remainder transfer finishes.
-- 2026-07-04T11:35:00+08:00 User paused the current transfer sequence. Whole-project remainder remains paused after completed chunks `0000`-`0008` (about `143.1` GiB of `484.482` GiB); chunk `0009` is not complete and partial local/remote chunk tar files were cleaned up. Verified the remote shared model cache `/ipfs/inspurfileset/home/dqxy/dqxy11/projects/xiyaowang/model` already contains `Qwen3.5-4B` (`18G`), `Qwen3.5-9B` (`25G`), and `qwen3-vl-2b-thinking-new` (`4.0G`). Patched `.remote_upload_tmp/upload_missing_001_models.ps1` to target the shared model cache, skip those already-present Qwen models, and create project-local symlinks. Added project `model/` symlinks for `Qwen3.5-4B`, `Qwen3.5-9B`, and `qwen3-vl-2b-thinking-new`.
-- 2026-07-04T18:23:00+08:00 User resumed after confirming model placement. Preflight for remaining model upload passed: `planning-with-files` catchup had no blocking output, local H: free space is `36.2` GB, `.remote_upload_tmp/upload_missing_001_models.ps1` passes PowerShell parse, remote shared model cache is `46G`, and only the already-present Qwen 2B/4B/9B models are in the shared cache. Updated `task_plan.md` with the active remote shared model completion phase and launched the resumable model uploader as PID `24032`.
-- 2026-07-04T18:24:00+08:00 Remaining model upload manifest generated successfully: `3573` files / `319.507` GiB after excluding `Qwen3.5-4B`, `Qwen3.5-9B`, `qwen3-vl-2b-thinking-new`, and non-model `.log`/`.ps1` files. Chunk `0000` is being tarred from `H:\Xiyao_Wang\001_models` into `.remote_upload_tmp/missing_001_models_chunk_0000.tar`.
-- 2026-07-04T18:46:00+08:00 Remaining model upload chunk `0000` completed `tar -> scp -> remote extract`, wrote both local and remote `missing_001_models_chunk_0000.done`, removed the local chunk tar, and advanced to chunk `0001`. H: free space recovered to `36.13` GB. Remote shared model cache is now `57G` and includes newly uploaded `CheXbert` plus partial `Gemma-4-26B-A4B-JANG_4M-CRACK` files.
-- 2026-07-04T19:10:00+08:00 Remaining model upload chunk `0001` completed and advanced to chunk `0002`; local and remote done counts are `2/24`, H: free space recovered to `36.05` GB, and the remote shared model cache is now `70G`. Chunk `0002` starts with `InternVL3_5-4B` and `InternVL3_5-8B` files.
-- 2026-07-04T19:32:00+08:00 Remaining model upload chunk `0002` completed and advanced to chunk `0003`; local and remote done counts are `3/24`, H: free space recovered to `36.11` GB, and the remote shared model cache is now `84G`. Chunk `0003` is `15.969` GiB / `22` files and contains the tail of `InternVL3_5-8B` plus the start of `LLaDA-8B-Base-MS`.
-- 2026-07-04T20:01:00+08:00 Remaining model upload chunk `0003` completed and advanced to chunk `0004`; local and remote done counts are `4/24`, H: free space recovered to `35.98` GB, and the remote shared model cache is now `100G`. Chunk `0004` is `14.936` GiB / `26` files and continues `LLaDA-8B-Base-MS` plus `LLaDA-8B-Instruct-MS`.
-- 2026-07-04T20:29:00+08:00 Remaining model upload chunk `0004` completed and advanced to chunk `0005`; local and remote done counts are `5/24`, H: free space recovered to `36.11` GB, and the remote shared model cache is now `115G`. Chunk `0005` is `10.225` GiB / `9` files and contains the tail of `LLaDA-8B-Instruct-MS`.
-- 2026-07-04T20:49:00+08:00 Remaining model upload chunk `0005` completed and advanced to chunk `0006`; local and remote done counts are `6/24`, H: free space recovered to `35.65` GB, and the remote shared model cache is now `125G`. Chunk `0006` is a single `15.865` GiB `LMStudio/models/bartowski/google_gemma-4-26B-A4B-it-GGUF/google_gemma-4-26B-A4B-it-Q4_K_M.gguf` file.
-- 2026-07-04T21:15:00+08:00 Remaining model upload chunk `0006` completed and advanced to chunk `0007`; local and remote done counts are `7/24`, H: free space recovered to `35.77` GB, and the remote shared model cache is now `141G`. Chunk `0007` is `14.964` GiB / `13` files and starts `Llama-3.2-11B-Vision-Instruct` after an `LMStudio` mmproj file.
-- 2026-07-04T21:43:00+08:00 Remaining model upload chunk `0007` completed and advanced to chunk `0008`; local and remote done counts are `8/24`, H: free space recovered to `36.00` GB, and the remote shared model cache is now `156G`. Chunk `0008` is `6.022` GiB / `3` files and completes the tail of `Llama-3.2-11B-Vision-Instruct`.
-- 2026-07-04T21:56:00+08:00 Remaining model upload chunk `0008` completed and advanced to chunk `0009`; local and remote done counts are `9/24`, H: free space recovered to `35.64` GB, and the remote shared model cache is now `162G`. Chunk `0009` is the single `19.799` GiB file `Llama-3.2-11B-Vision-Instruct/original/consolidated.pth`, so this chunk is expected to push local temporary free space lower than the regular 16 GiB chunks.
-- 2026-07-04T22:28:00+08:00 Remaining model upload chunk `0009` completed and advanced to chunk `0010`; local and remote done counts are `10/24`, H: free space recovered to `35.99` GB, and the remote shared model cache is now `182G`. Chunk `0010` is `14.967` GiB / `34` files and starts the `Qwen2-VL` model family after the `Llama-3.2-11B-Vision-Instruct` metadata tail.
-- 2026-07-04T22:53:00+08:00 Remaining model upload chunk `0010` completed and advanced to chunk `0011`; local and remote done counts are `11/24`, H: free space recovered to `35.98` GB, and the remote shared model cache is now `197G`. Chunk `0011` is `13.762` GiB / `17` files and continues `Qwen2-VL-7B-Instruct` plus starts `Qwen2.5-Coder-7B-Instruct`.
-- 2026-07-04T23:14:00+08:00 Remaining model upload chunk `0011` completed and advanced to chunk `0012`; local and remote done counts are `12/24`, H: free space recovered to `36.01` GB, and the remote shared model cache is now `210G`. Chunk `0012` is `15.696` GiB / `31` files and continues `Qwen2.5-Coder-7B-Instruct` plus starts `Qwen2.5-VL-3B/7B`.
-- 2026-07-04T23:40:00+08:00 Remaining model upload chunk `0012` completed and advanced to chunk `0013`; local and remote done counts are `13/24`, and the remote shared model cache is now `226G`. Chunk `0013` is `11.824` GiB / `17` files and completes more `Qwen2.5-VL-7B-Instruct` plus starts `Qwen3-VL-4B-Instruct`.
-- 2026-07-05T00:00:00+08:00 Remaining model upload chunk `0013` completed and advanced to chunk `0014`; local and remote done counts are `14/24`, H: free space recovered to `34.80` GB, and the remote shared model cache is now `238G`. Chunk `0014` is `12.843` GiB / `17` files and contains `Qwen3-VL-4B-Instruct` plus the start of `Qwen3-VL-8B-Instruct`.
-- 2026-07-05T00:20:00+08:00 Remaining model upload chunk `0014` completed and advanced to chunk `0015`; local and remote done counts are `15/24`, H: free space recovered to `34.92` GB, and the remote shared model cache is now `251G`. Chunk `0015` is `13.425` GiB / `32` files and completes `Qwen3-VL-8B-Instruct` plus starts `Qwen3.5-0.8B/2B`.
-- 2026-07-05T00:45:00+08:00 Remaining model upload chunk `0015` completed and advanced to chunk `0016`; local and remote done counts are `16/24`, H: free space recovered to `34.28` GB, and the remote shared model cache is now `264G`. Chunk `0016` is `11.447` GiB / `73` files and covers the tail of `Qwen3.5-2B`, `bge-reranker-v2-m3-MS`, `biomedclip`, `clip-vit-large-patch14-336`, `dinov3-vitl16`, and the start of `gemma-3-12b-it`.
-- 2026-07-05T01:07:00+08:00 Remaining model upload chunk `0016` completed and advanced to chunk `0017`; local and remote done counts are `17/24`, H: free space recovered to `34.41` GB, and the remote shared model cache is now `276G`. Chunk `0017` is `13.823` GiB / `3` files containing the first three `gemma-3-12b-it` safetensors.
-- 2026-07-05T01:30:00+08:00 Remaining model upload chunk `0017` completed and advanced to chunk `0018`; local and remote done counts are `18/24`, H: free space recovered to `34.13` GB, and the remote shared model cache is now `290G`. Chunk `0018` is `13.535` GiB / `18` files and contains the tail of `gemma-3-12b-it` plus the start of `gemma-3-4b-it`.
-- 2026-07-05T01:46:00+08:00 Remaining model upload paused unexpectedly at chunk `0018` scp after the remote host repeatedly closed SSH/SCP sessions. The main upload process exited after `scp model chunk 0018 failed with exit code 255`; local `missing_001_models_chunk_0018.tar` remains available at `13.535` GiB and H: free space is about `19.84` GB. Network/TCP to `172.20.52.10:22` is reachable, and verbose SSH authenticates successfully, but the remote closes the session immediately after command/session setup. Recovery plan: wait for SSH session stability, remove any remote partial `missing_001_models_chunk_0018.tar`, upload chunk `0018` as smaller subchunks, write local/remote `missing_001_models_chunk_0018.done`, then relaunch the main uploader from chunk `0019`.
-- 2026-07-05T01:53:00+08:00 Created `.remote_upload_tmp/recover_missing_001_models_chunk_0018.ps1` and verified PowerShell parse. The recovery script splits chunk `0018` into smaller subchunks (about 4-5 GiB each), removes the remote partial full tar, uploads/extracts each part, writes the full chunk `0018` done marker, and then allows the main uploader to resume at chunk `0019`. SSH session tests still fail after key authentication with the remote closing the session, so recovery is waiting on remote SSH stability rather than local file preparation.
-- 2026-07-05T01:56:00+08:00 Removed the local temporary full chunk tar `.remote_upload_tmp/missing_001_models_chunk_0018.tar` because recovery will use smaller part tar files generated from the original model sources. H: free space recovered to `29.06` GB. The chunk `0018` source list remains intact, and chunk `0018` is still not marked done.
-- 2026-07-05T02:13:00+08:00 Rechecked after user resumed. No local model chunk tar remains and no real upload/recovery process is running. Remote forced-TTY `ssh` still works for diagnostics, but normal non-interactive `ssh` exits `255` with `Timeout, server 172.20.52.10 not responding`, and a small `scp` probe exits `255` with `Connection closed`. Removed the failed remote partial `.incoming_models/missing_001_models_chunk_0018.tar` (`535M`). A TTY/base64 upload probe also hung and was cleaned up, so it is not safe to use for large binary model transfer. Current verified state remains `18/24` model chunks complete, remote shared model cache `290G`, and recovery is blocked on normal `ssh/scp/sftp` stability.
-- 2026-07-05T02:40:00+08:00 Worked around the broken `scp/sftp` path by starting a local HTTP server on `.remote_upload_tmp` and an SSH reverse tunnel from remote `127.0.0.1:18766` to local `127.0.0.1:18765`; a remote curl probe matched the local SHA256. Patched `.remote_upload_tmp/recover_missing_001_models_chunk_0018.ps1` and `.remote_upload_tmp/upload_missing_001_models.ps1` so remote downloads local tar chunks through the reverse tunnel instead of using `scp`. Recovered chunk `0018` as three parts (`4.593`, `4.322`, `4.621` GiB), each downloaded/extracted remotely, then wrote local and remote `missing_001_models_chunk_0018.done`. Model chunk done count is now `19/24`, and remote shared model cache is `303G`.
-- 2026-07-05T04:25:00+08:00 Completed the remaining `H:\Xiyao_Wang\001_models` upload into the remote shared model cache. Chunks `0019`-`0022` completed via the HTTP reverse tunnel; chunk `0023` initially failed under Windows `tar -T` on the Unicode `新建文件夹/...` paths, so `.remote_upload_tmp/upload_missing_001_models.ps1` now falls back to Python PAX tar when a chunk list contains non-ASCII paths. Final verification: local and remote model chunk done counts are `24/24`, `.incoming_models` has `0` residual `missing_001_models_chunk_*.tar`, remote shared model cache is `366G`, project `model/` has `42` symlinks to `../../model/<name>`, and sample files `model/新建文件夹/chexbert.pth`, `model/qwen3_4B_instinct/model-00001-of-00002.safetensors`, and empty dir `model/X-Coder-RL-Qwen2.5-7B` exist remotely. Stopped the temporary local HTTP server and SSH reverse tunnel after verification.
-- 2026-07-05T10:11:46+08:00 Resumed CVCP/CCSH monitoring after context compaction. Fresh summarizers report `12/27` full rows complete, `0` partial rows, and `0/18` module-combo rows complete. GPU0 is running `cvcp_v5_cdcs_hardneg` after `cvcp_v4_replay_full`; GPU1 is running `cvcp_v5_cdcs_full` after `cvcp_v5_cdcs_field`. Both postprocess lanes are waiting for the matching training rows, and both module-combo lanes are intentionally waiting under the 5000 MiB memory gate (`base_ccsh/train_module_ccsh` on GPU0, `sameq_ccsh/train_module_ccsh` on GPU1). Routine checks will stay hour-level unless a row reaches handoff/completion or an anomaly appears.
-- 2026-07-05T10:57:52+08:00 CVCP/CCSH check after a 45-minute low-frequency interval: training for `cvcp_v5_cdcs_hardneg` completed at `10:33:48` and training for `cvcp_v5_cdcs_full` completed at `10:40:15`. Fresh summaries report `12/27` rows complete and `2` partial rows because both completed trainings are still in postprocess. GPU0 queue advanced to `sameq_cf_10`; GPU1 queue advanced to `sameq_cf_20`. Postprocess completed LP and NIH appendix for both CDCS rows, completed visual-dependence for `cdcs_hardneg`, and was running counterfactual/visual diagnostics. Module combo rows remain gated by high memory, as intended.
-- 2026-07-05T11:28:25+08:00 CVCP/CCSH postprocess closeout check: `cvcp_v5_cdcs_hardneg` and `cvcp_v5_cdcs_full` both completed their LP, NIH appendix, visual dependence, counterfactual, A/B-swap, paraphrase, and summarize stages. Fresh summaries now report `14/27` complete rows, `0` partial rows, and `0/18` module-combo rows. Training continues with `sameq_cf_10` on GPU0 and `sameq_cf_20` on GPU1; postprocess lanes are waiting for those trainings, while module-combo lanes remain correctly blocked by high GPU memory.
-- 2026-07-05T11:36:00+08:00 User refined monitoring cadence: while queues are stable, reduce routine checks from hourly to roughly every two hours; increase cadence only around training completion, postprocess/module handoff, failures, partial-row stalls, or GPU/process anomalies. Updated `task_plan.md` execution resources to match this policy.
-- 2026-07-05T15:03:03+08:00 Immediate CVCP/CCSH status check after the interrupted long sleep: fresh summaries report `17/27` full rows complete, `1` partial row, and `0/18` module-combo rows. Since the last recorded check, `sameq_cf_10`, `sameq_cf_20`, and `sameq_cf_30` completed end-to-end. GPU0 is training `k4_cf_20_tw` after `sameq_cf_30`; GPU1 is training `k4_cf_30_tw` after `k4_cf_20`. `k4_cf_20` has completed training and LP/NIH appendix, and is in visual/postprocess diagnostics, so monitoring is temporarily dense until that partial row closes. Module combo lanes still wait under the high-memory gate.
-- 2026-07-05T15:49:08+08:00 Dense partial-row check: summaries remain `17/27` complete with `k4_cf_20` as the only partial row. `k4_cf_20` has now completed LP, NIH appendix, visual-dependence, and primary counterfactual diagnostics; it is running A/B-swap counterfactual after generating the swap JSONL/config. Training lanes are still healthy: GPU0 on `k4_cf_20_tw`, GPU1 on `k4_cf_30_tw`. Module-combo rows remain gated by training/postprocess memory pressure.
-- 2026-07-05T16:19:48+08:00 `k4_cf_20` closed end-to-end after A/B-swap, paraphrase, and summarize. Fresh summaries report `18/27` complete rows, `0` partial rows, and `0/18` module-combo rows. GPU0 continues training `k4_cf_20_tw`; GPU1 continues training `k4_cf_30_tw`. Postprocess lanes are waiting for those two trainings, and module-combo lanes remain correctly gated by current training memory. With no partial rows or failures, monitoring returns to the stable two-hour cadence.
-- 2026-07-05T18:20:30+08:00 Stable two-hour CVCP/CCSH check: `k4_cf_20_tw` completed end-to-end, raising the summary to `19/27` complete rows. `k4_cf_30_tw` completed training and is now the only partial row; LP, NIH appendix, and visual-dependence are done, with primary counterfactual running. Training queues advanced to `dual_light` on GPU0 and `dual_img_heavy` on GPU1. Module-combo lanes continue to wait under high-memory gating. Monitoring is temporarily dense again until `k4_cf_30_tw` closes.
-- 2026-07-05T19:06:13+08:00 Dense postprocess check: `k4_cf_30_tw` closed end-to-end, and summaries now report `20/27` complete rows. `dual_light` finished training at `18:41:04` and is the only partial row after LP and NIH appendix; visual-dependence is running. Training queues advanced to `dual_answer_heavy` on GPU0 while GPU1 continues `dual_img_heavy`. Module-combo rows remain held by memory gates.
-- 2026-07-05T19:52:00+08:00 User clarified the monitoring policy again: check every two hours by directly executing a sleep command after each check, and do not create any automation/scheduler. Updated `task_plan.md` accordingly. The most recent check before this policy update showed `20/27` complete rows, `dual_light` as the only partial row, and `0/18` module-combo rows; from here the loop uses direct `Start-Sleep -Seconds 7200` between checks.
-- 2026-07-06T00:40:06+08:00 Manual two-hour-loop check after the interrupted sleep continuation. Fresh summaries report `25/27` full rows complete, `1` partial row, and `6/18` module-combo rows complete. Training queues have advanced through `dual_answer_heavy`, `dual_img_heavy`, `dual_balanced`, and `sameq_tw_visual`; GPU1 training queue is done after `k4_tw_visual`, while GPU0 is still running `cvcp_tw_visual`. The active partial row is `k4_tw_visual`, which has completed LP, NIH appendix, and visual-dependence and is running counterfactual diagnostics. Module-combo queues have started real work after memory windows opened, including completed `sameq_ceq`, `shufk_ceq`, `cvcp_ceq_ccsh`, and `sameq_hnmb` stages; the current module lane is `ceq_hnmb_ccsh` embedding export. Next monitoring step uses direct `Start-Sleep -Seconds 7200`.
-- 2026-07-06T02:41:01+08:00 Two-hour manual check reached full queue completion. Fresh summaries report `27/27` CVCP/CCSH training rows complete, `0` partial rows, and `18/18` module-combo rows complete. GPU0 and GPU1 both report `0 MiB` and `0%` utilization. Training logs show both lanes ended with `QUEUE_DONE`, postprocess logs show both lanes ended with `QUEUE_DONE`, and module-combo logs show both lanes ended with `QUEUE_DONE`. Next phase is final summarization/audit, source markdown write-back, and fresh post-edit verification rather than another sleep interval.
-- 2026-07-06T02:50:00+08:00 Ran final CVCP/CCSH summarizers and audits after queue completion: `summarize_cvcp_ccsh_results.py` reported `27/27`, `summarize_cvcp_ccsh_module_combos.py` reported `18/18`, `audit_vlm_teacher_comparison.py` wrote 9 model rows with 5 supported/local-compatible rows, requirement ledger refreshed with 239 rows, and readiness audit refreshed with 56 rows. Appended final closure marker `CVCP_CCSH_FINAL_EXECUTION_CLOSURE_20260706` to `vivid_med_cvcp_ccsh_full_next_experiment_plan.md`, updated `docs/README.md`, `task_plan.md`, and `findings.md`, then created and ran `scripts/audit_cvcp_ccsh_completion.py --fail-on-open`; it wrote `outputs/final_tables/cvcp_ccsh_completion_audit.{csv,md}` with `24/24` audit rows completed.
+# VSL-CXR v5 Progress Log
+
+## 2026-07-11 Repository Storage Cleanup
+
+- Loaded `using-superpowers`, `planning-with-files`, and `neat-freak` guidance.
+- Ran planning session catchup and reviewed `docs/README.md`, `task_plan.md`, `findings.md`, `progress.md`, and `README.md`.
+- Began live disk-usage, Git-state, artifact-reference, and documentation inventory before deletion.
+- The first combined planning-file patch failed because `progress.md` has the title `# VSL-CXR v5 Progress Log`, not `# Progress`; inspected the actual heading and applied a corrected patch.
+- Inventory measured `outputs/` at 897.625 GiB, `data/` at 152.594 GiB, `.git/objects` at 124.305 GiB, `vivid_env/` at 5.938 GiB, and `History/` at 1.926 GiB.
+- Classified 893.666 GiB of output `.pt` files, 1.918 GiB of historical `.pt` files, the local virtual environment, temporary upload staging, and unreachable Git objects for cleanup; preserved medical data, base pretrained models, final tables, metrics, configs, logs, and plots.
+- Wrote `docs/storage_cleanup_manifest_20260711.csv` and updated the artifact-boundary documentation before deletion.
+- Deleted 1,639 `.pt` files from `outputs/` and `History/` after resolved-path boundary validation, reclaiming 895.719 GiB from those weights alone.
+- Removed the recreatable `vivid_env/` and temporary `.remote_upload_tmp/` directories.
+- Expired local reflogs and completed `git gc --prune=now`; `.git` fell from 124.305 GiB to 1.070 GiB. `git fsck --full` passed; `git count-objects -vH` reports zero loose and garbage objects.
+- Final affected-directory sizes: `outputs/` 3.825 GiB, `History/` 0.007 GiB, `.git` 1.070 GiB, `pretrained/` preserved at 0.958 GiB, and `experiments/` preserved at 0.498 GiB. Approximate total reclaimed space: 1,024.9 GiB (about 1.00 TiB).
+- Rebuilt the VSL evidence tables successfully after cleanup: formal 33/33, CEQ 5/5, CCSH 9/9, AUCH 1/1, Phase 5 6 rows, external 8 rows/5 appendix-completed, and locked final 8 rows with `VSL-Full` as integrated finalist.
+- Preserved all pre-existing dirty-worktree source/config/doc changes; no commit or push was performed.
+
+## 2026-07-07
+
+- Started VSL-CXR v5 execution under `planning-with-files` after skill pre-flight and memory lookup.
+- Ran session catchup; it produced no blocking unsynced-context output.
+- Confirmed current Git branch/status before edits: `main...origin/main`, with `vivid_med_vsl_cxr_full_experiment_plan_v5.md` untracked.
+- Read current `docs/README.md`, root `README.md`, old planning files, existing `History/`, and the full v5 source plan.
+- Identified stale active navigation: previous planning files and docs still pointed to SAMEQ-CVCP v4 / CVCP-CCSH / remote upload work.
+- Created archive directory `History/20260707_vsl_cxr_project_organization/`.
+- Moved old root planning state and older root-level experiment/proposal/handoff markdowns into the archive directory.
+- Created fresh VSL-CXR planning files: `task_plan.md`, `findings.md`, and `progress.md`.
+- Created archive manifest `History/20260707_vsl_cxr_project_organization/README.md`.
+- Created `docs/vsl_cxr_requirement_ledger.md` from the v5 formal plan.
+- Updated `docs/README.md` and root `README.md` so the active entry point is VSL-CXR v5.
+- Added an `Active Execution Status` section to `vivid_med_vsl_cxr_full_experiment_plan_v5.md` with source-of-truth, reuse, monitoring, and final-verification rules.
+- Added `scripts/audit_vsl_cxr_readiness.py`; compiled and ran it to generate `docs/vsl_cxr_readiness_audit.md` and `outputs/final_tables/vsl_cxr_readiness_audit.csv`.
+- Initial readiness audit found 5 exact v5 scripts, 24 missing exact scripts with analogs, D6/D9 missing candidates, and historical final tables that require v5 remapping before reuse.
+- Added `scripts/generate_vsl_4class_labels.py`; generated D6 VSL-4class train/val JSONL and summary/manual-audit outputs.
+- Added `scripts/audit_vsl_data_quality.py`; structural audit passed with 11149/11149 train and 1600/1600 val rows accepted.
+- Patched D6 generation so `uncertain` rows normalize `state=uncertain`; reran D6 generation, structural audit, and readiness audit.
+- Readiness audit now reports 8 exact v5 scripts, 21 missing exact scripts with analogs, and D6 as candidate VSL schema; only D9 remains without a data candidate.
+- Added `scripts/train_vsl_cxr.py` and `configs/qwen3vl_instruction/vsl_cxr/debug_vsl_4class.yaml`.
+- Ran `python scripts\train_vsl_cxr.py --config configs\qwen3vl_instruction\vsl_cxr\debug_vsl_4class.yaml --debug`; debug smoke completed with `global_step=1`, `best_val_loss=7.349977970123291`, 4 train records, and 2 val records.
+- Verified debug package under `outputs/qwen3vl_instruction_runs/vsl_cxr_d6_vsl4_debug/` with `config_snapshot.json`, `metrics_final.json`, `metrics_step_1.json`, `progress.json`, `runtime_summary.json`, and `training_log.txt`.
+- Post-smoke `nvidia-smi` initially reached an idle window, but the final verification showed GPU0 running a non-VSL local `scripts/serve_local_hf_openai.py` service for `Qwen3.5-0.8B` at about `1785 MiB`; GPU1 remained free at `0 MiB`. Do not claim both GPUs free until GPU0 service is stopped or explicitly excluded.
+- Added `scripts/generate_vsl_full_dataset.py` and generated D9 VSL-full artifacts: 18000 train instruction rows, 2000 val instruction rows, 13833/500 CEQ companion rows, and 28166/500 CCSH companion rows.
+- Extended `scripts/audit_vsl_data_quality.py` with `--schema d9` for mixed-supervision instruction rows.
+- First D9 audit failed due `missing_source` on HNMB rows; patched `generate_vsl_full_dataset.py` to normalize `source` from older provenance fields and reran.
+- D9 structural audit then passed with 18000/18000 train and 2000/2000 val accepted; summary written to `outputs/final_tables/vsl_cxr_d9_data_quality_summary.md`.
+- Added `scripts/train_vsl_full.py` and `configs/qwen3vl_instruction/vsl_cxr/debug_vsl_full.yaml`.
+- Ran D9 debug smoke with `python scripts\train_vsl_full.py --config configs\qwen3vl_instruction\vsl_cxr\debug_vsl_full.yaml --debug`; it completed with `global_step=1` and `best_val_loss=9.204761981964111`.
+- Added formal B7 config `configs/qwen3vl_instruction/vsl_cxr/vsl_4class.yaml` with F-drive output root and GPU1.
+- Launched formal B7 VSL-4class via hidden `Start-Process`; live process PID is `26240`, command `python scripts\train_vsl_cxr.py --config configs\qwen3vl_instruction\vsl_cxr\vsl_4class.yaml`.
+- Verified active B7 output root `F:\Xiyao_Wang\021_260129VIVID_vsl_cxr_outputs\qwen3vl\vsl_cxr_d6_vsl4` contains config/progress/log files, and `progress.json` reached at least `global_step=175/5000`.
+- Dense first-eval monitoring: B7 reached `global_step=500`, completed the 1000-row validation pass with `val_loss=0.6003475424525095`, and resumed training through at least `global_step=825/5000`.
+- Current GPU/process boundary after dense check: GPU1 runs B7 PID `26240` at about `8853 MiB`; GPU0 has a non-VSL local `serve_local_hf_openai.py` service at about `1785 MiB`.
+- Post-compaction verification ran `python -m py_compile` on the new VSL-CXR audit/generation/training scripts with no compile errors.
+- B7 second dense handoff check: `progress.json` reached `global_step=1000`, wrote `metrics_step_1000.json`, completed validation with `val_loss=0.5235666893760499`, and resumed training through at least `global_step=1200/5000`.
+- Process verification during the second check showed B7 PID `26240` still responding; GPU1 remained active at about `8853 MiB` while GPU0 still had the non-VSL local Python service at about `1785 MiB`.
+- Reran `python scripts\audit_vsl_cxr_readiness.py` after source-plan write-back; readiness remained stable at 67 rows with `exact_exists=9`, `candidate_vsl_schema=4`, and `missing=3`.
+- Later GPU query showed GPU0 released to `0 MiB`; GPU1 continued B7 PID `26240` at about `8853 MiB`.
+- B7 third dense handoff check: `training_log.txt` wrote `global_step=1500`, `metrics_step_1500.json`, and validation `val_loss=0.5967676737032307`; training resumed through at least `global_step=1900/5000`.
+- Final dense handoff check for this turn: `training_log.txt` wrote `global_step=2000`, `metrics_step_2000.json`, and validation `val_loss=0.3948386136543704`; training resumed through at least `global_step=2125/5000`.
+- Continued B7 monitoring: `metrics_step_2500.json` was written with `val_loss=0.5731672507374606`; training resumed through at least `global_step=2975/5000`.
+- Added `scripts/generate_vsl_label_variants.py` plus formal configs `configs/qwen3vl_instruction/vsl_cxr/vsl_2class.yaml` and `configs/qwen3vl_instruction/vsl_cxr/vsl_3class.yaml`.
+- Ran `python scripts\generate_vsl_label_variants.py`; generated `outputs/instruction_data/vsl_cxr/d6_vsl_2class_{train,val}.jsonl` with 6000/800 rows and `d6_vsl_3class_{train,val}.jsonl` with 8149/1200 rows.
+- Ran `python -m py_compile scripts\generate_vsl_label_variants.py scripts\train_vsl_cxr.py scripts\audit_vsl_data_quality.py`; no compile errors.
+- Ran VSL-2class structural audit with `--fail-on-error`; train accepted 6000/6000 and val accepted 800/800, writing `outputs/final_tables/vsl_cxr_d6_vsl2_data_quality_summary.md`.
+- Ran VSL-3class structural audit with `--fail-on-error`; train accepted 8149/8149 and val accepted 1200/1200, writing `outputs/final_tables/vsl_cxr_d6_vsl3_data_quality_summary.md`.
+- Launched formal Phase 2 VSL-2class with `python scripts\train_vsl_cxr.py --config configs\qwen3vl_instruction\vsl_cxr\vsl_2class.yaml`; PID `22216`, stdout `outputs/logs/vsl_cxr_phase2_vsl2_gpu0_20260707T030148.out.log`, stderr `outputs/logs/vsl_cxr_phase2_vsl2_gpu0_20260707T030148.err.log`.
+- Verified VSL-2class output root `F:\Xiyao_Wang\021_260129VIVID_vsl_cxr_outputs\qwen3vl\vsl_cxr_d6_vsl2` contains config/progress/log files and reached at least `global_step=100/5000`.
+- Continued dense monitoring: B7 wrote evals through step 5000 and completed with `best_val_loss=0.3948386136543704`; final evidence exists at `F:\Xiyao_Wang\021_260129VIVID_vsl_cxr_outputs\qwen3vl\vsl_cxr_d6_vsl4\metrics_final.json`, `runtime_summary.json`, and `checkpoints\final.pt`.
+- Continued dense monitoring: VSL-2class wrote evals through step 5000 and completed with `best_val_loss=0.04671015161014566`; final evidence exists at `F:\Xiyao_Wang\021_260129VIVID_vsl_cxr_outputs\qwen3vl\vsl_cxr_d6_vsl2\metrics_final.json`, `runtime_summary.json`, and `checkpoints\final.pt`.
+- Added `scripts/build_vsl_results_table.py`; ran `python scripts\build_vsl_results_table.py`, producing `outputs/final_tables/vsl_cxr_formal_run_results.csv` and `.md` with 3 rows and 2 completed runs.
+- Launched formal Phase 2 VSL-3class with `python scripts\train_vsl_cxr.py --config configs\qwen3vl_instruction\vsl_cxr\vsl_3class.yaml`; PID `9052`, stdout `outputs/logs/vsl_cxr_phase2_vsl3_gpu0_20260707T033325.out.log`, stderr `outputs/logs/vsl_cxr_phase2_vsl3_gpu0_20260707T033325.err.log`.
+- Verified VSL-3class output root `F:\Xiyao_Wang\021_260129VIVID_vsl_cxr_outputs\qwen3vl\vsl_cxr_d6_vsl3` contains config/progress/log files and reached at least `global_step=425/5000`.
+- Reran `python scripts\build_vsl_results_table.py`; current result table has 3 rows and 2 completed runs.
+- Reran `python scripts\audit_vsl_cxr_readiness.py`; readiness reported `wrote_rows=67`, `exact_exists=10`, `missing_exact_analogs_exist=19`.
+- VSL-3class dense handoff wrote step 500 `val_loss=0.2733266034766566`, step 1000 `val_loss=0.26886525302077646`, and step 1500 `val_loss=0.6412859738743573`; training resumed through at least `global_step=1550/5000`.
+- Latest GPU boundary during VSL-3class handoff: GPU0 runs VSL-3class PID `9052` at about `8799 MiB`; GPU1 has an unrelated Python service at about `1785 MiB`.
+- VSL-3class wrote step 2000 `val_loss=0.2681679199063801` and step 2500 `val_loss=0.3237449594446225`; training resumed through at least `global_step=2725/5000`.
+- Patched `scripts/generate_vsl_label_variants.py` with `vsl_4class_balanced` equal-class sampling and added `configs/qwen3vl_instruction/vsl_cxr/vsl_4class_balanced.yaml`.
+- Ran `python scripts\generate_vsl_label_variants.py --variants vsl_4class_balanced`; generated 8596 train rows with 2149 per class and 1600 val rows with 400 per class.
+- Ran VSL-4class-balanced structural audit with `--fail-on-error`; train accepted 8596/8596 and val accepted 1600/1600, writing `outputs/final_tables/vsl_cxr_d6_vsl4_balanced_data_quality_summary.md`.
+- Launched formal Phase 2 VSL-4class-balanced with `python scripts\train_vsl_cxr.py --config configs\qwen3vl_instruction\vsl_cxr\vsl_4class_balanced.yaml`; PID `6384`, stdout `outputs/logs/vsl_cxr_phase2_vsl4_balanced_gpu1_20260707T034843.out.log`, stderr `outputs/logs/vsl_cxr_phase2_vsl4_balanced_gpu1_20260707T034843.err.log`.
+- Verified VSL-4class-balanced output root `F:\Xiyao_Wang\021_260129VIVID_vsl_cxr_outputs\qwen3vl\vsl_cxr_d6_vsl4_balanced` contains config/progress/log files and reached at least `global_step=50/5000`.
+- VSL-3class completed at `global_step=5000` with `best_val_loss=0.14087300902791322`; final evidence exists at `F:\Xiyao_Wang\021_260129VIVID_vsl_cxr_outputs\qwen3vl\vsl_cxr_d6_vsl3\metrics_final.json`, `runtime_summary.json`, and `checkpoints\final.pt`.
+- A transient `Get-Content` ProviderContentReadError occurred while reading a log file during active writes; subsequent metrics-file checks succeeded and the run completed normally.
+- Reran `python scripts\build_vsl_results_table.py`; current result table has 4 rows and 3 completed runs.
+- Patched `scripts/generate_vsl_label_variants.py` with `vsl_4class_field_balanced` finding-balanced sampling and added `configs/qwen3vl_instruction/vsl_cxr/vsl_4class_field_balanced.yaml`.
+- Ran `python scripts\generate_vsl_label_variants.py --variants vsl_4class_field_balanced`; generated 5382 train rows and 767 val rows across 13 findings.
+- Ran VSL-4class-field-balanced structural audit with `--fail-on-error`; train accepted 5382/5382 and val accepted 767/767, writing `outputs/final_tables/vsl_cxr_d6_vsl4_field_balanced_data_quality_summary.md`.
+- VSL-4class-balanced wrote step 2000 `val_loss=0.5415896703147446`; training resumed through at least `global_step=2100/5000`.
+- Launched formal Phase 2 VSL-4class-field-balanced with `python scripts\train_vsl_cxr.py --config configs\qwen3vl_instruction\vsl_cxr\vsl_4class_field_balanced.yaml`; PID `24488`, stdout `outputs/logs/vsl_cxr_phase2_vsl4_field_balanced_gpu0_20260707T041258.out.log`, stderr `outputs/logs/vsl_cxr_phase2_vsl4_field_balanced_gpu0_20260707T041258.err.log`.
+- Verified VSL-4class-field-balanced output root `F:\Xiyao_Wang\021_260129VIVID_vsl_cxr_outputs\qwen3vl\vsl_cxr_d6_vsl4_field_balanced` contains config/progress/log files and reached at least `global_step=50/5000`.
+- Post-compaction session catchup produced no blocking unsynced-context output.
+- Dense monitor check: VSL-4class-balanced wrote step 2500 `val_loss=0.6033141188775771` and resumed training through at least `global_step=2600/5000`.
+- Dense monitor check: VSL-4class-field-balanced wrote step 500 `val_loss=0.614734708572628` and step 1000 `val_loss=0.5345917739312526`, then resumed training.
+- GPU process boundary after this check showed VSL PID `24488` on GPU0 and VSL PID `6384` on GPU1; the earlier unrelated GPU1 Python service was no longer listed by `nvidia-smi`.
+- Reran `python scripts\build_vsl_results_table.py`; current formal result table has 5 rows and 3 completed runs.
+- Reran `python scripts\audit_vsl_cxr_readiness.py`; readiness reported `wrote_rows=67`, `exact_exists=10`, `candidate_qa_schema=10`, and `missing=3`.
+- Dense monitor check: VSL-4class-balanced wrote evals through step 3500 and resumed past `global_step=3700/5000`; VSL-4class-field-balanced wrote evals through step 3000 and resumed past `global_step=3100/5000`.
+- Dense monitor check: VSL-4class-balanced wrote step 4000 `val_loss=0.4733143698232016` and step 4500 `val_loss=0.46450826864968986`; VSL-4class-field-balanced wrote step 3500 `val_loss=0.42705284517231677`, step 4000 `val_loss=0.41635908745289957`, and step 4500 `val_loss=0.39929727961842304`.
+- VSL-4class-field-balanced completed at `global_step=5000` with `best_val_loss=0.34942927536666346`; final evidence exists at `F:\Xiyao_Wang\021_260129VIVID_vsl_cxr_outputs\qwen3vl\vsl_cxr_d6_vsl4_field_balanced\metrics_final.json`, `runtime_summary.json`, and `checkpoints\final.pt`.
+- VSL-4class-balanced completed at `global_step=5000` with `best_val_loss=0.4522515568471281`; final evidence exists at `F:\Xiyao_Wang\021_260129VIVID_vsl_cxr_outputs\qwen3vl\vsl_cxr_d6_vsl4_balanced\metrics_final.json`, `runtime_summary.json`, and `checkpoints\final.pt`.
+- Reran `python scripts\build_vsl_results_table.py`; current formal result table has 5 rows and 5 completed runs.
+- Reran `python scripts\audit_vsl_cxr_readiness.py`; readiness remained stable at `wrote_rows=67`, `exact_exists=10`, and `missing=3`.
+- GPU process check after both balanced runs completed returned no active compute-app rows, so no VSL training process remained on GPU0/GPU1 at this boundary.
+- Patched `data/clinical_instruction_dataset.py` to expose canonical VSL labels and single-token ids for support/contradict/uncertain/insufficient.
+- Patched `scripts/train_qwen3vl_clinical_instruction.py` with optional `training.hierarchical_vsl_loss`; metrics now log `hier_answerable_loss`, `hier_support_contradict_loss`, `hier_uncertain_loss`, and `hierarchical_vsl_loss` when enabled.
+- Added formal config `configs/qwen3vl_instruction/vsl_cxr/vsl_hierarchical.yaml`.
+- Ran `python -m py_compile data\clinical_instruction_dataset.py scripts\train_qwen3vl_clinical_instruction.py scripts\train_vsl_cxr.py`; no compile errors.
+- Ran `python scripts\train_vsl_cxr.py --config configs\qwen3vl_instruction\vsl_cxr\vsl_hierarchical.yaml --debug`; debug smoke completed with `global_step=1` and `best_val_loss=7.492093324661255`.
+- Launched formal Phase 2 VSL-hierarchical with `python scripts\train_vsl_cxr.py --config configs\qwen3vl_instruction\vsl_cxr\vsl_hierarchical.yaml`; PID `14780`, stdout `outputs/logs/vsl_cxr_phase2_vsl_hierarchical_gpu1_20260707T045532.out.log`, stderr `outputs/logs/vsl_cxr_phase2_vsl_hierarchical_gpu1_20260707T045532.err.log`.
+- Verified VSL-hierarchical output root `F:\Xiyao_Wang\021_260129VIVID_vsl_cxr_outputs\qwen3vl\vsl_cxr_d6_vsl4_hierarchical` contains config/progress/log files and hierarchy loss metrics.
+- VSL-hierarchical wrote step 500 `val_loss=0.5881960963994497` and step 1000 `val_loss=0.7123697058961843`.
+- A formal-table refresh briefly counted the `_debug` hierarchical smoke as a completed formal row; patched `scripts\build_vsl_results_table.py` to exclude `_debug` run directories.
+- Reran `python -m py_compile scripts\build_vsl_results_table.py scripts\train_qwen3vl_clinical_instruction.py data\clinical_instruction_dataset.py`; no compile errors.
+- Reran `python scripts\build_vsl_results_table.py`; current formal result table has 6 rows and 5 completed runs.
+- Reran `python scripts\audit_vsl_cxr_readiness.py`; readiness remained stable at `wrote_rows=67`, `exact_exists=10`, and `missing=3`.
+- VSL-hierarchical completed at `global_step=5000` with `best_val_loss=0.47355849220942764`; final evidence exists at `F:\Xiyao_Wang\021_260129VIVID_vsl_cxr_outputs\qwen3vl\vsl_cxr_d6_vsl4_hierarchical\metrics_final.json`, `runtime_summary.json`, and `checkpoints\final.pt`.
+- Reran `python scripts\build_vsl_results_table.py`; current formal result table has 6 rows and 6 completed runs.
+- Reran `python scripts\audit_vsl_cxr_readiness.py`; readiness remained stable at `wrote_rows=67`, `exact_exists=10`, and `missing=3`.
+- GPU process check after VSL-hierarchical completion returned no active compute-app rows, so no VSL training process remained on GPU0/GPU1 at this boundary.
+- Updated `README.md`, `docs/README.md`, `docs/vsl_cxr_requirement_ledger.md`, `task_plan.md`, `findings.md`, `progress.md`, and `vivid_med_vsl_cxr_full_experiment_plan_v5.md` to mark VSL-hierarchical completed.
+- Reran `python scripts\build_vsl_results_table.py` after the source-doc sync; it reported `rows=6`, `completed=6`.
+- Reran `python scripts\audit_vsl_cxr_readiness.py` after the source-doc sync; readiness remained stable at `wrote_rows=67`, `exact_exists=10`, and `missing=3`.
+- GPU process check after the source-doc sync returned no active compute-app rows.
+- Created Phase 1 baseline configs for B1-B6 under `configs/qwen3vl_instruction/vsl_cxr/phase1_baselines/`.
+- First Phase 1 config-validation attempt used Bash heredoc syntax and failed in PowerShell; reran with a PowerShell here-string and validated all six configs, with all target output directories absent before launch.
+- Launched formal Phase 1 B1 Basic-QA with `python scripts\train_vsl_cxr.py --config configs\qwen3vl_instruction\vsl_cxr\phase1_baselines\b1_basic_qa.yaml`; PID `23488`, stdout `outputs/logs/vsl_cxr_phase1_b1_basic_qa_gpu0_20260707T055953.out.log`, stderr `outputs/logs/vsl_cxr_phase1_b1_basic_qa_gpu0_20260707T055953.err.log`.
+- Launched formal Phase 1 B2 CF-QA with `python scripts\train_vsl_cxr.py --config configs\qwen3vl_instruction\vsl_cxr\phase1_baselines\b2_cf_qa.yaml`; PID `13184`, stdout `outputs/logs/vsl_cxr_phase1_b2_cf_qa_gpu1_20260707T055953.out.log`, stderr `outputs/logs/vsl_cxr_phase1_b2_cf_qa_gpu1_20260707T055953.err.log`.
+- Verified B1 and B2 output roots contain config/progress files; both reached at least `global_step=25/5000`.
+- Reran `python scripts\build_vsl_results_table.py`; current formal result table has 8 rows, 6 completed and 2 in progress.
+- Updated active docs and v5 source plan to record B1/B2 active and B3-B6 config-prepared state.
+- Reran `python scripts\build_vsl_results_table.py` after the B1/B2 source-doc sync; it reported `rows=8`, `completed=6`.
+- Reran `python scripts\audit_vsl_cxr_readiness.py` after the B1/B2 source-doc sync; readiness remained stable at `wrote_rows=67`, `exact_exists=10`, and `missing=3`.
+- Dense launch check: B1 reached at least `global_step=300/5000`; B2 reached at least `global_step=250/5000`.
+- Dense first-eval check: B1 wrote step 500 `val_loss=0.029250623574480415` and step 1000 `val_loss=0.02628624876588583`, then resumed training through at least `global_step=1475/5000`.
+- Dense first-eval check: B2 wrote step 500 `val_loss=0.2498006151431282`; its step 1000 validation was confirmed active in stderr, then completed with `val_loss=0.15116162610249104` and resumed training through at least `global_step=1100/5000`.
+- Thirty-minute monitor check: B1 reached `global_step=5000` after evals through step 4500; B2 reached step 3500 eval `val_loss=0.14355185408559282` and resumed training through at least `global_step=3725/5000`.
+- B1 final handoff completed with `best_val_loss=0.023826396770775318`; final evidence exists at `F:\Xiyao_Wang\021_260129VIVID_vsl_cxr_outputs\qwen3vl\vsl_cxr_b1_basic_qa\metrics_final.json`, `runtime_summary.json`, and `checkpoints\final.pt`.
+- Launched formal Phase 1 B3 SAMEQ with `python scripts\train_vsl_cxr.py --config configs\qwen3vl_instruction\vsl_cxr\phase1_baselines\b3_sameq.yaml`; PID `29500`, stdout `outputs/logs/vsl_cxr_phase1_b3_sameq_gpu0_20260707T064825.out.log`, stderr `outputs/logs/vsl_cxr_phase1_b3_sameq_gpu0_20260707T064825.err.log`.
+- Verified B3 output root contains config/progress files and reached at least `global_step=175/5000`.
+- Reran `python scripts\build_vsl_results_table.py`; current formal result table has 9 rows, 7 completed and 2 in progress.
+- Updated active docs and v5 source plan to mark B1 completed, B2/B3 active, and B4-B6 prepared.
+- Reran `python scripts\build_vsl_results_table.py` after the B1/B3 source-doc sync; it reported `rows=9`, `completed=7`.
+- Reran `python scripts\audit_vsl_cxr_readiness.py` after the B1/B3 source-doc sync; readiness remained stable at `wrote_rows=67`, `exact_exists=10`, and `missing=3`.
+- Dense monitor check: B2 evals exist through step 3500 with latest `val_loss=0.14355185408559282`; B3 resumed training through at least `global_step=300/5000`.
+- Ten-minute monitor check: B2 reached step 4500 eval `val_loss=0.12107860860688788`; B3 wrote step 500 `val_loss=0.38360859186151713` and step 1000 `val_loss=0.24479191450511487`, then resumed training through at least `global_step=1100/5000`.
+- B2 final handoff completed with `best_val_loss=0.12035670908632119`; final evidence exists at `F:\Xiyao_Wang\021_260129VIVID_vsl_cxr_outputs\qwen3vl\vsl_cxr_b2_cf_qa\metrics_final.json`, `runtime_summary.json`, and `checkpoints\final.pt`.
+- Launched formal Phase 1 B4 SAMEQ-CF with `python scripts\train_vsl_cxr.py --config configs\qwen3vl_instruction\vsl_cxr\phase1_baselines\b4_sameq_cf.yaml`; PID `35368`, stdout `outputs/logs/vsl_cxr_phase1_b4_sameq_cf_gpu1_20260707T071329.out.log`, stderr `outputs/logs/vsl_cxr_phase1_b4_sameq_cf_gpu1_20260707T071329.err.log`.
+- Verified B4 output root contains config/progress files and reached at least `global_step=175/5000`.
+- Reran `python scripts\build_vsl_results_table.py`; current formal result table has 10 rows, 8 completed and 2 in progress.
+- Updated active docs and v5 source plan to mark B2 completed and B3/B4 active.
+- Reran `python scripts\build_vsl_results_table.py` after the B2/B4 source-doc sync; it reported `rows=10`, `completed=8`.
+- Reran `python scripts\audit_vsl_cxr_readiness.py` after the B2/B4 source-doc sync; readiness remained stable at `wrote_rows=67`, `exact_exists=10`, and `missing=3`.
+- Dense monitor check: B3 evals exist through step 2000 with latest `val_loss=0.19434519259354438` and resumed through at least `global_step=2400/5000`; B4 resumed training through at least `global_step=250/5000`.
+- Twenty-minute monitor check: B3 evals reached step 4000 and B4 evals reached step 2000; B3 then reached `global_step=5000` and entered final handoff.
+- B3 final handoff completed with `best_val_loss=0.17672864127079244`; final evidence exists at `F:\Xiyao_Wang\021_260129VIVID_vsl_cxr_outputs\qwen3vl\vsl_cxr_b3_sameq\metrics_final.json`, `runtime_summary.json`, and `checkpoints\final.pt`.
+- Launched formal Phase 1 B5 SAMEQ-K4 with `python scripts\train_vsl_cxr.py --config configs\qwen3vl_instruction\vsl_cxr\phase1_baselines\b5_sameq_k4.yaml`; PID `17368`, stdout `outputs/logs/vsl_cxr_phase1_b5_sameq_k4_gpu0_20260707T075138.out.log`, stderr `outputs/logs/vsl_cxr_phase1_b5_sameq_k4_gpu0_20260707T075138.err.log`.
+- Verified B5 output root contains config/progress files and reached at least `global_step=225/5000`.
+- Reran `python scripts\build_vsl_results_table.py`; current formal result table has 11 rows, 9 completed and 2 in progress.
+- Updated active docs and v5 source plan to mark B3 completed and B4/B5 active.
+- Reran `python scripts\build_vsl_results_table.py` after the B3/B5 source-doc sync; it reported `rows=11`, `completed=9`.
+- Reran `python scripts\audit_vsl_cxr_readiness.py` after the B3/B5 source-doc sync; readiness remained stable at `wrote_rows=67`, `exact_exists=10`, and `missing=3`.
+- Dense monitor check: B4 wrote step 2500 `val_loss=0.25917803262511735` and resumed training; B5 resumed through at least `global_step=350/5000`.
+- Twenty-minute monitor check: B4 evals reached step 3500, B5 evals reached step 1000, and both continued normally.
+- B4 final handoff completed with `best_val_loss=0.21318705889705136`; final evidence exists at `F:\Xiyao_Wang\021_260129VIVID_vsl_cxr_outputs\qwen3vl\vsl_cxr_b4_sameq_cf\metrics_final.json`, `runtime_summary.json`, and `checkpoints\final.pt`.
+- Launched formal Phase 1 B6 SAMEQ-HNMB with `python scripts\train_vsl_cxr.py --config configs\qwen3vl_instruction\vsl_cxr\phase1_baselines\b6_sameq_hnmb.yaml`; PID `20600`, stdout `outputs/logs/vsl_cxr_phase1_b6_sameq_hnmb_gpu1_20260707T092725.out.log`, stderr `outputs/logs/vsl_cxr_phase1_b6_sameq_hnmb_gpu1_20260707T092725.err.log`.
+- Verified B6 output root contains config/progress files and reached at least `global_step=200/5000`.
+- Reran `python scripts\build_vsl_results_table.py`; current formal result table has 12 rows, 10 completed and 2 in progress.
+- Updated active docs and v5 source plan to mark B4 completed and B5/B6 active.
+- Reran `python scripts\build_vsl_results_table.py` after the B4/B6 source-doc sync; it reported `rows=12`, `completed=10`.
+- Reran `python scripts\audit_vsl_cxr_readiness.py` after the B4/B6 source-doc sync; readiness remained stable at `wrote_rows=67`, `exact_exists=10`, and `missing=3`.
+- Dense monitor check: B5 evals exist through step 3000 with latest `val_loss=0.12773469497652912` and resumed through at least `global_step=3225/5000`; B6 resumed through at least `global_step=325/5000`.
+- Twenty-minute monitor check: B5 evals reached step 4500 and B6 evals reached step 1000. A B5 log-tail check used the wrong timestamp first; actual log paths are `outputs/logs/vsl_cxr_phase1_b5_sameq_k4_gpu0_20260707T075138.{out,err}.log`.
+- B5 final handoff completed with `best_val_loss=0.12773469497652912`; final evidence exists at `F:\Xiyao_Wang\021_260129VIVID_vsl_cxr_outputs\qwen3vl\vsl_cxr_b5_sameq_k4\metrics_final.json`, `runtime_summary.json`, and `checkpoints\final.pt`.
+- Reran `python scripts\build_vsl_results_table.py`; current formal result table has 12 rows, 11 completed and 1 in progress.
+- Dense monitor check: B6 evals exist through step 2000 with latest `val_loss=0.12863563075520168` and resumed through at least `global_step=2200/5000`.
+- Updated active docs and v5 source plan to mark B5 completed and B6 as the only active Phase 1 training row.
+- Reran `python scripts\build_vsl_results_table.py` after the B5 source-doc sync; it reported `rows=12`, `completed=11`.
+- Reran `python scripts\audit_vsl_cxr_readiness.py` after the B5 source-doc sync; readiness remained stable at `wrote_rows=67`, `exact_exists=10`, and `missing=3`.
+- Dense monitor check: B6 resumed through at least `global_step=2325/5000`.
+- Twenty-minute monitor check: B6 evals reached step 3500 with `val_loss=0.10433827909352619`.
+- Later dense check: B6 evals reached step 4500 with `val_loss=0.12906648439931798`, then continued to final handoff.
+- B6 final handoff completed with `best_val_loss=0.09585380152730649`; final evidence exists at `F:\Xiyao_Wang\021_260129VIVID_vsl_cxr_outputs\qwen3vl\vsl_cxr_b6_sameq_hnmb\metrics_final.json`, `runtime_summary.json`, and `checkpoints\final.pt`.
+- Reran `python scripts\build_vsl_results_table.py`; current formal training result table has 12 rows and 12 completed runs.
+- Reran `python scripts\audit_vsl_cxr_readiness.py`; readiness remained stable at `wrote_rows=67`, `exact_exists=10`, and `missing=3`.
+- GPU process check after B6 completion returned no active compute-app rows.
+- Added B0 config `configs/qwen3vl_instruction/vsl_cxr/phase1_baselines/b0_raw_vision_lp.yaml` for the formal raw-vision baseline: original Qwen3-VL vision tower, `vision_checkpoint: null`, frozen backbone, and linear-probe readout only.
+- Patched `scripts/build_vsl_results_table.py` so instruction-training runs require `metrics_final.json` plus `checkpoints/final.pt`, while B0-style linear-probe readout runs require `metrics_final.json` plus `final_probe.pt`.
+- Ran `python -m py_compile scripts\build_vsl_results_table.py scripts\train_qwen3vl_vision_lp.py`; no compile errors.
+- Launched B0 Raw-Vision LP with `python scripts\train_qwen3vl_vision_lp.py --config configs\qwen3vl_instruction\vsl_cxr\phase1_baselines\b0_raw_vision_lp.yaml`; GPU0 PID `17352`, stdout `outputs/logs/vsl_cxr_phase1_b0_raw_vision_lp_gpu0_20260707T100922.out.log`, stderr `outputs/logs/vsl_cxr_phase1_b0_raw_vision_lp_gpu0_20260707T100922.err.log`.
+- First B0 monitor check confirmed output files at `F:\Xiyao_Wang\021_260129VIVID_vsl_cxr_outputs\qwen3vl\vsl_cxr_b0_raw_vision_lp`, including `config.yaml`, `resolved_config.json`, and `best_probe.pt`; stdout reached at least `global_step=250`.
+- B0 Raw-Vision LP completed at `global_step=1000` with `best_val_loss=1.5914542600478516`, `final_val_loss=1.6204527318993562`, macro-AUC `0.6790032275900184`, macro-F1 `0.7323508931634031`, and micro-F1 `0.697265625`; final evidence exists at `F:\Xiyao_Wang\021_260129VIVID_vsl_cxr_outputs\qwen3vl\vsl_cxr_b0_raw_vision_lp\metrics_final.json` and `final_probe.pt`.
+- Reran `python scripts\build_vsl_results_table.py`; current formal result table has 13 rows and 13 completed runs.
+- Reran `python scripts\audit_vsl_cxr_readiness.py`; readiness remained stable at `wrote_rows=67`, `exact_exists=10`, and `missing=3`.
+- GPU process check after B0 completion returned no active compute-app rows.
+- Added `scripts/train_vsl_ceq.py` for Phase 3 CEQ variants using Qwen3-VL visual patch tokens, D9 CEQ companion rows, frozen B3/B7 backbones, and CEQ-head-only optimization.
+- Added Phase 3 CEQ configs under `configs/qwen3vl_instruction/vsl_cxr/phase3_ceq/`: `ceq_basic.yaml`, `ceq_diverse.yaml`, `ceq_sparse.yaml`, `ceq_region.yaml`, and `ceq_statement.yaml`.
+- First CEQ debug exposed a bf16/fp32 mismatch in CEQ attention; patched `scripts/train_vsl_ceq.py` to cast patch tokens to float32 before the CEQ head.
+- Second CEQ debug exposed an attempted JSON serialization of the full checkpoint tensor state; stopped debug PID `35756` and patched `scripts/train_vsl_ceq.py` to store checkpoint metadata summaries only.
+- Reran `python scripts\train_vsl_ceq.py --config configs\qwen3vl_instruction\vsl_cxr\phase3_ceq\ceq_basic.yaml --debug`; debug smoke completed at `global_step=2` with `metrics_final.json`, `checkpoints\best.pt`, and `checkpoints\final.pt` under the `_debug` output directory.
+- Launched formal Phase 3 CEQ-basic with `python scripts\train_vsl_ceq.py --config configs\qwen3vl_instruction\vsl_cxr\phase3_ceq\ceq_basic.yaml`; PID `33056`, stdout `outputs/logs/vsl_cxr_phase3_ceq_basic_20260707T102957.out.log`, stderr `outputs/logs/vsl_cxr_phase3_ceq_basic_20260707T102957.err.log`.
+- Launched formal Phase 3 CEQ-diverse with `python scripts\train_vsl_ceq.py --config configs\qwen3vl_instruction\vsl_cxr\phase3_ceq\ceq_diverse.yaml`; PID `29496`, stdout `outputs/logs/vsl_cxr_phase3_ceq_diverse_20260707T102957.out.log`, stderr `outputs/logs/vsl_cxr_phase3_ceq_diverse_20260707T102957.err.log`.
+- CEQ-basic completed at `global_step=1000` with best val loss `1.1079885663837195`, state accuracy `0.512`, binary AUC `0.7680567410478396`, AUPRC `0.6568213969762571`, and final checkpoint/metrics under `F:\Xiyao_Wang\021_260129VIVID_vsl_cxr_outputs\qwen3vl\vsl_cxr_ceq_basic`.
+- CEQ-diverse completed at `global_step=1000` with best val loss `0.8938750104010105`, state accuracy `0.54`, binary AUC `0.6909421615250172`, AUPRC `0.5141692794278574`, and final checkpoint/metrics under `F:\Xiyao_Wang\021_260129VIVID_vsl_cxr_outputs\qwen3vl\vsl_cxr_ceq_diverse`.
+- Launched CEQ-sparse and CEQ-region with logs `outputs/logs/vsl_cxr_phase3_ceq_sparse_20260707T103418.*.log` and `outputs/logs/vsl_cxr_phase3_ceq_region_20260707T103418.*.log`.
+- CEQ-sparse completed at `global_step=1000` with best val loss `0.94581986951828`, state accuracy `0.646`, binary AUC `0.7158374994919318`, and AUPRC `0.6633231868453408`.
+- CEQ-region completed at `global_step=1000` with best val loss `1.1243661365881563`, state accuracy `0.716`, binary AUC `0.8471731089704508`, AUPRC `0.8014489081845343`, ECE `0.08269000466053303`, and region accuracy `0.654`.
+- Launched CEQ-statement on the VSL-4class backbone with log timestamp `20260707T103756`; it completed at `global_step=1000` with best val loss `0.8952740111351013`, state accuracy `0.702`, binary AUC `0.7205218875746859`, and AUPRC `0.716205703116817`.
+- Added `scripts/build_module_results_table.py`; ran `python scripts\build_module_results_table.py`, producing `outputs/final_tables/vsl_cxr_ceq_results.csv` and `.md` with 5 rows and 5 completed CEQ variants.
+- Reran `python scripts\build_vsl_results_table.py`; current formal result table has 18 rows and 18 completed runs.
+- Reran `python scripts\audit_vsl_cxr_readiness.py`; exact v5 scripts increased to 12 and missing-exact analog rows decreased to 17.
+- GPU process check after CEQ-statement completion returned no active compute-app rows.
+- Added `scripts/train_vsl_ccsh.py` for Phase 4 CCSH/AUCH deployable readout variants using D9 CCSH statement pairs and frozen Qwen3-VL backbones.
+- Added Phase 4 configs under `configs/qwen3vl_instruction/vsl_cxr/phase4_ccsh/`: `ccsh_raw.yaml`, `ccsh_sameq.yaml`, `ccsh_sameq_k4.yaml`, `ccsh_hnmb.yaml`, `ccsh_ceq.yaml`, and `auch_ceq_ccsh.yaml`.
+- Ran `python scripts\train_vsl_ccsh.py --config configs\qwen3vl_instruction\vsl_cxr\phase4_ccsh\ccsh_raw.yaml --debug`; debug smoke completed at `global_step=2` with final metrics and final checkpoint under the `_debug` output directory.
+- The first CCSH-Raw/SAMEQ formal attempt produced impossible perfect scores because `label_type` was embedded in the statement representation; patched `scripts\train_vsl_ccsh.py` to remove that leakage source, deleted the invalid generated `vsl_cxr_ccsh_raw` and `vsl_cxr_ccsh_sameq` output directories, and reran no-leak debug successfully.
+- No-leak CCSH-Raw completed at `global_step=1000` with binary AUC `0.8815600000000001`, AUPRC `0.8507778435295084`, accuracy `0.804`, and ECE `0.1564016938265413`.
+- No-leak CCSH-SAMEQ completed at `global_step=1000` with binary AUC `0.895176`, AUPRC `0.8784714795940306`, accuracy `0.828`, and ECE `0.10921547676064075`.
+- CCSH-SAMEQ-K4 completed at `global_step=1000` with binary AUC `0.7883600000000001`, AUPRC `0.7120127432199869`, accuracy `0.732`, and ECE `0.18651148418523372`.
+- CCSH-HNMB completed at `global_step=1000` with binary AUC `0.8353600000000001`, AUPRC `0.7949973637930012`, accuracy `0.78`, and ECE `0.19963750052824616`.
+- CCSH-CEQ completed at `global_step=1000` with binary AUC `0.9059760000000001`, AUPRC `0.8859949035726915`, accuracy `0.82`, and ECE `0.11930484469234945`.
+- AUCH-CEQ-CCSH completed at `global_step=1000` with binary AUC `0.8889679999999999`, AUPRC `0.9005512099194461`, accuracy `0.822`, and ECE `0.13339214762486518`.
+- Extended `scripts\build_module_results_table.py`; at that checkpoint it produced `outputs/final_tables/vsl_cxr_ccsh_results.csv` and `.md` with 6 rows and 6 completed readout rows. This interim state was later superseded by the Phase 4 closure tables with 9/9 CCSH/AUCH+CCSH rows and 1/1 AUCH-only row.
+- Reran `python scripts\build_vsl_results_table.py`; at that checkpoint the formal result table had 24 rows and 24 completed runs. This interim state was later superseded by the refreshed 29/29 formal run table.
+- Reran `python scripts\audit_vsl_cxr_readiness.py`; exact v5 scripts increased to 13 and missing-exact analog rows decreased to 16.
+- Added remaining Phase 4 configs `ccsh_vsl4.yaml`, `auch_ccsh_sameq.yaml`, `auch_vsl4.yaml`, and `auch_sameq.yaml`.
+- Added `scripts/train_vsl_auch.py` for AUCH-only D9 CEQ target readout training; debug smoke completed successfully on `auch_sameq.yaml`.
+- CCSH-VSL4 completed at `global_step=1000` with binary AUC `0.8808239999999999`, AUPRC `0.8600663163097216`, accuracy `0.772`, and ECE `0.14746286206133666`.
+- AUCH-CCSH-SAMEQ completed at `global_step=1000` with binary AUC `0.90072`, AUPRC `0.8938395501978506`, accuracy `0.798`, and ECE `0.1630195039883256`.
+- AUCH-VSL4 completed at `global_step=1000` with binary AUC `0.895976`, AUPRC `0.8707344191804582`, accuracy `0.838`, and ECE `0.11341642936132851`.
+- AUCH-SAMEQ completed at `global_step=1000` with state accuracy `0.596`, answerability AUC `0.5476678876678877`, answerability AUPRC `0.9284813309209423`, uncertainty AUC `0.5466422466422467`, and uncertainty F1 `0.0`.
+- Extended `scripts\build_module_results_table.py`; ran it to produce `outputs/final_tables/vsl_cxr_ccsh_results.csv/.md` with 9 rows and 9 completed CCSH/AUCH+CCSH rows plus `outputs/final_tables/vsl_cxr_auch_results.csv/.md` with 1 completed AUCH-only row.
+- Reran `python scripts\build_vsl_results_table.py`; at Phase 4 closure the formal result table had 28 rows and 28 completed runs. This was later superseded by the Phase 5 refreshed 29/29 table.
+- Reran `python scripts\audit_vsl_cxr_readiness.py`; readiness reported `wrote_rows=67`, `exact_exists=13`, `missing=3`, and `missing_exact_analogs_exist=16`. The three `missing` rows are local external dataset directories for PadChest, MIMIC-CXR, and NIH.
+- GPU process check after Phase 4 completion returned no active compute-app rows on GPU0/GPU1.
+- Added `scripts/build_phase5_candidate_table.py`, generating `outputs/final_tables/vsl_cxr_phase5_candidate_results.csv/.md` from formal run, CCSH/AUCH, and AUCH-only tables.
+- Added formal Phase 5 config `configs/qwen3vl_instruction/vsl_cxr/phase5_integrated/vsl_full.yaml`.
+- The first `VSL-Full` formal launch used an incorrect `data_root: .` and logged CheXpert image path misses; stopped that run, removed its incomplete output directory, corrected `data_root` to `H:/Xiyao_Wang/000_Public Dataset`, reran debug, and confirmed no image path errors before relaunching.
+- `VSL-CXR-P5-VSL-FULL` completed at `global_step=5000` on D9 mixed-instruction data with `best_val_loss=0.19854170768998938`, final eval loss `0.2623454920754666`, 18000 train records, 2000 val records, final metrics, and final checkpoint under `F:/Xiyao_Wang/021_260129VIVID_vsl_cxr_outputs/qwen3vl/vsl_cxr_p5_vsl_full/`.
+- Reran `python scripts\build_vsl_results_table.py`; current formal result table has 29 rows and 29 completed runs.
+- Reran `python scripts\build_phase5_candidate_table.py`; Phase 5 candidate table has 4 component-completed candidates, 1 formal-training-completed `VSL-Full` candidate, and 1 `blocked_external_data` `VSL-Domain` candidate.
+
+## 2026-07-07 Phase 6 External Appendix/Stress Validation
+
+- Refreshed `scripts\audit_vsl_cxr_readiness.py` against real local external paths. Current external boundary: VinBigData-derived images exist but no class labels/bbox CSV were found, NIH exists with `Data_Entry_2017.csv`, MIMIC-CXR exists without the audited CheXpert label manifest, and PadChest is missing.
+- Regenerated the NIH external manifest with `python data\dataset\prepare_nih.py`; it produced `data/dataset/processed/nih_external_test_ums.jsonl` with 25596 official NIH test rows.
+- Ran the NIH label-mapping audit via `scripts\audit_label_mapping_nih.py`.
+- Added Phase 6 CheXpert LP configs and completed SAMEQ, VSL-Core, VSL-CEQ-backbone-proxy, and VSL-Full linear-probe readouts. Raw reuses the completed B0 raw-vision LP readout.
+- Ran NIH-appendix-1k transfer for Raw, SAMEQ, VSL-Core, VSL-CEQ backbone proxy, and VSL-Full, writing `transfer_metrics.json` under `outputs/vsl_cxr_phase6_external/nih1k_*`.
+- Added and ran `scripts\build_external_results_table.py`; `outputs/final_tables/vsl_cxr_external_results.md` has 8 rows: 3 main-external readiness/blocker rows and 5 completed NIH appendix/stress rows.
+- Phase 6 NIH summary: SAMEQ has the best NIH macro-AUC (`0.5932955434118374`), VSL-Core has the best NIH macro-AUPRC (`0.15464047456578672`), and all ECE/Brier results indicate weak calibration under domain shift.
+- Reran `python scripts\build_vsl_results_table.py`; current formal result table has 33 rows and 33 completed runs after adding the Phase 6 LP readouts.
+- Main external validation remains blocked under the v5 formal口径 until VinDr/VinBigData labels or another eligible main-external label manifest is available. NIH is recorded only as appendix/stress evidence.
+- Post-edit verification after Phase 6 documentation sync:
+  - `python -m py_compile scripts\build_vsl_results_table.py scripts\build_module_results_table.py scripts\build_phase5_candidate_table.py scripts\build_external_results_table.py scripts\audit_vsl_cxr_readiness.py scripts\evaluate_qwen3vl_lp_transfer.py scripts\train_qwen3vl_vision_lp.py` completed with no compile errors.
+  - `python scripts\build_vsl_results_table.py` reproduced `rows=33`, `completed=33`.
+  - `python scripts\build_module_results_table.py` reproduced CEQ `5/5`, CCSH/AUCH+CCSH `9/9`, and AUCH-only `1/1`.
+  - `python scripts\build_phase5_candidate_table.py` reproduced 6 rows: 4 component-completed, 1 formal-training-completed, and 1 blocked-external-data candidate.
+  - `python scripts\build_external_results_table.py` reproduced `rows=8`, `completed_appendix=5`.
+  - `python scripts\audit_vsl_cxr_readiness.py` reproduced `wrote_rows=67`, `exact_exists=14`, `missing=1`, `exists_missing_label_manifest=1`, and `exists_needs_label_audit=3`.
+  - `nvidia-smi` showed both RTX 3090 GPUs at `0 MiB` and no active compute-app rows after Phase 6 closure.
+
+## 2026-07-07 Phase 7 Teacher Comparison Audit
+
+- Replaced the old CVCP-named `scripts\audit_vlm_teacher_comparison.py` behavior with a VSL-CXR v5 Phase 7 audit. The script now writes `outputs/final_tables/vsl_cxr_teacher_model_audit.{csv,md}` and `outputs/final_tables/vsl_cxr_teacher_comparison_results.{csv,md,json}`.
+- Ran `python -m py_compile scripts\audit_vlm_teacher_comparison.py`; no compile errors.
+- Ran `python scripts\audit_vlm_teacher_comparison.py`; it produced 10 model-audit rows and 9 formal Phase 7 result rows, with 2 completed/current-main Qwen3-VL evidence rows and 7 bounded blocked rows.
+- Qwen3-VL current-main full row uses VSL-Core evidence: CheXpert LP macro-AUC `0.6985809632677275`, NIH-appendix macro-AUC `0.5872269642158319`, CCSH AUC `0.7883600000000001`, and the completed `VSL-CXR-B5-SAMEQ-K4` formal backbone.
+- InternVL local models load config but processor audit failed with `TokenizersBackend has no attribute start_image_token`; exact v5 smoke/full rows require an InternVL-specific VSL trainer adapter.
+- LLaVA/Mllama local model loads config/processor but exact v5 smoke/full rows require a Llama-vision VSL trainer adapter.
+- Qwen3.5 and Qwen-Coder text-only controls are blocked by missing exact v5 non-vision VSL scaffold trainer; old scaffold scripts are historical context only.
+
+## 2026-07-07 Phase 8 Casebook And Visualization Artifacts
+
+- Added `scripts\build_vsl_phase8_artifacts.py` to generate v5-named Phase 8 outputs from current VSL-CXR D6/D9, Phase 4, CEQ, and Phase 6 evidence rather than from mixed historical casebooks.
+- Ran `python -m py_compile scripts\build_vsl_phase8_artifacts.py`; no compile errors.
+- Ran `python scripts\build_vsl_phase8_artifacts.py`; it produced 33 casebook rows and 7 visualization-manifest rows.
+- Casebook group counts: VSL support 3, VSL contradict 3, VSL uncertain 3, VSL insufficient 3, SAMEQ pair 4, false-hard-negative review 4, CCSH success/failure 4, CEQ attention 4, and external failure 5.
+- Phase 8 outputs: `outputs/final_tables/vsl_cxr_phase8_casebook.{csv,md}`, `outputs/final_tables/vsl_cxr_phase8_visualization_manifest.{csv,md}`, and `outputs/final_tables/vsl_cxr_phase8_artifact_summary.{csv,md}`.
+- Publication boundary: casebook rows require manual visual review before paper use; calibration figure currently has ECE/Brier/per-label summaries but no exported binned curve points.
+
+## 2026-07-07 Phase 9 Locked Final Comparison
+
+- Added `scripts\build_vsl_locked_final_comparison.py` to build a v5-specific locked-final table from current formal, CEQ, CCSH, Phase 5, Phase 6 external, and Phase 7 teacher tables.
+- Ran `python -m py_compile scripts\build_vsl_locked_final_comparison.py`; no compile errors.
+- Ran `python scripts\build_vsl_locked_final_comparison.py`; it produced `outputs/final_tables/vsl_cxr_locked_final_comparison.{csv,md,json}` with 8 finalist rows, all single-seed.
+- Locked finalists: Raw Qwen3-VL vision LP, Basic-QA, SAMEQ, SAMEQ-HNMB, CEQ-region, CCSH-CEQ, VSL-Full, and Qwen3-VL 2B teacher.
+- Integrated final decision: VSL-Full is the locked integrated finalist by current single-seed v5 evidence, with CheXpert LP macro-AUC `0.7148588673744163`, NIH appendix macro-AUC `0.5815168249418435`, and CCSH/AUCH evidence from Phase 5. Boundary: SAMEQ/Core are stronger on NIH appendix macro-AUC, and the v5 main-external requirement remains blocked.
+- Final statistical boundary: no row currently has multi-seed mean±std under the v5 locked table; all numeric values are single-seed or bounded evidence.
+
+## 2026-07-16 VinDr-CXR Main-External Integration Started
+
+- Re-audited the three user-specified storage roots and confirmed that VinDr-CXR is present as the official 1.0.0 ZIP with all four annotation/image-label CSVs and 18,000 DICOM entries.
+- Confirmed storage placement: datasets under `H:\Xiyao_Wang\000_Public Dataset`; project code/manifests/audits/docs under `H:\Xiyao_Wang\021_260129VIVID`.
+- Confirmed H: capacity before extraction: 830.97 GiB free; no pre-existing extraction target was found.
+- Opened phases E2-E6 for extraction, checksum/decode validation, label mapping, deterministic manifest generation, audit/table refresh, and documentation write-back.
+- Added `scripts/extract_vindr_cxr.py`; compile/list checks passed and background extraction PID 31088 is writing only under the public-dataset root with atomic `.part` files, a 20 GiB reserve gate, and ZIP CRC validation.
+- Added the direct label-map config and `scripts/prepare_vindr_cxr.py`. Preliminary manifests contain 15,000 majority-vote train and 3,000 official test rows with zero split overlap; strict image completeness remains gated on extraction.
+- Added DICOM decoding support to the shared Qwen3-VL LP loader and declared `pydicom>=3.0.0`; representative decoded image extrema span 0-255 in RGB mode.
+- Added `scripts/audit_vindr_cxr_integrity.py` for official-manifest presence, deterministic SHA-256 sampling, and representative train/test DICOM decoding.
+- Updated readiness/external-table logic to recognize VinDr extracted labels, MIMIC `.csv.gz` manifests, and five pending main-external candidates. Refreshed external table currently has 13 rows: 5 pending VinDr, 5 completed NIH appendix/stress, and 3 readiness rows.
+- Added and launched `scripts/run_vindr_external_suite.py` as background PID 21928. It waits for extraction, then validates, regenerates manifests, runs Raw/SAMEQ/VSL-Core/VSL-CEQ-backbone/VSL-Full over the full 3,000-image VinDr test split on two GPUs, and refreshes tables/audits.
+
+## 2026-07-07 Final VSL-CXR v5 Verification
+
+- Ran final compile verification over the core/new scripts: `build_vsl_results_table.py`, `build_module_results_table.py`, `build_phase5_candidate_table.py`, `build_external_results_table.py`, `audit_vsl_cxr_readiness.py`, `audit_vlm_teacher_comparison.py`, `build_vsl_phase8_artifacts.py`, `build_vsl_locked_final_comparison.py`, and the v5 wrapper scripts. No compile errors.
+- Rebuilt final tables:
+  - `build_vsl_results_table.py`: `rows=33`, `completed=33`.
+  - `build_module_results_table.py`: CEQ `5/5`, CCSH/AUCH+CCSH `9/9`, AUCH-only `1/1`.
+  - `build_phase5_candidate_table.py`: 6 rows, with 4 component-completed, 1 formal-training-completed, and 1 blocked-external-data candidate.
+  - `build_external_results_table.py`: 8 rows, with 5 completed NIH appendix/stress rows.
+  - `audit_vlm_teacher_comparison.py`: 10 model-audit rows and 9 Phase 7 rows, with 2 Qwen3-VL current-main rows and 7 bounded blocked rows.
+  - `build_vsl_phase8_artifacts.py`: 33 casebook rows and 7 visualization rows.
+  - `build_vsl_locked_final_comparison.py`: 8 locked finalist rows.
+- Final readiness audit: `wrote_rows=67`, `exact_exists=18`, `missing=1`, `exists_missing_label_manifest=1`, `exists_needs_label_audit=3`, `missing_exact_analogs_exist=11`.
+- Final GPU check: both RTX 3090 GPUs showed `0 MiB` memory use and `0%` utilization, with no active compute-app rows.
+
+## 2026-07-07 Exact v5 Script Surface Closure
+
+- Added `scripts\build_vsl_auxiliary_audits.py` plus exact v5 wrappers for D0-D5/data-source auditing, HNMB training, CheXpert LP refresh, external LP refresh, VSL sufficiency summary, calibration summary, and casebook rebuilds.
+- Compile check passed for all new wrappers.
+- Ran `extract_clinical_statements.py`, `generate_counterfactual_statements.py`, `generate_sameq_pairs.py`, `generate_hard_negative_pairs.py`, and `mine_hard_negatives_memory_bank.py`; each rebuilt `outputs/final_tables/vsl_cxr_data_source_manifest.{csv,md}` with 13/13 existing source artifacts.
+- Ran `eval_vsl_sufficiency.py`; it wrote `outputs/final_tables/vsl_cxr_sufficiency_summary.{csv,md}` with 6 sufficiency rows.
+- Ran `eval_calibration.py`; it wrote `outputs/final_tables/vsl_cxr_calibration_summary.{csv,md}` with 14 calibration rows.
+- Ran `eval_casebook.py`; it reproduced 33 casebook rows and 7 visualization rows.
+- Ran `train_vsl_hnmb.py --help`; wrapper CLI is available without relaunching completed training.
+- Reran `python scripts\audit_vsl_cxr_readiness.py`; readiness now reports `wrote_rows=67`, `script exact_exists=29`, `missing=1`, `exists_missing_label_manifest=1`, and `exists_needs_label_audit=3`, with no `missing_exact_analogs_exist` rows.
+
+## 2026-07-07 Story And Result Summary Draft
+
+- Added `docs/vsl_cxr_story_and_results_summary.md`, a detailed Chinese summary of the current VSL-CXR paper story, experimental conclusions, phase-by-phase evidence, locked finalists, and non-claim boundaries.
+- Linked the new story/result summary from `docs/README.md`.
+- 2026-07-16T00:00:00+08:00 User redirected the VinDr work to the server and explicitly rejected local formal execution. Stopped the local suite parent PID `21928` and child inference PIDs `24956` and `15084`; no local VinDr formal result is claimed. Live SSH to `sues-hpc` passed on `mu01`, the remote VIVID project and writable `data/dataset` directory exist, and the remote tree has no VinDr dataset yet. Added portable model/checkpoint/data-root overrides to the external evaluator and VinDr suite, and verified both scripts compile plus the suite CLI renders successfully. Next action: upload the project whitelist, required probes/checkpoints, and the verified 191.825 GiB extracted VinDr tree to the corresponding remote project directories.
+- 2026-07-16T15:41:00+08:00 Server handoff is active. Updated the remote project whitelist under `/ipfs/inspurfileset/home/dqxy/dqxy11/projects/xiyaowang/021_260129VIVID`, then uploaded and remotely verified all 8 required evaluation artifacts: five `best_probe.pt` files and three source-backbone `checkpoints/final.pt` files (`2,442,151,756` bytes total) under `outputs/qwen3vl_external_sources`. Started resumable VinDr dataset uploader PID `28016`: the official `151,581,123,766`-byte ZIP is split into 18 parts, uploaded into `.incoming_vindr`, reassembled and extracted server-side into `data/dataset`, then checked for exactly 15,000 train and 3,000 test DICOMs. Part `0000` completed and received its remote done marker at 15:40:59; part `0001` is in progress. No formal experiment is running locally or remotely.
+- 2026-07-16T17:52:00+08:00 VinDr upload paused by a hard remote storage quota, not by a network fault. Logical parts `0000` and `0001` are complete; `0002.sub.00` is complete and `0002.sub.01` remains resumable at `1,849,688,064` bytes. The remote mount reports `1.2P` available, but both `curl -C -` and a dedicated 16 MiB `dd` probe fail with `Disk quota exceeded` in the project `.incoming_vindr` directory. Stopped local uploader PID `38524`; no dataset assembly/extraction or formal experiment was started. Resume only after the remote quota is increased/cleared or an authorized alternate remote storage destination is supplied.
+- 2026-07-16T18:10:00+08:00 Audited a lower-storage server alternative: the completed VinDr external manifests and evaluator consume only the official 3,000-image test split. Local test DICOMs occupy `33,523,408,062` bytes; the unused-for-evaluation train split is `172,434,631,116` bytes. A test-only remote package plus strict test-manifest audit can replace the full ZIP transfer after an explicit user-approved pivot; this requires only roughly 35-40 GiB remote free space when uploaded/extracted in small streamed parts, rather than the 150+ GiB full archive and 206 GiB full extraction.
+- 2026-07-16T18:30:00+08:00 Read-only remote quota/cleanup audit: portal-reported 1,024 GiB use matches major visible consumers, including shared `model/` 366 GiB, `models/027_diffsionretrieval` 47 GiB, OPMEM 196 GiB, IndexMemory 65 GiB, VIVID `outputs/` 71 GiB, root `model/Qwen` 32 GiB, and cache 15 GiB. VIVID has no obvious intermediate step checkpoints; it has 57 non-identical `best.pt`/`final.pt` pairs totalling 60.814 GiB. The external-source artifacts needed for VinDr total 2.275 GiB and are explicitly retained. No remote file was deleted during the audit.
+- 2026-07-16T18:45:00+08:00 User supplied `BiVES_CXR_MIA_TMI_ready_proposal.md` as the new authority and authorized local recovery plus remote pruning of obsolete VIVID outputs. Proposal mapping: retain VIVID code/config/data infrastructure, SAMEQ/HNMB/VSL data machinery, CEQ/CCSH/AUCH as baselines, final tables/logs/metrics, optional VIVID initialization, and the current external-source artifact package; historical VIVID ablation weights are not required online. Local H: has about 682 GB free, enough to archive the remote 71 GB `outputs` tree before file-verified remote pruning.
+- 2026-07-16T18:47:00+08:00 Started local verified recovery of the remote VIVID `outputs/` tree using `.remote_upload_tmp/recover_remote_outputs_to_local.ps1`, destination `H:\Xiyao_Wang\021_260129VIVID\History\remote_outputs_recovery_20260716\outputs`. The remote manifest has 6,723 files / 75,073,636,030 bytes; local H: free space is 681,902,669,824 bytes. An initial empty-record parsing bug was fixed before data transfer; the restarted process is actively copying and validating files. No remote deletion is permitted until `RECOVERY_COMPLETE.txt` exists and all manifest sizes verify.
+- 2026-07-16T18:45:00+08:00 User selected `BiVES_CXR_MIA_TMI_ready_proposal.md` as the final research mainline and requested old-code consolidation, new-code preparation, and Git push. Read the proposal, repository guidance, current docs/planning state, Git status, and existing VSL modules. Recorded the core boundary: BiVES must use bipolar spatial evidence plus closed-form four-state decoding and keep/drop/control intervention closure; CEQ/CCSH/AUCH and flat four-class prediction are legacy baselines only. Started three bounded independent audits for architecture, safe legacy archiving, and CPU test design. No formal local experiment was launched.
+- 2026-07-16T18:55:00+08:00 User added a Qwen3.5-only active-model constraint. Audited `H:\Xiyao_Wang\001_models\Qwen3.5-{0.8B,2B,4B,9B}` and confirmed all four local configs are multimodal `Qwen3_5ForConditionalGeneration` models with vision towers. Locked Qwen3.5-4B as the default BiVES model, 2B for P0/debug, 9B for scale validation, and 0.8B for optional ultra-light smoke. Older model families are legacy-only.
+- 2026-07-16T19:10:00+08:00 Added the isolated `bives_cxr/` core package: closed-form evidence decoder, bipolar field, sparse gates, feature keep/drop/control interventions, unified loss, Qwen3.5-only backbone validation/adapter, fail-fast manifest dataset, intervention metrics, and a CPU smoke script. Core compile and smoke passed with normalized four-state probabilities, no flat state head, finite loss, and finite gradients. Added 8 CPU unit tests; the first run exposed only a `1.44e-8` S/C symmetry tolerance issue, which was corrected with explicit floating-point tolerance.
+- 2026-07-16T20:20:00+08:00 Completed the BiVES repository consolidation before Git staging. Active `scripts/` now contains only `train_bives_cxr.py`, `smoke_bives_cxr.py`, `audit_bives_manifest.py`, `extract_vindr_cxr.py`, and `audit_vindr_cxr_integrity.py`; active configs contain only Qwen3.5 2B/4B/9B BiVES YAMLs. Moved 218 remaining pre-BiVES scripts plus old models/training/evaluation/loaders/profile/prompts/experiments/paper source into `legacy/vivid_med/`; preserved VSL-specific material under `legacy/vsl_cxr/`. Archived the old VinDr UMS builder because it referenced the retired Qwen3-VL mapping. Added manifest leakage/state/image readiness auditing and Qwen3.5-only config/path tests. Validation passed: active `py_compile`, 12/12 unit tests, synthetic BiVES smoke, and processor-only Qwen3.5-0.8B letterbox/grid smoke (`[[1,28,28],[1,28,28]]`). No formal local experiment or model-weight load was launched.
+- 2026-07-16T19:18:00+08:00 Repaired the local HTTP forwarding tunnel used by the conservative remote-output recovery after its original local forwarder exited. The remote range server remained healthy; a new local tunnel passed a 100-byte range probe. Recovery resumed without restarting completed files and the first legacy `final.pt` is now streaming to its retained local `.part` file. Remote deletion remains disabled until complete local size verification.
+- 2026-07-16T19:25:00+08:00 Per user authorization, removed 15 legacy shared-model directories: Qwen2/Qwen2.5 variants, Qwen thinking/non-Instruct variants, and embedding/reranker models (`qwen3 embedding`, `qwen3 rerank`, BGE reranker, Specter). Removed their matching project symlinks only. Verified 127,681,053,180 bytes freed; shared `model/` fell to 264,262,945,803 bytes. Retained Qwen3-VL Instruct, Qwen3.5 0.8B/2B/4B/9B, CheXbert, RadGraph, BiomedCLIP, and vision components. A remote write probe now succeeds, confirming the account is no longer quota-blocked.
+- 2026-07-16T19:27:00+08:00 Per user authorization, removed all shared `LLaDA*` models and their matching project symlinks: `LLaDA-8B-Base`, `LLaDA-8B-Base-MS`, and `LLaDA-8B-Instruct-MS`. Verified 32,075,002,016 additional bytes freed.
+- 2026-07-16T19:29:00+08:00 Per user authorization, removed all shared Gemma-family models and their matching project symlinks: `gemma-3-12b-it`, `Gemma-4-26B-A4B-JANG_4M-CRACK`, and `gemma-3-4b-it`. Verified 49,254,845,205 additional bytes freed.

@@ -1,0 +1,42 @@
+experiment:
+  id: vsl_cxr_d6_vsl4_debug
+  run_id: VSL-CXR-D6-VSL4-debug
+  route: VSL-CXR
+  data_version: D6-VSL-4class
+
+data:
+  data_root: H:/Xiyao_Wang/000_Public Dataset
+  train_instruction_path: outputs/instruction_data/vsl_cxr/d6_vsl_4class_train.jsonl
+  val_instruction_path: outputs/instruction_data/vsl_cxr/d6_vsl_4class_val.jsonl
+  max_length: 512
+  max_train_samples: 8
+  max_val_samples: 4
+  num_workers: 0
+
+model:
+  model_path: H:/Xiyao_Wang/001_models/qwen3-vl-2b-thinking-new
+  dtype: bf16
+  trainable_groups:
+    - vision_tower
+    - visual_connector
+
+training:
+  learning_rate: 2.0e-5
+  vision_learning_rate: 1.0e-5
+  connector_learning_rate: 2.0e-5
+  weight_decay: 0.01
+  max_steps: 2
+  batch_size: 1
+  eval_batch_size: 1
+  gradient_accumulation_steps: 1
+  max_grad_norm: 1.0
+  log_interval: 1
+  eval_interval: 1
+  save_interval: 999
+  save_checkpoints: false
+  save_best_checkpoint: false
+  save_final_checkpoint: false
+  output_dir: outputs/qwen3vl_instruction_runs/vsl_cxr_d6_vsl4_debug
+
+seed: 17
+device: cuda:1

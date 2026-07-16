@@ -2,7 +2,7 @@
 # Core
 torch>=2.0.0
 torchvision>=0.15.0
-transformers>=4.40.0
+transformers>=5.5.3
 accelerate>=0.27.0
 
 # Vision
@@ -12,6 +12,7 @@ pillow>=10.0.0
 # Data
 pandas>=2.0.0
 numpy>=1.24.0
+pydicom>=3.0.0
 
 # Config & Logging
 pyyaml>=6.0

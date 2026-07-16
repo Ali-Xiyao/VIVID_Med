@@ -1,0 +1,37 @@
+experiment:
+  id: vsl_cxr_p6_lp_vsl_full
+  run_id: VSL-CXR-P6-LP-VSL-FULL
+  route: VSL-CXR-Phase6
+  data_version: CheXpert-1k-LP
+  note: "CheXpert LP readout for VSL-Full D9 mixed-instruction visual backbone before NIH appendix transfer."
+
+data:
+  data_root: "H:/Xiyao_Wang/000_Public Dataset"
+  train_ums_path: "./data/splits/chexpert_train_1k.jsonl"
+  val_ums_path: "./data/splits/chexpert_val_fixed.jsonl"
+  use_common_labels_only: true
+  max_train_samples: 1000
+  max_val_samples: 1000
+  num_workers: 0
+  processor_prompt: "Classify the chest X-ray findings."
+
+model:
+  model_path: "H:/Xiyao_Wang/001_models/qwen3-vl-2b-thinking-new"
+  dtype: "bf16"
+  freeze_backbone: true
+  vision_checkpoint: "F:/Xiyao_Wang/021_260129VIVID_vsl_cxr_outputs/qwen3vl/vsl_cxr_p5_vsl_full/checkpoints/final.pt"
+
+training:
+  learning_rate: 1.0e-3
+  weight_decay: 0.01
+  max_steps: 1000
+  batch_size: 2
+  eval_batch_size: 2
+  uncertain_policy: "ignore"
+  log_interval: 25
+  eval_interval: 250
+  save_interval: 500
+  output_dir: "F:/Xiyao_Wang/021_260129VIVID_vsl_cxr_outputs/qwen3vl/vsl_cxr_p6_lp_vsl_full"
+
+seed: 74
+device: "cuda:1"

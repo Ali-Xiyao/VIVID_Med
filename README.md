@@ -1,77 +1,94 @@
-# VIVID-Med
+# BiVES-CXR
 
-VIVID-Med is a medical vision-language research repository centered on training deployable chest X-ray encoders from structured clinical supervision and instruction-style visual discrimination tasks.
+BiVES-CXR learns a statement-conditioned bipolar visual evidence set for
+chest-radiograph verification.
 
-## Current Main Method
+Given a chest X-ray and an atomic clinical statement, the active model learns:
 
-**SAMEQ-CVCP**  
-Same-Question Clinical Visual Curriculum Pretraining
+- positive spatial evidence supporting the statement;
+- negative spatial evidence contradicting the statement;
+- evidence availability and decisiveness;
+- a minimal evidence set that is sufficient when retained, necessary when
+  removed, and stable to matched irrelevant-region deletion.
 
-Current active work treats `SAMEQ-CVCP` as the primary paper-ready method line. The core idea is to keep the clinical question fixed while changing the image, so the model must resolve the answer from image-specific evidence instead of text shortcuts.
+The four states are derived from the same evidence variables:
 
-Current active entry points:
+`support`, `contradict`, `uncertain`, and `insufficient`.
 
-- [`docs/README.md`](docs/README.md): handoff index for active research state, ledgers, and result artifacts.
-- [`vivid_med_sameq_cvcp_next_experiment_plan_v4.md`](vivid_med_sameq_cvcp_next_experiment_plan_v4.md): current paper-ready experiment plan and final write-back.
-- `outputs/final_tables/`: generated manifests, audits, and result tables for the active SAMEQ/CVCP/CCSH line.
+There is no flat four-class prediction head in the active model.
 
-## Legacy Method
+## Active mainline
 
-**Frozen-LM JSON supervision**
+- Proposal: [`BiVES_CXR_MIA_TMI_ready_proposal.md`](BiVES_CXR_MIA_TMI_ready_proposal.md)
+- Code: [`bives_cxr/`](bives_cxr/)
+- Active configs: [`configs/bives_cxr/`](configs/bives_cxr/)
+- Training entry: [`scripts/train_bives_cxr.py`](scripts/train_bives_cxr.py)
+- CPU smoke: [`scripts/smoke_bives_cxr.py`](scripts/smoke_bives_cxr.py)
+- Manifest audit: [`scripts/audit_bives_manifest.py`](scripts/audit_bives_manifest.py)
+- Tests: [`tests/test_bives_core.py`](tests/test_bives_core.py)
+- Handoff index: [`docs/README.md`](docs/README.md)
 
-The earlier project line used a frozen LLM as a structured semantic decoder / supervision space:
+## Model policy
 
-```text
-Image -> ViT(train) -> Projector(train) -> Frozen LLM(forward) -> JSON token logits
-```
+All active BiVES-CXR experiments use the multimodal Qwen3.5 family:
 
-In that setup, the LLM was used during training-time supervision and then discarded after training. This legacy route remains in the repository for historical baselines, ablations, and prior experiment traces, but it is no longer the top-level active method narrative.
+| Role | Model |
+| --- | --- |
+| P0/debug | Qwen3.5-2B |
+| Default main model | Qwen3.5-4B |
+| Scale validation | Qwen3.5-9B |
+| Optional ultra-light smoke | Qwen3.5-0.8B |
 
-## Repository Layout
+Qwen3-VL, Qwen2.5, CEQ, CCSH, AUCH, SAMEQ-CVCP, and earlier VIVID-Med routes
+are not active model defaults. Their source/config/docs are preserved under
+[`legacy/`](legacy/) for provenance and fair baselines.
 
-```text
-configs/      Experiment configs, including SAMEQ/CVCP/CCSH and legacy baselines
-data/         Dataset loaders, local preprocessing, and processed manifests
-models/       Vision, projector, and integrated model components
-training/     Losses, trainers, and optimization utilities
-evaluation/   Metrics and verification utilities
-scripts/      Training, evaluation, summarization, and queue entry points
-docs/         Active ledgers, handoff indexes, and boundary notes
-profile/      Design notes, writing support, and historical method docs
-outputs/      Generated experiment artifacts (kept out of Git by default)
-```
-
-## Common Entry Points
-
-Install dependencies:
+## Quick validation
 
 ```bash
 pip install -r requirements.txt
+python scripts/smoke_bives_cxr.py
+python -m unittest discover -s tests -p "test_bives_*.py" -v
 ```
 
-Current active docs-first workflow:
+These checks use synthetic CPU tensors and do not load model weights or run a
+formal local experiment.
+
+## Server training
+
+The checked-in configs use the established server model cache:
 
 ```bash
-python scripts/train_qwen3vl_cvcp.py --config configs/qwen3vl_instruction/cvcp_ccsh/cvcp_v1_sameq_10k.yaml
-python scripts/run_multiseed_manifest.py
-python scripts/summarize_cvcp_ccsh_results.py
-python scripts/summarize_multiseed_results.py
+python scripts/train_bives_cxr.py \
+  --config configs/bives_cxr/qwen35_2b_p0.yaml \
+  --debug
 ```
 
-Legacy smoke test:
+Before formal training, build and audit the BiVES manifest. Required JSONL
+fields are documented in [`docs/bives_cxr_manifest_schema.md`](docs/bives_cxr_manifest_schema.md).
 
-```bash
-python scripts/test_pipeline.py
+## Repository layout
+
+```text
+bives_cxr/        Active evidence model, decoder, interventions, losses, data schema
+configs/bives_cxr Active Qwen3.5-only experiment configs
+scripts/          Active BiVES and reusable data-preparation entry points
+tests/            CPU contract tests
+docs/             Active handoff and implementation notes
+legacy/vsl_cxr/   Archived VSL/CEQ/CCSH/AUCH/Qwen3-VL pilot line
+legacy/vivid_med/ Archived pre-BiVES configs
+data/             Local manifests/loaders; medical images remain ignored
+outputs/          Generated experiment artifacts; ignored by Git
 ```
 
-Note: many runnable experiment queues are also packaged as PowerShell helpers under `scripts/`.
+## Data and evidence boundaries
 
-## Documentation Policy
-
-The top-level README is only a project overview. For the current research state, always start from [`docs/README.md`](docs/README.md) instead of older root-level proposal files.
-
-## Data and Artifact Boundaries
-
-- Medical datasets under `data/dataset/` should remain local.
-- Generated instructions, checkpoints, and result packages under `outputs/` are evidence artifacts and are typically not committed.
-- Historical method files are preserved for comparison and auditability, even when they are no longer the active paper line.
+- Medical images and patient data remain local/server-side and are not
+  committed.
+- Generated outputs and checkpoints remain ignored.
+- Historical outputs are preserved as pilot/provenance evidence; they are not
+  BiVES-CXR results.
+- Formal local training is not part of this consolidation. The new code is
+  prepared for server execution.
+- VinDr ZIP extraction and integrity checks remain active utilities; the old
+  UMS/VSL manifest builder is archived and must not be used for BiVES labels.

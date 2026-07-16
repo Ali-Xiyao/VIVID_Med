@@ -1,364 +1,159 @@
-# VIVID-Med Execution Findings
+# VSL-CXR v5 Findings
 
-## 2026-07-06 SAMEQ-CVCP v4 Takeover Findings
+## 2026-07-07 Project Organization Findings
 
-- The active `/goal` already matches `vivid_med_sameq_cvcp_next_experiment_plan_v4.md`, so this turn continues under the existing goal rather than creating a new one.
-- The v4 SAMEQ-CVCP document is a paper-ready reframing of the already executed `vivid_med_cvcp_ccsh_full_next_experiment_plan.md` route, but it is not yet synchronized with the repo's current formal outputs.
-- Current exact formal evidence already exists for `27/27` CVCP/CF/token-weighting/dual-margin backbone rows in `outputs/final_tables/cvcp_training_results.md` and `18/18` module-combo rows in `outputs/final_tables/module_combo_results.md`.
-- The strongest existing training row remains `cvcp_v1_sameq_full` with CheXpert AUC `0.748633` and hard-shuffle delta `0.641917`; the strongest repaired SAMEQ row is `sameq_cf_30` with CheXpert AUC `0.744668` and hard-shuffle delta `0.481282`.
-- The strongest existing deployable readout still comes from replay-backed CCSH rows such as `cvcp_replay_ccsh`, `ceq_hnmb_ccsh`, and `ceq_auch_ccsh`, each reaching binary AUC `0.893317` and state accuracy `0.766000`.
-- The exact v4 gaps are now closed at the artifact level: `SAMEQ-10k+CCSH`, `SAMEQ-full+CCSH`, `SAMEQ-full+CEQ+CCSH`, `SAMEQ-CF-20+CCSH`, `SAMEQ-CF-20+CEQ+CCSH`, and the pure SAMEQ multiseed evidence for both `10k-8k` and `full-12k` are all closed by exact artifacts.
-- `docs/README.md` is now aligned to the active v4 SAMEQ-CVCP source markdown, with the older CVCP/CCSH full-plan document preserved only as prior closure context.
-- External and model-comparison boundaries remain real as of this turn's live audit: VinDr is image-only without label/bbox CSV, PadChest is missing locally, NIH remains appendix-only, and the current formal trainer still only supports the Qwen3-VL family without InternVL/LLaVA-specific adapters.
-- Fresh `nvidia-smi` on 2026-07-06T13:41:20+08:00 showed both local RTX 3090 GPUs idle and available for new SAMEQ-v4 queues.
-- The generated pure SAMEQ seed configs are correctly isolated: `experiment.id`, `run_id`, and `training.output_dir` all point to seed-specific paths under `F:/Xiyao_Wang/021_260129VIVID_cvcp_ccsh_outputs/qwen3vl_sameq_v4_multiseed/`, so these runs are not overwriting the old base `cvcp_v1_sameq_10k` or `cvcp_v1_sameq_full` outputs.
-- Live verification after launch shows the seed runs are genuinely progressing, not just sitting at wrapper start: both `cvcp_v1_sameq_10k_seed0` and `seed1` wrote `training_log.txt` plus `progress.json`, and both reached at least `global_step=125`.
-- The repaired SAMEQ-v4 postprocess watchers are now attached to the corrected seed manifest and are behaving as intended: they emit `training_not_ready` waits for `cvcp_v1_sameq_10k_seed0/seed1` instead of crashing on missing `family` or `val_instruction_path`.
-- The first two bridge export jobs (`sameq_10k_ccsh` and `sameq_full_ccsh`) are active on GPU alongside the seed runs; their output directories are not populated yet, which is consistent with the current export script behavior of writing the artifact files late in the job rather than streaming partial files from step zero.
-- A second live check roughly six minutes later confirmed continued forward motion: both active SAMEQ-10k seeds advanced to at least `global_step=300`, with `training_log.txt` and `progress.json` timestamps still moving.
-- The module-queue command lines both print `--device cuda:0`, but `nvidia-smi --query-compute-apps` shows one export worker on each physical GPU. In practice this queue is using device remapping rather than accidentally stacking both bridge exports onto a single card.
-- The v4 source markdown can already absorb part of the paper-ready story before the new queues finish: exact legacy evidence cleanly supports the `SAMEQ-3k-5k`, `SAMEQ-10k-8k`, `SAMEQ-full-12k`, `Base+CCSH`, `SHUF-K4+CCSH`, and `Replay-CVCP+CCSH` rows, while the actively running `SAMEQ-10k/full+CCSH` rows should remain marked in-progress until their own artifacts land.
-- The safest way to keep the v4 document honest is to leave `External AUC` blank for these prefilled rows unless the value comes from a formally accepted main external dataset. The currently available NIH numbers remain appendix-only evidence and should not be promoted by convenience.
-- The first live SAMEQ-v4 bridge wave is now partially closed by exact artifacts, not just queue state: `sameq_10k_ccsh` and `sameq_full_ccsh` each produced full embedding exports, module-stack checkpoints, and `metrics_final.json`, so these rows can now be treated as completed evidence-backed bridge results in the v4 markdown.
-- The bridge story is already more specific than the initial placeholder claim: `SAMEQ-full+CCSH` is the strongest SAMEQ bridge seen so far (`binary_auc=0.881573`, `state_accuracy=0.772124`), but `Replay-CVCP+CCSH` still holds the best exact CCSH AUC (`0.893317`). That means the current evidence supports a narrowed claim of “SAMEQ closes much of the gap” rather than “SAMEQ+CCSH already dominates replay.”
-- The first pure SAMEQ 10k multiseed pair has now completed not only formal training but the full downstream package currently wired into the SAMEQ v4 queue: `cvcp_v1_sameq_10k_seed0` and `seed1` both have `metrics_final.json`, `checkpoints/final.pt`, `metrics_step_8000.json`, LP, NIH appendix 1k, visual-dependence, counterfactual, A/B-swap counterfactual, paraphrase, and `summarize` closure in the live queue logs.
-- The strongest completed 10k-seed formal losses are now the step-8000 eval anchors, not the older mid-run checkpoints: `0.186816` for `seed0` and `0.205080` for `seed1`.
-- Queue handoff is now down to the final remaining postprocess row: `cvcp_v1_sameq_10k_seed2`, `cvcp_v1_sameq_full_seed0`, and `cvcp_v1_sameq_full_seed1` have all completed downstream package closeout through `summarize`, and `cvcp_v1_sameq_full_seed2` has also completed formal training; only its downstream postprocess chain remains active.
-- The repaired SAMEQ-v4 postprocess watchers are still behaving correctly after those later eval milestones: watcher PIDs `7380` and `15684` remain alive, GPUs are back to the training-only footprint (`9609 MiB` on GPU0, `9161 MiB` on GPU1 in the latest check), and the gate still waits for the final package rather than misfiring on intermediate eval artifacts.
-- Direct log inspection now proves that the watcher gate condition is still healthy, not silently dead: `postprocess_gpu0_lane0_of2.log` and `postprocess_gpu1_lane1_of2.log` continue writing fresh `WAIT ... training_not_ready` lines every two minutes for `cvcp_v1_sameq_10k_seed0` and `seed1`.
-- No SAMEQ-v4 experiment blocker remains inside the repo's formal execution chain; the final sameq-v4 downstream tail has closed through `summarize`.
-- The SAMEQ v4 multiseed manifest itself is now synchronized with the new queue phase instead of the earlier active/queued-only picture: the full 10k triplet plus `full_seed0/full_seed1` are `completed_existing`, and only `full_seed2` remains active as a training-complete row whose postprocess is still running.
-- `sameq_v4_multiseed_stability.md` now gives the paper-ready seed-sweep snapshot for that stronger boundary directly: every row except `full_seed2` has completed formal training, and the last active row has already crossed into training-complete / postprocess-only status.
-- The SAMEQ v4 multiseed status artifacts are now materially stronger than a plain `active/queued` view: both the manifest and stability snapshot surface `latest_formal_eval_step`, `latest_formal_val_loss`, and `latest_live_step`, so the paper-ready boundary can cite the newest landed intermediate evidence without pretending those rows are already final multiseed results.
-- The second bridge wave is genuinely active rather than stuck in wrapper state: `nvidia-smi --query-compute-apps` shows `export_qwen3vl_instruction_embeddings.py` running on `sameq_full_ceq_ccsh` and `sameq_cf20_ccsh`, one worker per physical GPU, even though the command lines still print `--device cuda:0`.
-- The v4 source markdown can safely absorb more of Phase 4 without waiting for the new CEQ/CF exports to finish: exact legacy module-combo artifacts already close `SAMEQ+CEQ`, `SAMEQ+CEQ+CCSH`, and `SAMEQ-K4+CEQ+CCSH`, as long as `Attention quality` stays blank until a matching qualitative casebook/attention review exists.
-- The second bridge wave is no longer just active; it is complete. `sameq_full_ceq_ccsh`, `sameq_cf20_ccsh`, and `sameq_cf20_ceq_ccsh` all landed `metrics_final.json` and were promoted to `complete` in `outputs/final_tables/module_combo_results.csv`.
-- The new exact bridge evidence sharpens the CEQ interpretation: `SAMEQ-full+CEQ+CCSH` gives a strong CEQ head (`binary_auc=0.869218`) but does not beat the `SAMEQ-full+CCSH` readout on the final CCSH metric (`0.881573` in both rows). `SAMEQ-CF-20+CEQ+CCSH` remains usable (`CEQ auc=0.835453`), but the CF-compatible readout still sits well below the full-scale SAMEQ and replay-backed stacks.
-- The curriculum section can now be written as an evidence-backed comparison rather than a blank plan. Exact rows already show a clear pattern: direct SAMEQ-full (`AUC=0.748633`, `hard_shuffle=0.641917`) stays ahead of progressive (`cvcp_v3_prog_full`, `AUC=0.705902`, `hard_shuffle=0.323814`), replay (`cvcp_v4_replay_10k`, `AUC=0.723687`, `hard_shuffle=0.151935`), and CDCS scheduling (`cvcp_v5_cdcs_field`, `AUC=0.737263`, `hard_shuffle=-0.276647`) on the paper's grounding-first criteria.
-- The external-evaluation section is a true boundary, not just an empty table: `external_eval_results.md` still shows VinDr/VinBigData as image-only without labels, PadChest missing locally, and NIH as appendix-only. The paper-ready main-external cells should stay blank until that boundary changes.
-- The model-comparison section is also a real boundary today: `model_comparison_results.md` still shows Qwen3-VL as the only family directly supported by the formal trainer, while InternVL and LLaVA need architecture-specific trainers and the text-only scaffolds are not valid VLM-teacher results.
-- The locked-comparison table can already hold provisional finalists, but it cannot become final yet: the bridge finalists are known, while the pure-SAMEQ main family still needs the in-flight multiseed sweep before any `mean±std` claim is paper-ready.
+- The active source plan is `vivid_med_vsl_cxr_full_experiment_plan_v5.md`, which reframes the project as Visual Sufficiency Learning for Chest X-rays rather than the previous SAMEQ-CVCP/CVCP-CCSH paper line.
+- Existing root `task_plan.md`, `findings.md`, and `progress.md` were still focused on prior SAMEQ-CVCP v4, CVCP/CCSH, remote-upload, and A800 transfer tasks, so they were archived before starting the VSL-CXR execution state.
+- Existing `docs/README.md` and `README.md` still pointed readers to SAMEQ-CVCP v4 as the active entry point; these must be updated before running new experiments so agents and humans start from the v5 plan.
+- Root-level historical proposal/runbook markdowns were moved to `History/20260707_vsl_cxr_project_organization/` and remain recoverable context, but they are not active VSL-CXR completion evidence by themselves.
+- Current v5 requires several named scripts that may not exist yet, including VSL data generation, VSL-specific training, sufficiency/readout/calibration evaluation, and VSL paper-table builders. The next audit must classify each as existing exact, analog available, missing, or historical-only.
+- The v5 external-validation wording prefers VinDr-CXR/VinBigData with label/bbox CSV, then PadChest, then MIMIC if not used in training; NIH is appendix/stress rather than main. Prior memory indicates local VinBigData assets may be image/meta-only, so external-main readiness needs a fresh local audit before any claim.
 
-## 2026-07-06 CVCP/CCSH Full Plan Completion Findings
+## 2026-07-07 D6 VSL-4class Gate Findings
 
-- The active `vivid_med_cvcp_ccsh_full_next_experiment_plan.md` route reached artifact-backed completion for the local formal protocol: 27/27 Qwen3-VL CVCP/CF/token-weighting/dual-margin rows completed training plus LP, NIH appendix, visual-dependence, counterfactual, A/B-swap, and paraphrase diagnostics; 18/18 module-combo rows completed embedding export and module-stack training.
-- The strongest empirical training row is `cvcp_v1_sameq_full` with CheXpert AUC `0.748633` and hard-shuffle delta `0.641917`. `sameq_cf_30` is close on CheXpert AUC (`0.744668`) with a strong repaired hard-shuffle signal (`0.481282`).
-- The strongest deployable module readout is not the same as the best training row: replay-backed CCSH/stack rows on `cvcp_v4_replay_10k` reach best binary AUC `0.893317` and state accuracy `0.766000`, including `cvcp_replay_ccsh`, `ceq_hnmb_ccsh`, and `ceq_auch_ccsh`.
-- The final story should stay two-part: SAMEQ-style CVCP gives the strongest image-specific training signal, while CCSH on replay/CVCP backbones gives the strongest deployable consistency readout. Do not collapse this into a single universal winner.
-- External claims remain bounded: NIH is complete only as appendix/stress-test for all 27 rows; the VinDr/VinBig package is image-only without labels/bboxes; PadChest is missing locally. These boundaries are recorded in `outputs/final_tables/external_eval_results.md`.
-- Model-comparison claims remain compatibility/audit claims for non-Qwen3VL families. Qwen3VL is the formal trainer route; InternVL/LLaVA/Llama/Qwen3.5 directories are present but require architecture-specific adapters before training-comparison claims.
+- Added and ran `scripts/audit_vsl_cxr_readiness.py`. Current readiness after D6 work is 63 rows: 8 exact v5 scripts, 21 missing exact scripts with analogs, 2 candidate VSL-schema artifacts, 1 remaining missing data candidate (`D9 VSL-full`), 8 historical final-table bundles needing v5 remap, 5 model families available but needing smoke, and external-data gaps for PadChest/MIMIC/NIH under the audited local paths.
+- Added `scripts/generate_vsl_4class_labels.py` and generated D6 VSL-4class train/val artifacts at `outputs/instruction_data/vsl_cxr/d6_vsl_4class_train.jsonl` and `outputs/instruction_data/vsl_cxr/d6_vsl_4class_val.jsonl`.
+- D6 train has 11149 rows: support 3000, contradict 3000, uncertain 2149, insufficient 3000. D6 val has 1600 rows, exactly 400 rows per label.
+- Added `scripts/audit_vsl_data_quality.py`; structural audit accepted 11149/11149 train rows and 1600/1600 val rows with zero errors and zero warnings after normalizing uncertain-state rows.
+- The D6 data is still an auto-labeled candidate. Manual correctness, leakage, and false-hard-negative review remain pending via `outputs/final_tables/vsl_cxr_d6_manual_audit_template.csv`.
+- Added `scripts/train_vsl_cxr.py` and `configs/qwen3vl_instruction/vsl_cxr/debug_vsl_4class.yaml`; a debug Qwen3-VL trainer smoke completed on the D6 JSONL path with `global_step=1`, `best_val_loss=7.349977970123291`, 4 train records, 2 val records, and frozen language decoder / trainable vision tower plus visual connector.
+- Post-smoke GPU check showed GPU1 free at `0 MiB` and `0%`. GPU0 had a non-VSL local `scripts/serve_local_hf_openai.py` service for `Qwen3.5-0.8B` using about `1785 MiB`; release or avoid GPU0 before formal dual-GPU VSL queues.
 
-## 2026-07-01 Case Study + Module Plan Takeover
+## 2026-07-07 D9 VSL-full and B7 Formal Launch Findings
 
-- Active goal is now `vivid_med_case_study_modules_next_experiment_plan.md`; the user explicitly asked to complete the full document, including expansion/module content, before stopping.
-- Skill pre-flight used `superpowers:using-superpowers`, `planning-with-files`, `executing-plans`, and `verification-before-completion`. `subagent-plan-decomposer` and `superpowers:subagent-driven-development` were inspected because the plan is large, but subagent spawning is not used unless explicitly needed and authorized.
-- Session catchup produced no output. Existing `task_plan.md/findings.md/progress.md` were from the completed next-stage comprehensive objective, so this new plan needs a fresh active section rather than treating previous completion as sufficient.
-- Memory for this repo emphasizes artifact-backed completion: output files, checkpoint contents, task states, logs, GPU/process checks, and failure-case preservation beat planning prose.
-- The target plan explicitly says `SHUF-TW-clinical` is only a candidate. The required next step is not another post-hoc best-row selection; it is case study, seed stability, NIH/domain diagnosis, curriculum retry, moduleization, and locked comparison.
-- Immediate required source additions named by the plan:
-  - Case study scripts: `mine_pairwise_case_studies.py`, `audit_nih_transfer_failure.py`, `audit_hard_negative_quality.py`, `audit_curriculum_leakage_cases.py`, `build_casebook_markdown.py`.
-  - Stability scripts: `run_multiseed_manifest.py`, `bootstrap_auc_ci.py`, `paired_bootstrap_method_delta.py`, `summarize_multiseed_results.py`.
-  - NIH/domain scripts: `audit_label_mapping_nih.py`, `run_nih_full_transfer.py`, `compute_domain_shift_mmd.py`, `plot_dataset_embedding_umap.py`.
-  - Curriculum v2 scripts: `build_curriculum_v2_schedule.py`, `generate_curriculum_v2_instructions.py`, `train_qwen3vl_curriculum_v2.py`.
-  - Module files: `clinical_evidence_query.py`, `answerability_uncertainty_head.py`, `hard_negative_memory_bank.py`, `domain_robust_adapter.py`, `clinical_consistency_head.py`, `case_driven_curriculum_scheduler.py`.
-- Required final reports named by the plan: `case_study_summary.md`, `multiseed_stability.md`, `nih_domain_audit.md`, `module_candidate_results.md`, and `locked_final_comparison.md` under `outputs/final_tables/`.
+- Added `scripts/generate_vsl_full_dataset.py` and generated D9 VSL-full as a composite package: trainable instruction rows plus CEQ/CCSH companion supervision.
+- D9 instruction package paths: `outputs/instruction_data/vsl_cxr/d9_vsl_full_train.jsonl` with 18000 rows and `outputs/instruction_data/vsl_cxr/d9_vsl_full_val.jsonl` with 2000 rows.
+- D9 companion paths: `d9_ceq_targets_train.jsonl` 13833 rows, `d9_ceq_targets_val.jsonl` 500 rows, `d9_ccsh_pairs_train.jsonl` 28166 rows, and `d9_ccsh_pairs_val.jsonl` 500 rows.
+- D9 structural audit passed after normalizing missing source provenance in the HNMB component: train accepted 18000/18000 and val accepted 2000/2000 with zero errors and zero warnings.
+- Added `scripts/train_vsl_full.py` and `configs/qwen3vl_instruction/vsl_cxr/debug_vsl_full.yaml`; D9 mixed-instruction debug smoke completed with `global_step=1`, `best_val_loss=9.204761981964111`, 4 train records, and 2 val records.
+- Added formal B7 config `configs/qwen3vl_instruction/vsl_cxr/vsl_4class.yaml` using D6 VSL-4class data, frozen language decoder, trainable vision tower plus visual connector, 5000 steps, final-only checkpointing, GPU1, and F-drive output root.
+- Launched formal B7 VSL-4class as PID `26240` at 2026-07-07 02:30:58 local time. Live evidence after launch: output root `F:/Xiyao_Wang/021_260129VIVID_vsl_cxr_outputs/qwen3vl/vsl_cxr_d6_vsl4` contains `config_snapshot.json`, `resolved_config.yaml`, `progress.json`, and `training_log.txt`.
+- First dense handoff check closed cleanly: B7 wrote eval at `global_step=500` with `val_loss=0.6003475424525095`, then continued training through at least `global_step=825/5000`.
+- Second dense handoff check closed cleanly: B7 wrote eval at `global_step=1000` with `val_loss=0.5235666893760499`, then continued training beyond `global_step=1200/5000`.
+- Third dense handoff check closed cleanly: B7 wrote eval at `global_step=1500` with `val_loss=0.5967676737032307`, then continued training through at least `global_step=1900/5000`.
+- Fourth dense handoff check closed cleanly: B7 wrote eval at `global_step=2000` with `val_loss=0.3948386136543704`, then continued training through at least `global_step=2125/5000`.
+- Fifth dense handoff check closed cleanly: B7 wrote eval at `global_step=2500` with `val_loss=0.5731672507374606`, then continued training through at least `global_step=2975/5000`.
+- Added `scripts/generate_vsl_label_variants.py` to derive Phase 2 label-ablation datasets from audited D6 without overwriting D6.
+- VSL-2class data generated from D6 support/contradict rows: 6000 train and 800 val; structural audit accepted 6000/6000 train and 800/800 val.
+- VSL-3class data generated from D6 support/contradict/uncertain rows: 8149 train and 1200 val; structural audit accepted 8149/8149 train and 1200/1200 val.
+- Launched formal VSL-2class Phase 2 run on GPU0 as PID `22216`; initial log loaded 6000 train and 800 val records and reached at least `global_step=100/5000`.
+- GPU state after dual-run launch: GPU0 runs VSL-2class plus a small unrelated Python service, with total memory around `9578 MiB`; GPU1 runs B7 PID `26240` at about `8853 MiB`.
+- B7 VSL-4class formal run completed at `global_step=5000` with `best_val_loss=0.3948386136543704`, `train_records=11149`, `val_records=1000`, final checkpoint, final metrics, and runtime summary. The best eval was step 2000.
+- VSL-2class formal run completed at `global_step=5000` with `best_val_loss=0.04671015161014566`, `train_records=6000`, `val_records=800`, final checkpoint, final metrics, and runtime summary. The best eval was step 2500.
+- Added `scripts/build_vsl_results_table.py`; current formal result table has 3 rows: B7 and VSL-2class completed, VSL-3class in progress.
+- Launched VSL-3class formal run on GPU0 as PID `9052`; initial log loaded 8149 train records and 1000 capped validation records.
+- VSL-3class passed early eval handoff: step 500 `val_loss=0.2733266034766566`, step 1000 `val_loss=0.26886525302077646`, step 1500 `val_loss=0.6412859738743573`; training continued to at least step 1550/5000.
+- After B7 and VSL-2class completed, GPU0 was occupied by VSL-3class at about `8799 MiB`; GPU1 later had an unrelated small Python service at about `1785 MiB`.
+- VSL-3class continued through step 2500 eval with `val_loss=0.3237449594446225`, then resumed through at least step 2725/5000.
+- Extended `scripts/generate_vsl_label_variants.py` with `vsl_4class_balanced`, an equal-class D6 sampling variant. It generated 8596 train rows with 2149 rows per class and 1600 val rows with 400 rows per class.
+- VSL-4class-balanced structural audit accepted 8596/8596 train rows and 1600/1600 val rows.
+- Launched VSL-4class-balanced formal run on GPU1 as PID `6384`; initial log loaded 8596 train and 1000 capped validation records and reached at least step 50/5000.
+- VSL-4class-balanced continued through step 2000 eval with `val_loss=0.5415896703147446`, then resumed through at least step 2100/5000.
+- Added `vsl_4class_field_balanced`, a finding-balanced D6 sampling variant covering 13 findings. It generated 5382 train rows and 767 val rows.
+- VSL-4class-field-balanced structural audit accepted 5382/5382 train rows and 767/767 val rows.
+- Launched VSL-4class-field-balanced formal run on GPU0 as PID `24488`; initial log loaded 5382 train and 767 val records and reached at least step 50/5000.
+- VSL-3class completed at `global_step=5000` with `best_val_loss=0.14087300902791322`, final metrics, runtime summary, and final checkpoint. The best eval was step 5000.
+- Refreshed `outputs/final_tables/vsl_cxr_formal_run_results.md`; current formal table has 5 rows, with B7/VSL-2class/VSL-3class completed and VSL-4class-balanced/VSL-4class-field-balanced in progress.
+- VSL-4class-balanced reached step 2500 eval with `val_loss=0.6033141188775771`, then resumed training through at least step 2600/5000.
+- VSL-4class-field-balanced reached step 500 eval with `val_loss=0.614734708572628` and step 1000 eval with `val_loss=0.5345917739312526`, then resumed training.
+- Latest GPU process boundary after the dense check showed only VSL jobs on the GPUs: PID `24488` on GPU0 and PID `6384` on GPU1.
+- VSL-4class-balanced completed at `global_step=5000` with `best_val_loss=0.4522515568471281`, final metrics, runtime summary, and final checkpoint. The best eval was step 3000.
+- VSL-4class-field-balanced completed at `global_step=5000` with `best_val_loss=0.34942927536666346`, final metrics, runtime summary, and final checkpoint. The best eval was step 1500.
+- After both balanced runs completed, `nvidia-smi --query-compute-apps` listed no active compute processes; VSL GPU training was closed cleanly at this boundary.
+- Added an optional `training.hierarchical_vsl_loss` path to `scripts/train_qwen3vl_clinical_instruction.py`. It adds the v5 hierarchy on top of answer-token CE: answerable vs not, support vs contradict for answerable samples, and uncertain vs not.
+- Added `configs/qwen3vl_instruction/vsl_cxr/vsl_hierarchical.yaml` for formal `VSL-CXR-D6-VSL4-HIERARCHICAL` on D6 four-class data.
+- The VSL-hierarchical debug smoke completed at `global_step=1`, proving the tokenizer/model path can provide the required VSL label-token logits.
+- Launched formal VSL-hierarchical on GPU1 as PID `14780`; it reached step 500 eval `val_loss=0.5881960963994497` and step 1000 eval `val_loss=0.7123697058961843`.
+- Patched `scripts/build_vsl_results_table.py` to exclude `_debug` run directories; current formal table has 6 rows and all 6 are completed.
+- VSL-hierarchical completed at `global_step=5000` with `best_val_loss=0.47355849220942764`, final metrics, runtime summary, result-table row, and final checkpoint. The best eval was step 2000.
+- After VSL-hierarchical completed, `nvidia-smi --query-compute-apps` listed no active compute processes; VSL GPU training was closed cleanly at this boundary.
+- Prepared v5-named Phase 1 baseline configs for B1-B6 under `configs/qwen3vl_instruction/vsl_cxr/phase1_baselines/`, all using Qwen3-VL, frozen language decoder, trainable vision tower plus visual connector, 5000 steps, and final-only checkpointing.
+- B1 Basic-QA and B2 CF-QA launched as current formal v5 runs under the VSL-CXR F-drive output root. B1 PID `23488` and B2 PID `13184` both reached step 25 shortly after launch.
+- B4 SAMEQ-CF has no standalone `sameq_cf_20_val.jsonl`; its formal config follows the prior SAMEQ-CF protocol and uses `outputs/instruction_data/next_stage/sameq_shuf_val.jsonl` for validation.
+- B1 Basic-QA completed at `global_step=5000` with `best_val_loss=0.023826396770775318`, final metrics, runtime summary, result-table row, and final checkpoint. The best eval was step 3000.
+- B3 SAMEQ launched on GPU0 as the next Phase 1 baseline after B1 released GPU0; it reached at least `global_step=175/5000` shortly after launch.
+- B2 CF-QA completed at `global_step=5000` with `best_val_loss=0.12035670908632119`, final metrics, runtime summary, result-table row, and final checkpoint. The best eval was step 5000.
+- B4 SAMEQ-CF launched on GPU1 as the next Phase 1 baseline after B2 released GPU1; it reached at least `global_step=175/5000` shortly after launch.
+- B3 SAMEQ completed at `global_step=5000` with `best_val_loss=0.17672864127079244`, final metrics, runtime summary, result-table row, and final checkpoint. The best eval was step 3500.
+- B5 SAMEQ-K4 launched on GPU0 as the next Phase 1 baseline after B3 released GPU0; it reached at least `global_step=225/5000` shortly after launch.
+- B4 SAMEQ-CF completed at `global_step=5000` with `best_val_loss=0.21318705889705136`, final metrics, runtime summary, result-table row, and final checkpoint. The best eval was step 2000.
+- B6 SAMEQ-HNMB launched on GPU1 as the final Phase 1 training baseline after B4 released GPU1; it reached at least `global_step=200/5000` shortly after launch.
+- B5 SAMEQ-K4 completed at `global_step=5000` with `best_val_loss=0.12773469497652912`, final metrics, runtime summary, result-table row, and final checkpoint. The best eval was step 3000.
+- B6 SAMEQ-HNMB completed at `global_step=5000` with `best_val_loss=0.09585380152730649`, final metrics, runtime summary, result-table row, and final checkpoint. The best eval was step 3000.
+- After B6 completed, `nvidia-smi --query-compute-apps` listed no active compute processes; Phase 1 training rows closed cleanly at this boundary.
+- B0 Raw-Vision is represented under the formal no-vision-training boundary as a frozen raw Qwen3-VL vision tower plus linear-probe readout. The completed B0 config has `vision_checkpoint: null` and `freeze_backbone: true`, so its metric can be used as raw feature evidence but not as a trained VSL checkpoint claim. Final metrics: macro-AUC `0.6790032275900184`, macro-F1 `0.7323508931634031`, micro-F1 `0.697265625`.
 
-## 2026-06-29 Next-Stage Comprehensive Plan Takeover
+## 2026-07-16 VinDr-CXR Integration Findings
 
-- Active goal is now `vivid_med_next_stage_comprehensive_experiment_plan.md`; the user explicitly asked to complete the full document, including expansion items, before stopping.
-- Skill pre-flight completed using `superpowers:using-superpowers` and `planning-with-files`. `subagent-plan-decomposer` and `superpowers:subagent-driven-development` were read because the plan may later benefit from independent implementation/review packages, but main-agent coordination remains necessary while the worktree is large and dirty.
-- Session catchup produced no unsynced-context report output. Current planning files were from the P4-v2 objective, so they needed a new active section rather than being treated as completion evidence.
-- Memory for this repo emphasizes that authoritative completion signals are current output files, checkpoints, task/queue states, logs, and GPU/process checks, not planning prose.
-- UTF-8 reading is required for this Chinese plan; plain PowerShell output initially showed mojibake.
-- Existing P4-v2/SHUF-3k evidence is strong baseline evidence only: the new plan cites SHUF-3k at CheXpert AUC 0.726709, NIH AUC 0.568045, random shuffle delta 0.0716429, hard shuffle delta 0.0806744, and CF acc 0.870748.
-- Exact G1 script audit found the seven plan-named scripts are missing:
-  - `scripts/generate_storymix_instructions.py`
-  - `scripts/generate_sameq_shuf_pairs.py`
-  - `scripts/generate_multi_negative_shuf.py`
-  - `scripts/audit_instruction_leakage_v2.py`
-  - `scripts/build_progressive_mixture_schedule.py`
-  - `scripts/build_token_weight_map.py`
-  - `scripts/mine_hard_negatives_from_embeddings.py`
-- Existing training/evaluation trunk is reusable: `scripts/train_qwen3vl_clinical_instruction.py`, `scripts/train_qwen3vl_vision_lp.py`, visual-dependence, counterfactual, paraphrase, LP transfer, P4-v2 D6/D7 builder, and P4-v2 summarizer are present.
-- Current `configs/qwen3vl_instruction/` covers P2/P3/P4/P5, P4-v2 CF/SHUF/QA8, LP, and transfer configs, but does not yet cover the new StoryMix, SAMEQ, P2 mask variants, curriculum/progressive, SHUF-K, token-weighting-on-SHUF, scale, or training-policy runs.
-- Existing `outputs/final_tables/qwen3vl_p4v2_*` tables and P4-v2 D6/D7/QA8 validation outputs exist and should seed the next-stage baseline table, not close the new objective.
-- The plan's required core work decomposes into: A1 JSON mask diagnostics, A2 rich QA mixture, A3 workflow/curriculum, A4 SHUF++, A5 token weighting, B1 scale, B2 training policy, B3 model/model-type controls, B4 external transfer, B5 calibration/AUPRC, B6 robustness/bias, B7 leakage audit 2.0, B8 qualitative visualization, G1 scripts, G2 training features, and G3 per-run packages.
+- The official VinDr-CXR archive now exists at `H:\Xiyao_Wang\000_Public Dataset\vindr-cxr-an-open-dataset-of-chest-x-rays-with-radiologist-annotations-1.0.0.zip` with size 151,581,123,766 bytes.
+- Its central directory is readable and exposes 15,000 train plus 3,000 test DICOMs, bbox annotation CSVs, image-level label CSVs, and `SHA256SUMS.txt`; this supersedes the earlier claim that local VinDr data lacked labels.
+- MIMIC-CXR CheXpert, NegBio, metadata, and split manifests exist as `.csv.gz` under `H:\Xiyao_Wang\000_Public Dataset\mimic_cxr_other`; the current readiness audit misses them because it checks different uncompressed paths.
+- H: has 830.97 GiB free before extraction, exceeding the archive's approximately 205.97 GB uncompressed payload while leaving a substantial safety margin.
+- Dataset/project separation is explicit: extracted medical data stays in the public dataset root; project-local work is limited to code, label maps, manifests, audit summaries, and documentation.
+- The official image-level tables support a deterministic protocol: 45,000 train reader rows aggregate by 2-of-3 majority vote to 15,000 images; the test table has one row for each of 3,000 images; official train/test image IDs have zero overlap.
+- The direct CheXpert/VSL mapping retains eight fields, but VinDr test has zero positive Edema rows. The primary external macro-AUC must therefore use seven directly comparable, non-degenerate labels; Edema stays visible in full metrics but is excluded from the primary denominator.
+- Representative extracted DICOM decoding passed with `pydicom` and produces a valid RGB image after VOI LUT, percentile normalization, and MONOCHROME inversion handling. The shared LP loader now supports `.dicom`/`.dcm` paths.
+- All five retained Phase 6 probe packages exist on F:, including `best_probe.pt` and `final_probe.pt`, so VinDr inference can run without retraining after extraction.
+- The background suite PID 21928 waits for the extraction marker, then runs integrity audit, strict manifest regeneration, five full 3,000-image external evaluations across GPU0/GPU1, and final table/readiness refresh.
 
-## 2026-06-29 Next-Stage Preparation Artifacts
+## Reuse Boundaries
 
-- Implemented the seven G1 plan-named scripts plus P2/config helper scripts: `generate_storymix_instructions.py`, `generate_sameq_shuf_pairs.py`, `generate_multi_negative_shuf.py`, `audit_instruction_leakage_v2.py`, `build_progressive_mixture_schedule.py`, `build_token_weight_map.py`, `mine_hard_negatives_from_embeddings.py`, `prepare_p2_loss_mask_variants.py`, and `prepare_next_stage_configs.py`.
-- Extended the Qwen3-VL instruction collator/trainer for `loss_masking`, token weighting, image-shuffle margin, answer margin, multi-negative hard images, `config_snapshot.json`, progress events, step metrics, and `training_log.txt`.
-- Generated next-stage instruction data under `outputs/instruction_data/next_stage/`: P2 compact train/val 1000/1000, P2 field-query 14000/14000, Balanced/CF-heavy/SHUF-heavy/Clinical-rich QA8 train sets around 23k rows, StoryMix QA5/8/10/12 train sets 14568/23269/29031/34877 rows, SAMEQ-SHUF train/val 9238/566, and SHUF-K2/K4 train/val 14333/953 each.
-- Ran leakage audit 2.0 for the current next-stage JSONL files into `outputs/final_tables/next_stage_audits/`. P2 variants are 100% accepted; SAMEQ/SHUF-K are roughly 92-93% accepted with A/B balance near 50%; rich mixtures expose expected duplicate-question-per-image flags as QA/image increases.
-- Generated 30 YAML configs under `configs/qwen3vl_instruction/next_stage/`, token-weight snippets under `configs/qwen3vl_instruction/next_stage_snippets/`, and schedule/config manifests under `outputs/next_stage_manifests/`. Only the two 10k placeholder configs intentionally point to missing `next_stage_missing` paths.
-- Debug-smoked `P2-no-punct` and `SHUF-K4`; both wrote the required baseline per-run package including `config_snapshot.json`, `metrics_final.json`, `metrics_step_1.json`, `progress.json`, `resolved_config.yaml`, `runtime_summary.json`, and `training_log.txt`.
-- Added `docs/next_stage_requirement_ledger.md` as the current requirement ledger. It marks A1/A2 preparation complete, A3/A4/A5 config/data support mostly ready, and Part B extension gaps still open for 10k scale, training policy, model scale, external transfer, calibration/AUPRC, prompt robustness/option bias, and qualitative visualization.
+## 2026-07-11 Storage Cleanup Findings
 
-## 2026-06-29 Next-Stage Expansion Artifacts
+- Cleanup scope is the repository root `H:\Xiyao_Wang\021_260129VIVID`; referenced external datasets and external experiment roots are not implicitly authorized for deletion.
+- Existing Git and active handoff state must be checked before deleting generated or historical material.
+- A deletion manifest and resolved-path boundary validation are required before recursive removal.
+- Live inventory found `outputs/` at 897.625 GiB, of which 1,352 `.pt` files account for 893.666 GiB. This makes completed-run weights the dominant safe reclamation target while preserving non-weight evidence.
+- `.git/objects` is 124.305 GiB with 6,766 loose objects, but only 1,614 objects are reachable from current refs; Git garbage collection must be used instead of manual object deletion.
+- `data/` is 152.594 GiB and is preserved as sensitive source/processed medical data. `pretrained/` is only 0.958 GiB and remains useful for reproducible initialization, so it is preserved.
+- Post-cleanup state: `outputs/` 3.825 GiB, `.git` 1.070 GiB, `History/` 0.007 GiB, zero `.pt` files under `outputs/` or `History/`, and both `vivid_env/` and `.remote_upload_tmp/` absent.
+- Approximate reclaimed space is 1,024.9 GiB (about 1.00 TiB). Git integrity passed with 1,614 reachable objects in one 1.07 GiB pack and zero loose or garbage objects.
+- The VSL table rebuild chain still succeeds without the deleted weights: formal 33/33, CEQ 5/5, CCSH 9/9, AUCH 1/1, Phase 5 6 rows, external 8 rows with 5 appendix-completed, and locked final 8 rows with `VSL-Full` retained as integrated finalist.
 
-- Phase 1 formal queues are active. `P2-value-only` has resumed cleanly from step 500 and reached step 1500+ eval; `P2-field-query` was relaunched with corrected 1k validation and reached step 1000 eval.
-- Failure evidence is preserved under `outputs/failure_cases/next_stage/` for P2-field-query full-val eval and wrapper interruption. These are engineering cases, not silent retries.
-- Training resume now restores checkpoint `global_step` and `best_val_loss`; queue scripts auto-resume from the newest checkpoint when `metrics_final.json` is missing.
-- In-batch negative support is implemented and smoke-verified: a 2-row D7 batch produced 2 `negative_input_ids` rows from batch-rotated images.
-- 10k scale data is now present and explicitly labeled as UMS-structured rather than GLM-report-derived: `ums_chexpert_10k_facts.jsonl`, `shuf_10k_train/val.jsonl`, `storymix_10k_train/val.jsonl`, with leakage audits for train/val.
-- Config matrix now has 36 runnable configs and 36 LP configs. Newly covered items include `InBatch-SHUF`, TRAIN-CONN, TRAIN-LAST4, TRAIN-FULLVISION, SHUF-10k-8k, StoryMix-10k-8k, PROG-Mix-10k-8k, and PROG-Mix-TW-10k.
-- B5 metrics support is expanded: LP/transfer metrics now include macro/per-label AUPRC, ECE, and Brier score.
-- B6 support is expanded with A/B swap diagnostic JSONL generation and postprocess hooks for Phase 1 runs.
-- B8 support is expanded with `next_stage_qualitative_cases.md` and 24 side-by-side hard-negative image assets. This is qualitative case review, not Grad-CAM/attention attribution.
-- External/model audit is documented in `docs/next_stage_external_model_availability.md`: NIH external UMS is available; MIMIC reports/images exist but AUC transfer needs a UMS label manifest; PadChest/VinDr are unavailable in current repo/data paths; 4B/8B local models need separate VRAM audits before formal larger-VLM claims.
-- Phase N4 P2 formal diagnostics are now complete: `p2_value_only` finished at 3000 steps with best validation loss 0.25470546504855157; `p2_field_query` finished at 3000 steps with best validation loss 0.1867514458609803. Both keep the language decoder frozen.
-- Phase N4 queue behavior note: the GPU queue wrappers exited after the first completed run, so they were relaunched to skip completed P2 runs and continue with `storymix_qa8` on GPU0 and `shuf_heavy_qa8` on GPU1.
-- A4 SHUF++ no longer has only a boundary for Mined/SelfHard: the repo now has scripts to export SHUF checkpoint embeddings, mine same-finding answer-mismatch negatives, score wrong-image NLL for confidence mining, oversample self-hard rows, and run a progressive-hardneg schedule. The actual mined JSONL still needs a GPU pass after a lane is free.
-- Workflow/progressive configs previously carried `curriculum_schedule` as metadata only. The trainer now supports actual step-window sampling when rows include `curriculum_start_step` and `curriculum_end_step`; a small smoke materialized four stages and confirmed the active set changes by global step.
-- Formal CUR/PROG configs now point to materialized JSONL with curriculum windows. Leakage audit flags are high for these files, mostly from duplicate-question-per-image introduced by stage resampling; preserve this as a cost/quality signal rather than treating curriculum data as clean by default.
+## Reuse Boundaries (Existing Experiment Evidence)
 
+- Prior CVCP/CCSH and SAMEQ artifacts can support baselines or interpretation only when the v5 ledger maps them to exact run definitions such as SAMEQ-full+CCSH or SAMEQ-K4+CCSH.
+- VSL-4class, AUCH/insufficient labels, explicit support/contradict/uncertain/insufficient metrics, and v5 locked-final rows should be treated as not complete until current artifacts prove otherwise.
+- Existing `outputs/final_tables/module_ablation_results.csv` remains useful historical embedding-level CEQ/AUCH/HNMB/DRA/CCSH evidence, but Phase 3 CEQ claims are now being regenerated with v5-named patch-token CEQ runs over D9 CEQ companion rows.
+- Phase 3 CEQ quantitative runs are complete. CEQ-region is the strongest current CEQ variant on the D9 CEQ validation target: binary AUC `0.8471731089704508`, AUPRC `0.8014489081845343`, state accuracy `0.716`, ECE `0.08269000466053303`, and region accuracy `0.654`. This supports CEQ-region as the current CEQ finalist for later CCSH/AUCH/integrated rows, while attention-map casebooks remain pending.
+- Phase 4 deployable readout runs are complete. Single-run leaders are CCSH-CEQ for binary AUC (`0.9059760000000001`), AUCH-CEQ-CCSH for AUPRC (`0.9005512099194461`), and AUCH-VSL4 for ECE (`0.11341642936132851`). AUCH-SAMEQ gives high answerability AUPRC (`0.9284813309209423`) but weak answerability AUC (`0.5476678876678877`) and uncertainty F1 `0.0`, so the AUCH-only result should be treated as calibration/answerability evidence, not as a strong uncertainty classifier.
+- The post-Phase-4 readiness audit was superseded by the Phase 6 audit: VinBigData-derived images and NIH are locally present, MIMIC-CXR is locally present without the audited CheXpert label manifest, and PadChest remains missing.
+- Phase 5 integrated candidate evidence is complete for the locally runnable candidates. VSL-CEQ is the strongest component-completed candidate by CCSH binary AUC (`0.9059760000000001`), while VSL-Full completed D9 mixed-instruction formal training with best val loss `0.19854170768998938` and inherits the current CCSH+AUCH evidence row (`AUCH-CEQ-CCSH`, AUPRC `0.9005512099194461`). VSL-Domain remains blocked by external dataset availability rather than by missing local training code.
+- Phase 6 external evidence is complete only in the appendix/stress sense. NIH-appendix-1k transfer completed for Raw, SAMEQ, VSL-Core, VSL-CEQ backbone proxy, and VSL-Full. SAMEQ has the best NIH macro-AUC (`0.5932955434118374`), VSL-Core has the best NIH macro-AUPRC (`0.15464047456578672`), and all calibration numbers remain weak. This is useful domain-shift evidence but does not satisfy the v5 preferred main-external claim.
+- The v5 main-external claim remains blocked by data eligibility, not by trainer/evaluator availability: the local VinBigData-derived image package has PNGs and `train_meta.csv` but no class label/bbox CSV, PadChest is absent, and local MIMIC-CXR lacks the audited CheXpert label manifest.
+- Phase 7 teacher comparison is complete in a bounded audit sense. Qwen3-VL current-main smoke/full evidence is supported by the completed VSL-Core formal run plus CheXpert LP, NIH appendix/stress, and CCSH readout rows. InternVL and LLaVA/Mllama local model directories exist, but exact v5 comparison is blocked by missing family-specific VSL trainer adapters. Qwen3.5 and Qwen-Coder text-only controls require a separate non-vision VSL scaffold trainer; historical text-only scripts are not exact v5 evidence.
+- Phase 8 case-study evidence is generated from current VSL-CXR artifacts rather than old mixed-plan casebooks. The new casebook has 33 rows covering VSL support, contradict, uncertain, insufficient, SAMEQ pairs, false-hard-negative review, CCSH, CEQ attention, and NIH external failures. These rows are publication candidates and still require manual image review.
+- Phase 8 visualization evidence is organized in a 7-row manifest. CEQ attention-map assets exist, CCSH/external/calibration metrics are linked, and the calibration figure is bounded by missing binned curve points because current transfer outputs expose ECE/Brier/per-label metrics rather than per-sample probability bins.
+- Phase 9 locked final comparison is complete with explicit boundaries. The integrated finalist is VSL-Full because it has the best Phase 6 CheXpert LP macro-AUC (`0.7148588673744163`) and completed D9 mixed-instruction training, but the NIH appendix macro-AUC still favors SAMEQ/Core and main external is blocked. Qwen3-VL 2B remains the teacher finalist because all cross-family rows lack exact v5 trainer adapters. Every locked row is single-seed, so the final claim should be written as current locked evidence rather than multi-seed statistical dominance.
+- The v5 named-script surface has been closed at the readiness-audit level: after adding wrappers/manifests for D0-D5 sources, HNMB training, CheXpert/external LP summaries, VSL sufficiency, calibration, and casebook rebuilds, `scripts/audit_vsl_cxr_readiness.py` reports `script exact_exists=29` and no `missing_exact_analogs_exist` rows. This does not remove the real main-external, manual-review, binned-calibration, adapter, or multi-seed boundaries.
+## 2026-07-16 VinDr Server Handoff
 
-## 2026-06-28 P4-v2 / Scale Plan Takeover
+- The user explicitly moved execution away from the Windows workstation: the local VinDr formal suite must not continue.
+- Local processes `21928`, `24956`, and `15084` were stopped before result generation; the incomplete local output directories are not formal evidence.
+- Live SSH verification passed for `sues-hpc` (`mu01`). The established remote project root is `/ipfs/inspurfileset/home/dqxy/dqxy11/projects/xiyaowang/021_260129VIVID`, and its existing `data/dataset` directory is writable.
+- The extracted VinDr-CXR tree contains 18,008 files / 205,970,857,822 bytes (191.825 GiB). The remote project currently has no VinDr dataset path.
+- The server handoff must include the five small final LP-probe packages and three source-backbone `final.pt` files, because the remote project did not expose those run directories during the live check.
+- `scripts/run_vindr_external_suite.py` and `scripts/evaluate_qwen3vl_lp_transfer.py` now accept server path overrides instead of requiring Windows `H:`/`F:` paths.
+- The remote VinDr transfer is not currently limited by network or global filesystem capacity. Its project destination reports `1.2P` free globally, but user-level quota enforcement rejects a 16 MiB write with `Disk quota exceeded`. The resumable state is preserved: logical ZIP parts `0000`/`0001` are done; `0002.sub.00` is done; `0002.sub.01` is safely retained at `1,849,688,064` bytes.
+- A storage-minimal server path is scientifically sufficient for the already-trained external LP probes: `run_vindr_external_suite.py` consumes `vindr_cxr_external_test_ums.jsonl`, whose 3,000 entries resolve only under the official `test/` directory. Local audited sizes are `33,523,408,062` bytes for test (3,000 DICOMs) versus `172,434,631,116` bytes for train (15,000 DICOMs). A clearly labelled test-only remote package can therefore replace the full 18,000-image upload for external evaluation, provided the suite skips full-dataset extraction/audit preparation and performs a strict 3,000-image test-only manifest/path audit.
+- Remote storage audit: the server portal's 1,024 GiB usage is consistent with the visible allocation. Major known consumers are `projects/xiyaowang/model` (366 GiB), `projects/xiyaowang/models/027_diffsionretrieval` (47 GiB), `projects/xiyaowang/035_Opmem` (196 GiB), `projects/xiyaowang/036_IndexMemory` (65 GiB), VIVID `outputs/` (71 GiB), the account-root `model/Qwen` (32 GiB), and `projects/xiyaowang/cache` (15 GiB: 12 GiB pip plus 2.8 GiB Hugging Face).
+- VIVID `outputs/` contains 57 paired `best.pt`/`final.pt` checkpoint directories, 30.407 GiB per side (60.814 GiB total). Two SHA-256 samples prove `best.pt` and `final.pt` are not byte-identical, so neither side can be called a duplicate. The currently uploaded VinDr external-source artifacts total 2.275 GiB under `outputs/qwen3vl_external_sources` and must be retained. There are no `step_*.pt` / numeric checkpoint files in remote VIVID `outputs/`; cleanup there is a retention decision, not removal of obvious intermediates.
 
-- Active goal is now `vivid_med_qwen3vl_p4v2_scale_experiment_plan.md`; prior Qwen3-VL v2 completion artifacts are useful context but do not prove the new scale/hard-counterfactual plan is complete.
-- The new plan requires P4-v2 facts, D6 hard A/B counterfactual data, D7 hard image-shuffle data, instruction leakage/distribution/manual audit outputs, training/evaluation runs, and final write-back into the same markdown file.
-- Memory and repo history indicate that authoritative completion signals in this repo are current output files, checkpoint contents, logs, process/GPU state, and generated tables, not plan prose.
-- Initial process listing found multiple Python processes that may be lingering generation/evaluation jobs; command lines and GPU state still need to be audited before launching new API-heavy or GPU-heavy work.
-- API key/endpoint details must remain environment-only; raw keys must not be written to code, configs, logs, or planning files.
-- Resource audit found GPU0/GPU1 idle, no compute apps, and a present `ZHIPU_API_KEY` environment variable.
-- Four active GLM API processes were generating older `v3_mimic_5k/train_extra4k` shards with `prompts/glm_instruction_generation_report_grounded_v3_counterfactual.txt`, not the new plan's standardized D6/D7 outputs.
-- Pause point for old extra4k generation: shard0/shard1/shard2/shard3 API logs were roughly 277/226/259/323 successful API rows out of 500, and raw JSONL lines were 880/832/804/800. The jobs use `--resume`, so they can be resumed after P4-v2 data generation.
-- Added P4-v2 support scripts: `scripts/generate_p4v2_facts_with_glm.py`, `scripts/build_p4v2_d6_d7.py`, `scripts/audit_p4v2_instruction_quality.py`, and `prompts/glm_p4v2_fact_extraction.txt`.
-- Two-sample GLM fact smoke completed with 2 written, 0 errors. D6/D7 smoke built 10 records each; P4-v2 smoke audit reported 100% accepted, 0% leakage, and 50/50 A/B balance. Existing validator cross-check accepted 10/10 D6 smoke records with 0 rejects.
-- Added hard-shuffle support to `scripts/evaluate_qwen3vl_visual_dependence.py` and configurable image-shuffle margin loss to the Qwen3-VL instruction trainer/dataset path for D7 runs.
-- Core P4-v2 configs now exist for `CF-1k-3k`, `S-P4-3k`, `CF-3k-5k`, `CF-3k-8k`, and `SHUF-3k`; YAML parsing passed.
-- Added `scripts/summarize_p4v2_results.py`, which writes the plan-requested `qwen3vl_p4v2_*` final tables with explicit `missing` statuses until artifacts exist.
+## 2026-07-16 BiVES-CXR Consolidation Findings
 
-## 2026-06-28 Qwen3-VL Resume
-
-- Active goal is again `vivid_med_qwen3vl_proposal_v2_modification_plan.md`; old MIMIC V1-V4 document line remains closed and should only be used as baseline evidence.
-- Official Zhipu API docs distinguish the general endpoint `https://open.bigmodel.cn/api/paas/v4` from the Coding Plan endpoint `https://open.bigmodel.cn/api/coding/paas/v4`; the latter is required for Coding Plan use, and the API key should be supplied as a Bearer token via environment variable rather than hard-coded.
-- Formal Qwen3-VL P2/P3/P4/P5 instruction training artifacts exist with `global_step=1000` and frozen language decoder counts in their `metrics_final.json`.
-- Formal CheXpert 1k LP artifacts exist for base/P2/P3/P4/P5, but metrics live under nested `metrics.*` fields; top-level `macro_auc` reads are invalid.
-- Existing extraction manifests were created before the freeze-plan manifest patch was rerun; they still report the language decoder as trainable. Re-run extraction P2-P5 before treating extraction manifests as final evidence.
-- Remaining v2 plan gaps include Qwen3-VL visual-dependence diagnostics, Qwen3-VL counterfactual diagnostics, paraphrase/template sensitivity, subgroup/cost/transfer evidence, and the final requirement audit.
-
-## 2026-06-28 Old Document Closure
-
-- User requested that the old document be closed and not continued afterward.
-- Verified old MIMIC V1/V2/V3/V4 evidence tables are present: main results, V1-V4 comparison, visual-dependence results, counterfactual results, and answer-type diagnostics.
-- Final old-document interpretation: V4 lowers teacher-forced validation loss relative to V3 and weakly improves option-subset counterfactual accuracy, but V2 remains best on LP macro-AUC and image-shuffle deltas remain near zero.
-- Boundary: strong image-specific grounding is not validated; broader old-document gaps such as NIH transfer, paraphrase robustness, subgroup analysis, and cost tables are not pursued after this closure unless the user reopens the objective.
-- Final process check found GPU0/GPU1 idle and no active Python experiment process; residual `cmd`/`powershell` processes are tool/plugin shells.
-
-## 2026-06-28 Qwen3-VL Proposal v2 Takeover
-
-- User superseded the previous `vivid_med_clinical_instruction_proposal.md` objective with `vivid_med_qwen3vl_proposal_v2_modification_plan.md`; do not continue old-document-only gaps.
-- No old instruction training/evaluation/generation process was running at takeover, and both GPUs were idle.
-- New proposal changes the main method from piecemeal `timm ViT + text-only Qwen/Qwen-Coder + new projector` to a pretrained VLM-coupled route.
-- New main route: local Qwen3-VL VLM, frozen language decoder, trainable vision tower and visual connector, report-grounded GLM clinical instructions, then discard LLM and evaluate the vision tower.
-- Required first executable gate is Qwen3-VL component audit, not immediate full training.
-- Local model root `H:\Xiyao_Wang\001_models` does not contain a directory literally named `Qwen3-VL-2B-Instruct`, but does contain `qwen3-vl-2b-thinking-new`, `Qwen3-VL-4B-Instruct`, and `Qwen3-VL-8B-Instruct`.
-- `H:\Xiyao_Wang\001_models\qwen3-vl-2b-thinking-new\config.json` has `model_type=qwen3_vl` and architecture `Qwen3VLForConditionalGeneration`; use it as the first local 2B Qwen3-VL candidate unless audit fails.
-- In conda env `vivid`, `transformers 5.0.0` loads `Qwen3VLConfig` and `Qwen3VLProcessor`, and the processor has `apply_chat_template`; CUDA is available.
-- Coding Plan domestic endpoint remains `https://open.bigmodel.cn/api/coding/paas/v4`; raw API key must stay out of repo files/logs.
-- Qwen3-VL debug training works with `AutoModelForImageTextToText` and `Qwen3VLProcessor`; answer-only labels are generated through `apply_chat_template`.
-- The validated freeze plan leaves `vision_tower` plus `visual_connector` trainable and keeps `language_decoder` frozen.
-- V2/V3 report-grounded instruction data is usable after auto-validation, but hard rejects show real data-quality issues: unsupported laterality/severity claims, null-as-absent errors, and a few invalid finding names.
-- Counterfactual-format warnings remain frequent, especially in V3; treat this as a data-quality limitation for P4/P5 rather than as a solved counterfactual benchmark.
-- CheXpert relative image paths require `H:\Xiyao_Wang\000_Public Dataset` as `data_root`; repo-local `.` causes black-image fallbacks in Qwen3-VL LP.
-- True D0 fixed-JSON Qwen3-VL data is now available and validated; P2 should use `outputs/instruction_data/glm_validated/d0_train_validated.jsonl` and `d0_val_validated.jsonl`, not the earlier V1 proxy.
-- Formal P2/P4 runs completed with frozen language decoder and trainable vision tower/connector. P2's very low validation loss reflects the fixed-schema target and should not be interpreted as visual grounding by itself.
-- Qwen3-VL P2-P5 visual-dependence diagnostics completed: question-only/black-image loss deltas are large, but image-shuffle deltas stay small, so image presence sensitivity is supported while strong image-specific grounding is not validated.
-- Qwen3-VL P4/P5 counterfactual diagnostics completed on option-formatted subsets. P4/P5 prefer correct options on that subset, but most `counterfactual_choice` rows are not explicit A/B/C/D option records, so this remains a data-quality boundary.
-- Qwen3-VL P2-P5 paraphrase/template diagnostics completed. Clinical rewrites cause small mean NLL increases; style rewrites are consistently harder, so paraphrase robustness is measured but not fully solved.
-- NIH 1k transfer completed for Base/P2/P3/P4/P5/P6 with 0 missing images after resolving NIH `extensions.image_index` paths. P4 has the best NIH macro-AUC among these runs, but the margin over Base is small.
-- P6 data-only no-LM control completed as a Qwen3-VL vision tower + linear head trained directly on CheXpert UMS labels. It does not use GLM D3 instruction data, so it is a useful no-LLM control but not a perfect D3 data-only match.
-- The user-requested final write-back is now in `vivid_med_qwen3vl_proposal_v2_modification_plan.md` Section 11, including completion status, main metrics, visual-dependence/counterfactual/paraphrase boundaries, and artifact index.
-
-## 2026-06-28 Initial Context
-
-- `AGENTS.md` now requires a skill/superpower pre-flight before any task or command sequence.
-- `planning-with-files` applies because the objective is a complex multi-step experiment execution workflow.
-- Memory indicates that for this repo, authoritative completion signals are output files, checkpoint contents, queue/task state, log tails, and GPU/process checks rather than planning prose alone.
-- Current repo has many pre-existing modified/untracked experiment files; do not revert or overwrite them casually.
-- No raw GLM API key should be written into repo files.
-
-## 2026-06-28 Proposal Requirements Extract
-
-- The new repository-level objective is `Clinical Evidence Instruction Pretraining for Deployable CXR ViTs`.
-- Core direction: convert CXR report + UMS schema into GLM-generated clinically grounded visual instructions, train deployable ViT/ViT+small head, and avoid deployment-time LLM.
-- Required instruction types include finding verification, evidence phrase, laterality/location, severity, uncertainty, answerability, image-report consistency, counterfactual choice, temporal comparison, and device QA.
-- Required data versions include V0 fixed JSON, V1 label-to-QA, V2 report-grounded QA, V3 report-grounded QA plus counterfactual, V4 token weighting, V5 counterfactual margin, V6 question-only/image-shuffled controls, optional V7 visual verifier, and V8 decoder controls.
-- Required implementation tasks are G0 schema, G1 GLM generator, G2 filter, G3 stats, G4 manual audit sample, G5 instruction dataloader, G6 instruction trainer, G7 visual-dependence evaluator, and G8 downstream LP evaluation.
-- Minimum runnable matrix: fixed JSON V0 1k, label-to-QA V1 1k, report-grounded V2 1k, V3 1k, no-LM schema 1k, question-only eval, image-shuffle eval, and visual token weighting.
-- Final result package should include instruction dataset stats, main results, visual dependence results, ablations, counterfactual results, cost table, audit summary, failure cases, plus per-run configs/metrics/runtime/checkpoints/predictions.
-- Success requires not only CheXpert AUC but also NIH transfer, counterfactual pairwise accuracy, image-shuffle drop, question-only degradation, paraphrase robustness, and rare/high-null/uncertain group behavior.
-
-## 2026-06-28 Current Artifact Audit
-
-# 2026-07-04 CVCP/CCSH Full Plan Takeover
-
-- Formal CVCP training is now routed to `F:/Xiyao_Wang/021_260129VIVID_cvcp_ccsh_outputs/qwen3vl` because the project `H:` drive has only about 36-39 GB free. Configs remain in-repo; heavy metrics/checkpoints use the F-drive output root.
-- The postprocess layer must use `checkpoints/final.pt`, not `best.pt`, for the new CVCP runs because the generated configs intentionally use final-only checkpointing to control storage growth.
-- NIH is being treated as `appendix_stress_test` only. The postprocess queue uses a 1k NIH appendix subset for uniform stress evidence; VinDr/PadChest remain explicit main-external blockers unless labels/manifests are supplied.
-- Current `model_comparison_results` is a compatibility audit, not a completed teacher-training comparison. Qwen3VL 2B is the formal active queue; Qwen3VL 4B/8B still need VRAM smoke before long runs; InternVL/Llama vision and text-only scaffolds require separate trainer/adapter implementations to be fair under the plan's same-protocol rule.
-- Module-combo rows are now queued as embedding-backed module-head experiments after formal backbone checkpoints complete. This preserves Base+CCSH as a raw-Qwen3VL head-only baseline and avoids reusing old embedding-level module ablations as if they were new CVCP module-combo results.
-
-- User started an active `/goal` for `vivid_med_cvcp_ccsh_full_next_experiment_plan.md` and explicitly requested completion of every required and optional experiment under the document's formal protocol.
-- User approved use of both local RTX 3090 GPUs. Initial `nvidia-smi` snapshot showed GPU0 and GPU1 idle at `0 MiB` and `0%`.
-- Skill preflight used `superpowers:using-superpowers`, `planning-with-files`, `subagent-plan-decomposer`, `subagent-driven-development` as conditionally applicable, `executing-plans` as fallback, and `verification-before-completion` for final claims.
-- Session catchup produced no output. The prior planning files describe completed case-study/module and upload handoff work, so this new CVCP/CCSH goal needs a fresh active section rather than inheriting old completion claims.
-- Memory guidance is useful only as a boundary pattern: write results back into the source markdown, refresh audits after final edits, keep GPU/process evidence fresh, and do not trust old row counts without revalidation.
-- The target document frames the main story as Clinical Visual Curriculum Pretraining with deployable CCSH/CEQ-style modules, not as a final-best `SHUF-TW-clinical` claim.
-- Current local dataset directories include CheXpert, NIH, MIMIC-derived processed data from earlier runs, AMOS22/KITS21/LIDC/OrganMNIST, and `vinbigdata_xhlulu_512png`. There is no current local `PadChest` directory in the first dataset-directory audit. The downloaded VinBigData package is image/meta-only per previous project findings and needs labels/manifest before it can satisfy a VinDr/VinBig external-evaluation row.
-- Initial script-existence audit command failed before returning data; rerun before claiming which target-plan scripts exist or are missing.
-- Generated `docs/cvcp_ccsh_requirement_ledger.md` and `outputs/final_tables/cvcp_ccsh_requirement_ledger.csv` with 239 rows. The conservative first-pass status distribution is: 21 missing scripts, 5 missing target final tables, 143 open experiment/metric rows, 36 experiment/metric rows with name-like candidate evidence requiring exact protocol audit, and 14 open qualitative/casebook/visualization rows.
-- Exact target-plan script names are absent, but useful analogs exist: curriculum, SAMEQ, SHUF, bootstrap, case-study module, NIH/domain, and Qwen3VL training/eval scripts from prior plans. These should be adapted behind target-named entry points rather than counted complete as-is.
-- Broad multi-directory `rg` for all CVCP/CCSH-related terms timed out, reinforcing that audits should be ledger-driven and targeted rather than whole-tree scans.
-- Generated `docs/cvcp_ccsh_readiness_audit.md` and `outputs/final_tables/cvcp_ccsh_readiness_audit.csv` with 56 rows. It maps all 21 missing target scripts to existing analogs, confirms 5 local model-comparison buckets, records 5 missing/existing target output statuses, and separates reusable prior-protocol artifacts from new CVCP/CCSH completion.
-- Local model availability: Qwen3VL current main (`qwen3-vl-2b-thinking-new`, 4B, 8B), InternVL (2.5/3.5 1B-8B), Llama-3.2-11B-Vision, Qwen3.5 2B/4B/9B, and Qwen2.5-Coder-7B directories exist under `H:/Xiyao_Wang/001_models`. Each needs a model-specific smoke before training claims.
-- Reusable artifact boundary: case-study multiseed/downstream rows are complete for SHUF-3k, SHUF-TW-clinical, SAMEQ-SHUF-3k, and SHUF-K4; module ablations are complete at embedding-head level; next-stage 39-run audit is complete for the older protocol. None of these close new CVCP+CCSH, CEQ+CCSH, HNMB+CCSH, teacher-comparison, or external-main rows by themselves.
-- Implemented `scripts/cvcp_ccsh_driver.py` plus 21 target-named wrappers. The exact script rows in the target document now exist and compile; readiness audit now reports `target_script exact_exists=21`.
-- Generated formal CVCP/CCSH data artifacts: 14 CVCP curriculum datasets, 3 SAMEQ-CF-compatible datasets, 3 SHUF-K-CF-compatible datasets, 28,666 CCSH statement rows, and 14,333 CEQ target rows.
-- Ran v3 data audits on generated key datasets. These audits are first-pass automatic gates; rows with flags require data filtering/rebalancing before final training claims if they affect selected candidates.
-- Created target-named final-table outputs for casebook, CVCP training, module combo, model comparison, external eval, and locked comparison. Some are readiness/prior-protocol summaries until the new formal training rows finish.
-- The 2026-07-04T17:39 goal-continuation/tool interruption is treated as an external interruption, not a model-quality result. Because CVCP configs use final-only checkpointing, interrupted training directories without `metrics_final.json` and without `checkpoints/final.pt` are now archived under the F-drive `interrupted_runs/` area before clean rerun. Official CVCP/CCSH tables should only count runs with final metrics/checkpoints or explicit data-unavailable boundaries.
-
----
-
-- GPUs are currently idle: GPU0 and GPU1 both report 0 MiB memory use and 0% utilization.
-- No VIVID training, instruction, or GLM generation process is currently running.
-- Existing old-revision artifacts under `outputs/final_tables` and `outputs/failure_cases` are extensive but correspond to schema/frozen-LM/data-scaling work, not the new instruction-data proposal.
-- No existing `data/instructions/*`, `scripts/train_cxr_instruction.py`, `data/cxr_instruction_dataset.py`, or GLM instruction generator was found by filename search.
-- `data/splits/chexpert_train_{1k,3k,10k,30k}.jsonl` and `chexpert_val_fixed.jsonl` exist and contain UMS `findings`, `answerability`, `uncertainty`, and `extensions.original_path`.
-- Current CheXpert small files include `train.csv`, `valid.csv`, and images, but not radiology report text files.
-- First-pass conclusion: V1 label-to-QA/answerability can be generated from UMS now; V2/V3 report-grounded GLM generation needs a report text source or a fallback strategy clearly marked as non-report-grounded.
-
-## 2026-06-28 GLM Coding Plan Setup
-
-- Official docs identify the domestic BigModel/Zhipu Coding Plan OpenAI-compatible base URL as `https://open.bigmodel.cn/api/coding/paas/v4`.
-- Official docs identify the international Z.AI Coding Plan OpenAI-compatible base URL as `https://api.z.ai/api/coding/paas/v4`.
-- `scripts/generate_clinical_instructions.py` defaults to the domestic Coding Plan URL and reads the API key from `GLM_API_KEY`.
-- Connectivity smoke test with the user-provided key, domestic Coding Plan URL, and `glm-5.2` returned a successful OpenAI-compatible chat-completions response.
-- GLM generator smoke test produced 4 parsed records from 1 CheXpert sample with 0 errors at `data/instructions/raw/glm_v1_smoke/train.jsonl`.
-- Secret check found no raw key written under `data/instructions`, `outputs/instruction_generation`, `scripts`, `docs`, `prompts`, or the planning files.
-
-## 2026-06-28 Instruction V1 Debug Training
-
-- Implemented `data/cxr_instruction_dataset.py` and `scripts/train_cxr_instruction.py`.
-- Added local debug config `configs/debug_instruction_v1_qwen25_coder_7b.yaml`.
-- `H:/Xiyao_Wang/001_models/Qwen3.5-0.8B` failed because the current `vivid` Transformers does not recognize `model_type=qwen3_5`.
-- Switched to `H:/Xiyao_Wang/001_models/Qwen2.5-Coder-7B-Instruct`; debug training loaded 7.6B frozen parameters and trained 92.5M ViT/projector parameters.
-- Two-step debug completed: global_step 2, best_val_loss 1.009125, train_records 16, val_records 4.
-- Debug artifacts are under `outputs/instruction_runs/debug_v1_qwen25_coder_7b/` with `best.pt`, `step_2.pt`, `final.pt`, `config.yaml`, `resolved_config.yaml`, `metrics_final.json`, and `runtime_summary.json`.
-- Both GPUs were idle after the debug run.
-- Added `data/instructions/` to `.gitignore` because generated instruction data derives from medical data.
-
-## 2026-06-28 Subagent Audits
-
-- Report-source explorer checked CheXpert/NIH CSVs, split JSONL, processed UMS JSONL, instruction JSONL, schema/docs, and preprocessing scripts.
-- No original CXR radiology report text was found in current repo data; UMS `findings` is structured label metadata, not narrative report text.
-- Current instruction rows have schema fields such as `report` and `evidence_phrase`, but sampled V1 records leave them empty/null and carry `no_report_text`.
-- Therefore V2/V3 cannot honestly run as report-grounded instruction generation until a licensed/de-identified report lookup manifest is added.
-- Evaluation explorer confirmed old no-LM schema 1k and old LP comparator metrics already exist under `outputs/data_scaling/`, but these are older UMS-schema comparators, not new instruction-LP outputs.
-- Required instruction-specific question-only/image-shuffle evaluation and instruction downstream LP were missing before this session; visual token weighting exists only as generic state-token weighting and is not meaningful for report-evidence V4 without V2/V3 report-backed rows.
-
-## 2026-06-28 Instruction Visual-Dependence Smoke
-
-- Added instruction teacher-forced loss evaluator for normal, question-only zero image, and image-shuffle modes.
-- First image-shuffle implementation was misleading because V1 records are grouped by image; batch-local rolling can keep the same image. The evaluator now pairs each instruction row with an image from a different `sample_id`.
-- On `step_250.pt`, 64 V1 validation rows: normal loss 1.628535, question-only loss 1.910276 (`+0.281741`), image-shuffle loss 1.629220 (`+0.000685`).
-- Interpretation: the current V1 label-to-QA checkpoint is sensitive to blanking the image but has near-zero sensitivity to mismatched images in this small smoke. This supports keeping V1 claims narrow and treating stronger visual-dependence as unresolved until report-backed/counterfactual data exists.
-
-## 2026-06-28 MIMIC Report Source
-
-- `H:\Xiyao_Wang\000_Public Dataset\mimic-cxr\mimic-cxr\mimic-cxr-reports` contains report `.txt` files, with local count previously checked at 227835.
-- `H:\Xiyao_Wang\000_Public Dataset\mimic-cxr\mimic-cxr\mimic-cxr-images` contains matching image study directories; image/report paths align by `pXX/p########/s########`.
-- `mimic-cxr_less` CSVs have nonempty `text` and `text_augment`, but for V2/V3 we use the full image/report directory layout to keep image-study-report alignment explicit.
-- Generated MIMIC manifest rows contain absolute image paths plus report text in local ignored JSONL; no report body was printed to the terminal.
-- V2 MIMIC train generation produced 4000 raw rows from four shards with 0 duplicate drops; filtering kept 3993 rows across 1000 studies.
-- V2 MIMIC val generation produced 800 raw rows from four shards with 0 duplicate drops; filtering kept 796 rows across 200 studies.
-- V2 train answer types cover finding verification, evidence phrase, laterality/location, severity, uncertainty, answerability, report consistency, counterfactual choice, temporal comparison, and device position.
-- V2 debug training completed on local Qwen2.5-Coder-7B with `global_step=2`, `best_val_loss=2.3839718103408813`, 16 train records, and 4 val records.
-- V2 formal training completed on the MIMIC report-backed instruction set with `global_step=1000`, `best_val_loss=1.5185097228342563`, 3993 train records, and 796 val records.
-- V2 visual-dependence eval on 796 val rows produced normal loss 1.5181669605586996, question-only delta +0.0026753411146265282, and image-shuffle delta +0.002212008115035191.
-- V2 downstream LP completed with macro-AUC 0.6076272728674769, macro-F1 0.827882392711578, and micro-F1 0.8021211275467486.
-- Interpretation boundary: V2 is a completed report-backed baseline, but the small perturbation deltas do not validate strong image-specific grounding.
-- Dedicated V3 `v3_mimic_report_grounded_counterfactual` generation uses a stricter counterfactual prompt; the 2-sample smoke kept 8/8 rows and all were `counterfactual_choice`.
-- V3 train generation completed after preserving and retrying one network timeout; filtered train keeps 3978/4000 rows across 1000 samples, including 3783 `counterfactual_choice` rows.
-- V3 val generation completed after preserving and retrying one SSL EOF and one timeout; filtered val keeps 797/800 rows across 200 samples, including 747 `counterfactual_choice` rows.
-- V3 formal training completed with `global_step=1000`, `best_val_loss=1.0704705653511417`, 3978 train records, and 797 val records.
-- V3 visual-dependence eval on 797 val rows produced normal loss 1.0706396021434998, question-only delta +0.13083389097616682, and image-shuffle delta +0.0013180705187012531.
-- V3 downstream LP completed with macro-AUC 0.5572995973253796, macro-F1 0.8365447527869113, and micro-F1 0.8057493720346078.
-- Interpretation boundary: V3 strengthens question-only degradation relative to V2, but image-shuffle delta remains near zero; do not claim strong image-specific grounding yet.
-- Implemented instruction-level token weighting in `training/trainer.py` for report-evidence/visual-dependency V4; weights are derived from batch `answer_types`, `visual_dependencies`, and `quality_flags`, and normalized over answer tokens.
-- V4 debug training completed before formal launch, confirming the weighted instruction path runs on local Qwen2.5-Coder-7B.
-- V4 formal training completed with `global_step=1000`, `best_val_loss=1.0197519861665882`, 3978 train records, and 797 val records.
-- V4 visual-dependence eval on 797 val rows produced normal loss 1.0831622853711564, question-only delta +0.13674618338598155, and image-shuffle delta +0.000021105833174051014.
-- V4 downstream LP completed with macro-AUC 0.5646456277698648, macro-F1 0.832328792498657, and micro-F1 0.8040747976555959.
-- Interpretation boundary: V4 satisfies the visual token weighting matrix item and lowers teacher-forced validation loss compared with V3, but it still does not validate strong image-specific grounding because image-shuffle loss is effectively unchanged.
-- Added instruction-specific counterfactual diagnostics for V3/V4. The diagnostic scores normal answer NLL by answer_type and scores A/B/C/D option-formatted counterfactual_choice records by correct-option vs best-negative-option NLL.
-- V3 counterfactual diagnostics: 747 `counterfactual_choice` validation records, 231 explicit option-formatted records, 513 no-option records, 3 correct-letter failures, option-subset pairwise accuracy 0.4199134199134199, mean best-negative minus correct NLL -0.003256428250992896.
-- V4 counterfactual diagnostics: 747 `counterfactual_choice` validation records, 231 explicit option-formatted records, 513 no-option records, 3 correct-letter failures, option-subset pairwise accuracy 0.45021645021645024, mean best-negative minus correct NLL 0.004010261470901575.
-- Interpretation boundary: V4 weakly improves option-subset pairwise accuracy over V3, but the margin is near zero and most GLM-labeled counterfactual_choice rows are not actually multiple-choice; this is evidence of a data-quality gap, not a strong counterfactual-grounding win.
-
-## 2026-06-30 Next-Stage Concurrency Findings
-
-- GPU1 can sustain two concurrent 10k-scale Qwen3-VL next-stage trainings (`shuf_10k_8k` plus `storymix_10k_8k`) around the current 21-22 GiB window, but repeated third-training-lane probes with `prog_mix_10k_8k` crossed guarded thresholds before training progress. Treat a third GPU1 10k training as opportunistic only after another lane frees memory.
-- Root-scoped memory guards preserve work better than broad cleanup: the 15:54 `prog_mix_10k_8k` probe was stopped at 22609 MiB while `shuf_10k_8k` and `storymix_10k_8k` kept advancing. A Windows PID-reuse edge case required creation-time filtering in `scripts/guard_gpu_memory_process_tree.ps1` so stale children created before the guarded root are ignored.
-- A second guard robustness edge appeared at 18:16: guards wrote `GUARD_TRIGGER` for `prog_mix_tw_10k` and the waiting `storymix_10k_8k` watcher but did not write `STOPPED`; this indicates trigger-time process-tree construction can still fail before stop. The guard now catches timestamp-read failures per child and falls back to stopping the root if full tree construction fails. Reattach fixed guards after patching rather than trusting old already-running guard processes, because they retain the old script body.
-- A third guard edge appeared at 20:17: after the fallback patch, the guard stopped the `prog_mix_tw_10k` root but child timestamp conversion failures caused children to be skipped, leaving the actual Python process alive. The safer policy is: if a root timestamp cannot be read, use `DateTime.MinValue`; if a child timestamp cannot be read, include that child in the stop tree instead of skipping. Old guards must be relaunched after this patch as well.
-- A fourth refinement followed the 21:23 guard event: using `DateTime.MinValue` for a root whose `CreationDate` is unreadable can defeat PID-reuse filtering and over-include stale children. The guard now uses `Convert-ProcessCreationTime`: accept `[datetime]` values, try DMTF conversion for strings, and fall back to `Get-Process.StartTime`; only if root time is truly unavailable does it stop root-only. This is the current preferred implementation.
-- A queue-ownership edge appeared at 22:29 after `train_fullvision` completed: the older GPU0 training queue still contained `prog_mix_tw_10k` and auto-resumed it from `step_6000.pt` while a manual GPU1 resume lane was already active. The duplicate GPU0 tree was stopped and logged. Future long queues should remove manually owned unfinished IDs or use a run-owner lock before auto-resuming a non-final output directory.
-- A/B-swap diagnostics must be first-class package evidence. `StoryMix-10k-8k` initially packaged successfully without A/B-swap because the required `storymix_10k_val_ab_swap.jsonl` was missing and the previous marker set did not include `ab_swap_results.md`; the package, summary, and completion-audit scripts now include explicit A/B-swap evidence.
-- Final next-stage completion is artifact-backed, not prose-backed: after refreshing per-run packages and final tables, `outputs/final_tables/next_stage_completion_audit.csv` contains 1049 rows and all are `completed`. This includes training packages, LP/NIH transfer metrics, visual-dependence, primary counterfactual, A/B-swap counterfactual, paraphrase, instruction audits, cost tables, and final consolidated CSV/MD tables for all 39 manifest runs.
-- A/B-swap zero-row cases need an explicit not-applicable boundary. P2-style validation files have no A/B option rows; the final audit now treats existing zero-row A/B diagnostic inputs as `not_applicable_no_ab_rows` rather than false missing GPU diagnostics, while rowful A/B inputs still require canonical diagnostic JSON.
-- After the user requested GPU0 be freed, all remaining next-stage work was migrated to `gpu1_only_remaining_after_free_gpu0_20260701T004917`. GPU0 was kept free from next-stage tasks; unrelated `outputs/runs/m1_dense/run_train*.py` processes repeatedly restarted on GPU0 and were stopped to honor the GPU0-free boundary during closeout.
-- Final closeout verification refreshed all next-stage package/summary/audit outputs and confirmed no next-stage worker, watcher, or guard processes remained. The only post-closeout GPU0 pressure came from unrelated `m1_dense/opmem.eval` copy/reverse eval wrappers; after stopping those wrappers, a 20-second `nvidia-smi` observation showed both GPU0 and GPU1 at `0 MiB`.
-- Because the unrelated `m1_dense/opmem.eval` wrappers restarted once more after the initial observation, final closeout used a synchronous 60-second narrow matcher and then a 12-second post-clean check. The final `nvidia-smi` state showed GPU0=`0 MiB`, GPU1=`0 MiB`, and no compute apps.
-- The `m1_dense/opmem.eval` restarts came from an external Codex app-launched offset loop, not from next-stage workers. A hidden 20-minute narrow guard was started at 2026-07-01T02:12:58+08:00 to keep GPU0 free by stopping only `outputs\runs\m1_dense` / `opmem.eval checkpoint_last.pt` wrappers; it does not run GPU work itself.
-
-## 2026-07-01/02 Case Study + Module Real Execution
-
-- The active target `vivid_med_case_study_modules_next_experiment_plan.md` is now closed at the real-run artifact level, not only source/manifest/smoke level. The final entry points are `outputs/final_tables/case_study_full_execution_status.md`, `outputs/final_tables/case_study_extra_execution_status.md`, and `outputs/final_tables/module_ablation_results.md`.
-- All 12 required stability/downstream rows completed true 5000-step long training plus CheXpert LP, NIH available transfer, visual-dependence, counterfactual/A-B or explicit not-applicable boundary, and paraphrase diagnostics. Every NIH available transfer evaluated 25,596 records and wrote `nih_1000`, `nih_5000`, and `all_available` subset metrics.
-- Three-seed family means now change the interpretation: `SHUF-TW-clinical` remains a candidate but not a final-best winner. Mean CheXpert AUC is `SHUF-3k=0.686757`, `SHUF-TW-clinical=0.690742`, `SAMEQ-SHUF-3k=0.713825`, `SHUF-K4=0.709548`; mean hard-shuffle delta is `0.114476`, `0.046622`, `0.438040`, and `0.329075`, respectively.
-- SAMEQ-SHUF-3k has strong/stable hard-shuffle signal but its CF/A-B option-pairwise accuracy is not applicable in the current same-question/different-answer format because the diagnostic JSONs have zero option records. Do not read those blanks as missing artifacts or zeros.
-- NIH/domain evidence is now real available-transfer plus real embeddings. `domain_shift_mmd.md` reports RBF-MMD `0.139625` using CheXpert-val `n=1000` and NIH-available sampled `n=4000`; `dataset_embedding_projection.md` writes 5000 projected rows from actual embedding files.
-- `cur_v2_progressive_replay` completed formal 12000-step training with `best_val_loss=0.237637`. This gives curriculum a fair long-training result, but training loss alone is not a final-method claim.
-- CEQ, AUCH, HNMB, DRA, CCSH, and CDCS are implemented, smoke-passed, and now formal-ablation trained for 1000 steps each. The strongest current embedding-level module readout is CCSH (`state_accuracy=0.746065`, `binary_auc=0.894268`, `binary_auprc=0.847528`), but it should be promoted into a locked full-training candidate before being claimed as the method.
-- The main paper direction should shift away from "SHUF-TW-clinical is综合最优" and toward mechanism-backed image-mismatch grounding plus deployable clinical consistency/evidence modules. Current evidence supports family narrowing and diagnosis, not final-best declaration.
-- During real execution setup, two artifacts required queue-level protection against false completion: MMD/UMAP had to force rerun after real CheXpert/NIH embeddings existed because old boundary reports already occupied the target filenames, and multi-seed stability had to include A/B-swap diagnostics rather than only primary counterfactual diagnostics.
-- For this Windows queue pattern, nested `powershell -Command $Command` does not preserve double-quoted path arguments reliably when the path contains spaces. The NIH evaluator was healthy in a manual 2-sample check, but queued NIH runs failed with a stray `Dataset` token until path arguments were single-quoted in the postprocess queue and extra execution manifest.
-- CEQ formal ablation initially failed with `ModuleNotFoundError: No module named 'evaluation'`; the root cause was script-local import path resolution. `scripts/train_case_study_module_ablation.py` now inserts the repository root on `sys.path`, and the rerun completed all six module ablations.
-
-## 2026-07-03 Remote Upload Handoff Findings
-
-- Upload handoff target is `dqxy11@172.20.52.10`, with remote base `~/projects/xiyaowang` and revised target `~/projects/xiyaowang/021_260129VIVID`.
-- User revised the upload scope to the whole repository folder rather than the document's split `code/data/outputs` layout.
-- Before uploading the whole folder, check for unsafe credential/private-key material and transfer tooling; do not expose real passwords or private keys.
-- Local full-repository size audit: `outputs/` 896.635 GB, `data/` 148.712 GB, `vivid_env/` 5.938 GB, `.git/` 2.467 GB, total roughly 1.06 TB plus small source/doc trees.
-- Remote `/ipfs` has ample capacity (`1.2P` size, about `1.2P` available at audit time). Remote GNU tar is available.
-- Local `rsync` is unavailable; after user refined scope, build a filtered staging directory and stream it to `~/projects/xiyaowang/021_260129VIVID`.
-- Filtered upload should keep runnable source/config/docs (`configs`, `data` loaders and processed metadata, `models`, `training`, `evaluation`, `scripts`, `prompts`, `docs`, `profile`, root README/requirements/AGENTS and main proposal markdown), but exclude `outputs/`, raw dataset images/volumes, `vivid_env/`, `.git/`, `History/`, `delete/`, pretrained `.pt/.pth`, caches, and local process records (`progress.md`, `findings.md`, `task_plan.md`).
-- Remote upload completed at `~/projects/xiyaowang/021_260129VIVID`; final remote project size is 457 MB with the filtered source/config/doc/data-processed subset.
-- Remote environment `vivid_med310` uses Python 3.10, PyTorch `2.9.0+cu128`, torchvision `0.24.0+cu128`, transformers `5.12.1`, timm `1.0.27`, pandas `2.3.3`, and scikit-learn `1.7.2`.
-- GPU smoke ran inside the approved `gpu` tmux session on `gpu02` with `CUDA_VISIBLE_DEVICES=0`; A800 CUDA availability and CUDA matmul passed, and `scripts/smoke_case_study_modules.py` passed CEQ/AUCH/HNMB/DRA/CCSH/CDCS.
-- Post-smoke GPU check in the `gpu` session reported `0 MiB, 0%`; no smoke process remained on the GPU.
-- For a quick runnable remote package, the useful data beyond code/docs is much smaller than the full repository: processed metadata is 427 MB, `data/instructions` + `data/splits` are 229 MB, CheXpert small is 10.684 GB, and small auxiliary LIDC/OrganMNIST is 1.823 GB.
-- The huge local size is explained by deferred buckets: raw NIH/AMOS/KITS total 135.565 GB, output final-weight candidates are 315.923 GB, and output intermediate/process checkpoints dominate the remaining ~893.8 GB under `outputs/`.
-- Remote full-data upload was stopped after it had created a partial 34 GB `data/`; this partial tree should be replaced by the minimal runnable data package before claiming data readiness.
-- To satisfy the user's "run first" priority faster than the 13.2 GB minimal-complete transfer, the remote `data/` tree was replaced with a tiny real-image package: full data source code, full processed/instruction/split metadata, and 2,929 sampled CheXpert image files covering early debug rows. Remote `data/` verifies at 844 MB.
-- Remote data smoke passed with CUDA available and a real image batch tensor `(2, 3, 224, 224)`.
-- Remote training smoke passed in the approved `gpu` tmux session using `vivid_med310`: `scripts/train_ums_classifier.py --config configs/remote_smoke_ums_classifier.yaml --debug` completed 20 debug steps and wrote `outputs/remote_smoke_ums_classifier/metrics_final.json`.
-- Smoke-generated `.pt` files under `outputs/remote_smoke_ums_classifier/` were removed after verification so process weights do not inflate the remote package; the final post-smoke GPU check reported `0 MiB, 0%`.
-- Remote model upload scope should start with `qwen3-vl-2b-thinking-new`: it is referenced 141 times across configs/scripts/docs and is documented as the active audited route; local size is 3.974 GB. `Qwen2.5-Coder-7B-Instruct` appears in 8 legacy text-scaffold configs, and BiomedCLIP's raw folder is not needed for the current remote package because the converted `pretrained/biomedclip_vit_base.pt` is already present.
-- `qwen3-vl-2b-thinking-new` is now uploaded to remote `~/projects/xiyaowang/021_260129VIVID/model/qwen3-vl-2b-thinking-new`, verifying as 14 files / 4.0 GB. A project-local compatibility symlink at `H:/Xiyao_Wang/001_models/qwen3-vl-2b-thinking-new` points to the same model so existing Windows-style configs can resolve from the remote project root.
-- Remote model verification passed in `vivid_med310`: direct config/processor load reports `model_type=qwen3_vl`, `Qwen3VLForConditionalGeneration`, and `Qwen3VLProcessor`; GPU component audit wrote `outputs/remote_qwen3vl_model_audit.{json,md}` with `device=cuda`, `dtype=torch.bfloat16`, and `forward_status=ok`.
-- After the remote Qwen3-VL model audit, the approved `gpu` tmux session returned to `0 MiB, 0%`; remote project size including the model is now 8.8 GB.
-- For `vivid_med_case_study_modules_next_experiment_plan.md`, the remote now has all checked final/best/probe-final case-study/module weights required for artifact continuation: 62 expected files, 62 remote files, 0 missing, 0 size mismatches. Intermediate `step_*.pt` and `probe_step_*.pt` files remain excluded.
-- For `vivid_med_a800_full_next_experiment_plan.md`, the remote is not fully data-ready as written. It has the plan document, Qwen3-VL 2B model, 2.1 GB of existing instruction data, 59 checked next-stage/case-study configs, and the 62 final case-study weights, but it lacks full CheXpert images, raw NIH, raw MIMIC, and VinDr/PadChest external data.
-- The A800 full plan is partly aspirational relative to the current repo: the 23 Section 11 script names checked for data generation, A800-specific training, external evaluation, and plotting do not exist in the current repository. Existing older scripts/configs can run prior next-stage/case-study style routes, but the A800 full plan cannot be executed end-to-end exactly as written until those scripts and missing external/full datasets are added.
-
-## 2026-07-03 A800 Available Data Upload Findings
-
-- User requested "把有的先传齐" for A800 readiness. Current upload scope is all locally available A800-relevant datasets: full CheXpert small, NIH Chest X-rays, MIMIC-CXR images/reports, mimic-cxr_less, and MIMIC supplementary files if present.
-- VinDr-CXR and PadChest remain unavailable in the audited local public-data root, so they cannot be uploaded until supplied separately.
-- User later requested "NIH先不用传了"; NIH is now an explicit `deferred_by_user` data bucket with local and remote marker files, not an uploaded/completed dataset.
-- Kaggle `xhlulu/vinbigdata` was downloaded to `data/dataset/vinbigdata_xhlulu_512png` and verified as a valid 1.94 GiB zip with 18,001 entries, extracting to 15,000 train PNGs, 3,000 test PNGs, and `train_meta.csv`. The images are 512x512 grayscale PNGs; `train_meta.csv` only has `image_id,dim0,dim1`, and the zip contains no annotation/label/bbox CSV. Treat this as an image-only VinBigData/VinDr-CXR-derived asset, not a complete external-evaluation dataset for `vivid_med_a800_full_next_experiment_plan.md` until official labels or a UMS/VinDr manifest are added.
+- `BiVES_CXR_MIA_TMI_ready_proposal.md` is now the user-designated final mainline. Its non-negotiable modeling object is a statement-conditioned bipolar spatial evidence set, not the existing VSL-CXR combination of VSL-4class, CEQ, CCSH, and AUCH.
+- The default BiVES implementation must derive support, contradict, uncertain, and insufficient from evidence availability, decisiveness/conflict, and polarity. A separate flat four-class classifier would violate the proposal even if it improves loss.
+- Existing SAMEQ/HNMB assets remain useful only for same-statement grouping, hard-negative sampling, and fair baselines. Existing CEQ/CCSH/AUCH code remains useful as legacy comparison code but must not be imported into the default BiVES package.
+- The current worktree contains substantial uncommitted VSL-CXR/VinDr work from the previous phase, including new scripts/configs/docs and modifications to shared Qwen3-VL training/data code. These changes must be preserved and included deliberately rather than reset.
+- Prior root proposal deletions already have recoverable copies under `History/20260707_vsl_cxr_project_organization/`; the current Git deletions are therefore intentional archive moves, not evidence loss.
+- Local formal experiments remain out of scope. The correct local verification surface for this consolidation is synthetic CPU smoke/unit testing; formal training belongs on the server after the code is pushed.
+- Local `H:\Xiyao_Wang\001_models` contains Qwen3.5-0.8B, 2B, 4B, and 9B. All four `config.json` files declare `Qwen3_5ForConditionalGeneration`, `model_type: qwen3_5`, image/video token IDs, and a non-empty `vision_config`; they are multimodal and can serve as the only active BiVES model family.
+- The active Qwen3.5 policy is: 4B default, 2B debug/P0, 9B scale validation, 0.8B optional ultra-light smoke. Existing Qwen3-VL/Qwen2.5/other-model code and configs are legacy-only and must not appear in the active BiVES config tree.
+- Independent architecture review recommends a new isolated `bives_cxr/` package with explicit tensor contracts, a bounded bipolar evidence field, a decoder containing no trainable four-class matrix, feature-space keep/drop/control rescoring, and synthetic CPU tests.
+- Independent archive review recommends preserving old executable code under `legacy/vsl_cxr/` and old narrative/audit docs under `History/20260716_bives_pivot/`, while leaving large ignored outputs/data in place and referring to them from an archive manifest.
+- Independent test review requires closed-form probability, S/C polarity swap, U/I semantics, intervention algebra, finite/backprop losses, mask regularizers, and an architecture contract forbidding a flat state head.
+- Transformers 5.5.3 maps local Qwen3.5 configs to `Qwen3_5ForConditionalGeneration` and exposes `AutoModelForImageTextToText`. For Qwen3.5 vision output, `last_hidden_state` is the merger-preceding spatial token sequence with count `T*H*W` and dimension `vision_config.hidden_size`; `pooler_output` is merger-following and unsuitable as the default local evidence grid. BiVES uses `last_hidden_state`.
+- The active repository surface is now intentionally narrow: `bives_cxr/`, three `configs/bives_cxr/qwen35_*.yaml` files, five active scripts, and two BiVES test modules. Pre-BiVES scripts/models/training/evaluation/loaders/profiles/prompts/evaluator tools are preserved under `legacy/vivid_med/`; VSL-specific assets remain under `legacy/vsl_cxr/`.
+- The old VinDr UMS builder referenced an archived Qwen3-VL mapping and therefore cannot define BiVES labels. It is archived; only ZIP extraction and integrity audit remain active until a patient-disjoint four-state BiVES manifest passes the new readiness audit.
+- Same-statement pair ranking is implemented in the loss but disabled in every active config until a locked group sampler and coverage audit exist. This prevents the 9B scale config from silently advertising a loss term the current loader does not supply.
+- Current validation evidence: active Python compilation passed; 12/12 BiVES unit tests passed; the synthetic core smoke produced normalized four-state probabilities with no flat state head and finite gradients; a local Qwen3.5-0.8B processor-only smoke produced uniform `image_grid_thw=[[1,28,28],[1,28,28]]` from two differently shaped letterboxed CXRs without loading model weights.

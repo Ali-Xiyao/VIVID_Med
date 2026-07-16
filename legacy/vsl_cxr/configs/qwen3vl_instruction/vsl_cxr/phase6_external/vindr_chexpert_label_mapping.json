@@ -1,0 +1,35 @@
+{
+  "dataset": "VinDr-CXR 1.0.0",
+  "protocol": "official train/test split; image-level labels; direct visual-label mappings only",
+  "source_to_chexpert": {
+    "No finding": "No Finding",
+    "Atelectasis": "Atelectasis",
+    "Cardiomegaly": "Cardiomegaly",
+    "Consolidation": "Consolidation",
+    "Edema": "Edema",
+    "Pleural effusion": "Pleural Effusion",
+    "Pneumonia": "Pneumonia",
+    "Pneumothorax": "Pneumothorax"
+  },
+  "primary_external_labels": [
+    "No Finding",
+    "Atelectasis",
+    "Cardiomegaly",
+    "Consolidation",
+    "Pleural Effusion",
+    "Pneumonia",
+    "Pneumothorax"
+  ],
+  "mapped_but_not_primary": {
+    "Edema": "The official VinDr-CXR test image-label table has zero positive Edema rows, so test AUC is undefined. Retain it in manifests for transparency but exclude it from the primary macro-AUC denominator."
+  },
+  "deliberately_unmapped_examples": {
+    "Infiltration": "Not a clean synonym for CheXpert Lung Opacity.",
+    "Nodule/Mass": "Not identical to the broader CheXpert Lung Lesion field.",
+    "Aortic enlargement": "Not identical to Enlarged Cardiomediastinum.",
+    "Pleural thickening": "Not identical to Pleural Other.",
+    "Rib fracture / Clavicle fracture": "Could be collapsed to Fracture, but this hierarchy changes label semantics and is excluded from the primary protocol."
+  },
+  "train_aggregation": "majority vote: at least 2 of 3 radiologists",
+  "test_aggregation": "official one-row-per-image image_labels_test.csv"
+}

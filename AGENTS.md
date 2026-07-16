@@ -1,60 +1,81 @@
 # Repository Guidelines
 
-## Project Structure & Module Organization
+## Active authority
 
-- `configs/`: YAML experiment configs (e.g. `configs/cxr_chexpert.yaml`).
-- `data/`: dataset loaders and image transforms.
-  - `data/dataset/`: local datasets + preprocessing scripts (`prepare_chexpert.py`, `prepare_nih.py`) and `processed/` JSONL.
-- `models/`: model components (`vit.py`, `projector.py`, `vivid_model.py`).
-- `training/`: losses and trainer (`losses.py`, `trainer.py`).
-- `evaluation/`: UMS verifier + metrics (`verifier.py`, `metrics.py`).
-- `scripts/`: runnable entry points (`train_cxr.py`, `test_pipeline.py`).
-- `docs/`: active requirement ledgers, handoff indexes, and boundary notes (`docs/README.md` is the first stop).
-- `profile/`: design docs and schema notes (Markdown).
+`BiVES_CXR_MIA_TMI_ready_proposal.md` is the final research authority. The
+active implementation is BiVES-CXR and uses multimodal Qwen3.5 only:
 
-## Build, Test, and Development Commands
+- Qwen3.5-2B for P0/debug;
+- Qwen3.5-4B as the default main model;
+- Qwen3.5-9B for the locked scale study;
+- Qwen3.5-0.8B only for optional ultra-light smoke checks.
+
+Do not introduce active Qwen2, Qwen2.5, Qwen3-VL, LLaDA, Gemma, InternVL,
+Llama, BiomedCLIP, CEQ, CCSH, or AUCH model paths. Historical implementations
+belong under `legacy/`.
+
+## Project structure
+
+- `bives_cxr/`: active evidence model, closed-form decoder, intervention logic,
+  losses, metrics, Qwen3.5 adapter, and manifest dataset.
+- `configs/bives_cxr/`: the only active experiment configurations.
+- `scripts/train_bives_cxr.py`: server training entry.
+- `scripts/smoke_bives_cxr.py`: synthetic CPU smoke.
+- `scripts/audit_bives_manifest.py`: manifest and split readiness audit.
+- `scripts/{prepare,extract,audit}_vindr_cxr*.py`: current external-data tools.
+- `tests/`: active BiVES contract tests.
+- `docs/`: active handoff and schema documentation.
+- `legacy/`: archived pre-BiVES code, configs, proposals, and tools.
+- `data/`, `outputs/`, `pretrained/`: local/server assets; do not publish them.
+
+## Build, test, and development commands
 
 ```bash
 pip install -r requirements.txt
-python data/dataset/prepare_chexpert.py
-python data/dataset/prepare_nih.py
-python scripts/test_pipeline.py
-python scripts/train_cxr.py --debug
-python scripts/train_cxr.py --config configs/cxr_chexpert.yaml
-python scripts/train_cxr.py --resume outputs/cxr_chexpert/checkpoints/step_5000.pt
+python scripts/smoke_bives_cxr.py
+python -m unittest discover -s tests -p "test_bives_*.py" -v
+python scripts/audit_bives_manifest.py \
+  --train data/bives_cxr/manifests/train_locked.jsonl \
+  --val data/bives_cxr/manifests/val_locked.jsonl
+python scripts/train_bives_cxr.py \
+  --config configs/bives_cxr/qwen35_2b_p0.yaml \
+  --debug
 ```
 
-Notes:
-- `scripts/test_pipeline.py` is a smoke test (data loading, model construction, forward pass, verifier). It may prompt to download the LLM; answering “y” can fetch multi‑GB weights.
-- Training artifacts default under `outputs/` (see `training.output_dir` in the YAML).
+Local validation is synthetic and read-only. Formal model loading/training runs
+on the server after the data readiness audit passes.
 
-## Coding Style & Naming Conventions
+## Coding style
 
-- Python: 4-space indentation, `snake_case` for functions/variables, `CapWords` for classes.
-- Prefer `pathlib.Path` for paths; keep dataset/config paths in YAML (`configs/`) rather than hardcoding.
-- No formatter/linter is configured here—match surrounding style and keep changes minimal and readable.
+- Python uses 4-space indentation, `snake_case` functions/variables, and
+  `CapWords` classes.
+- Prefer `pathlib.Path`.
+- Keep data and model paths in YAML.
+- Keep the active decoder closed-form; do not add a trainable flat four-class
+  head.
 
-## Testing Guidelines
+## Testing guidelines
 
-- No unit-test framework is enforced. Use `python scripts/test_pipeline.py` for quick validation.
-- If you add tests/scripts, prefer `test_*.py` naming and keep them runnable from the repo root.
+- Run the BiVES smoke and `test_bives_*.py` suite after every active-code
+  change.
+- Assert the no-flat-four-class-head contract and the Qwen3.5-only path guard.
+- Do not treat missing/corrupt images as `insufficient`; manifest IO is
+  fail-fast.
 
-## Commit & Pull Request Guidelines
+## Commit and security rules
 
-- This workspace may not include Git metadata; if you initialize Git, use concise, imperative commit messages (e.g., “Add CheXpert preprocessing guardrails”).
-- PRs: include a short summary, commands run, and any config/data assumptions; attach key metrics (tables/plots) when changing training/eval behavior.
+- Use concise, imperative commit messages.
+- Do not commit medical images, patient data, generated outputs, checkpoints,
+  model weights, environments, upload staging, or caches.
+- Pull requests should include the commands run and data/model assumptions.
 
-## Security & Configuration Tips
+## Agent workflow
 
-- Datasets are medical images—treat `data/dataset/**` as sensitive and keep it local.
-- Avoid committing generated artifacts such as `outputs/`, `vivid_env/`, and `__pycache__/`; add a `.gitignore` if/when you set up Git.
-
-## Agent Workflow & Skill Use
-
-- Before starting any task or command sequence, check whether an available skill or superpower should be used; if one applies, load and follow it before executing file edits, experiments, or long-running commands.
-- Prefer `superpowers:using-superpowers` as the pre-flight rule for skill selection: when there is even a small chance a skill applies, inspect it first, then proceed with the matching workflow.
-- Use `subagent-plan-decomposer` (`C:\Users\Admin\.codex\skills\subagent-plan-decomposer\SKILL.md`) when converting an existing plan into a main-agent plus subagent execution plan. Keep final decisions, merge/conflict handling, and user-visible conclusions with the main agent.
-- Use `superpowers:subagent-driven-development` (`C:\Users\Admin\.codex\superpowers\skills\subagent-driven-development\SKILL.md`) when executing an implementation plan with mostly independent tasks that benefit from fresh implementer/reviewer subagents. Do not use it for small, tightly coupled, or single-file edits unless the user explicitly asks.
-- Use `planning-with-files` (`C:\Users\Admin\.codex\skills\planning-with-files\SKILL.md`) for complex multi-step work, research workflows, experiment queues, or work expected to span many tool calls. Keep `task_plan.md`, `findings.md`, and `progress.md` in the project root when this workflow is active.
-- For current research handoff, read `docs/README.md`, `task_plan.md`, `findings.md`, and `progress.md` before interpreting old root-level proposal markdown. Treat generated files under `outputs/` as evidence, but keep them ignored unless the user explicitly asks to version artifacts.
-- For simple one-step questions or narrow edits, briefly note that the skill check was considered and continue directly.
+- Before starting a task, check whether an available skill applies.
+- Use `planning-with-files` for complex work and keep `task_plan.md`,
+  `findings.md`, and `progress.md` current.
+- Read `BiVES_CXR_MIA_TMI_ready_proposal.md`, `docs/README.md`,
+  `task_plan.md`, `findings.md`, and `progress.md` before interpreting anything
+  under `legacy/`.
+- Treat `outputs/` as ignored evidence unless the user explicitly asks to
+  publish selected artifacts.

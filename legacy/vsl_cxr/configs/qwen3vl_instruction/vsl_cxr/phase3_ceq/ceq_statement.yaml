@@ -1,0 +1,34 @@
+experiment:
+  id: vsl_cxr_ceq_statement
+  run_id: VSL-CXR-CEQ-STATEMENT
+  route: VSL-CXR-Phase3
+  data_version: D9-CEQ
+data:
+  train_ceq_path: outputs/instruction_data/vsl_cxr/d9_ceq_targets_train.jsonl
+  val_ceq_path: outputs/instruction_data/vsl_cxr/d9_ceq_targets_val.jsonl
+  max_train_samples: 6000
+  max_val_samples: 500
+  num_workers: 0
+  processor_prompt: "Find visual evidence for this chest X-ray."
+model:
+  model_path: H:/Xiyao_Wang/001_models/qwen3-vl-2b-thinking-new
+  dtype: bf16
+  trainable_groups: []
+  vision_checkpoint: F:/Xiyao_Wang/021_260129VIVID_vsl_cxr_outputs/qwen3vl/vsl_cxr_d6_vsl4/checkpoints/final.pt
+ceq:
+  variant: statement
+  num_heads: 8
+  query_buckets: 256
+losses: {}
+training:
+  learning_rate: 1.0e-3
+  weight_decay: 0.01
+  max_steps: 1000
+  batch_size: 2
+  eval_batch_size: 2
+  log_interval: 25
+  eval_interval: 250
+  max_grad_norm: 1.0
+  output_dir: F:/Xiyao_Wang/021_260129VIVID_vsl_cxr_outputs/qwen3vl/vsl_cxr_ceq_statement
+seed: 46
+device: cuda:0

@@ -1,0 +1,30 @@
+experiment:
+  id: vsl_cxr_auch_sameq
+  run_id: VSL-CXR-AUCH-SAMEQ
+  route: VSL-CXR-Phase4
+  data_version: D9-CEQ
+data:
+  train_auch_path: outputs/instruction_data/vsl_cxr/d9_ceq_targets_train.jsonl
+  val_auch_path: outputs/instruction_data/vsl_cxr/d9_ceq_targets_val.jsonl
+  max_train_samples: 8000
+  max_val_samples: 500
+  num_workers: 0
+model:
+  model_path: H:/Xiyao_Wang/001_models/qwen3-vl-2b-thinking-new
+  dtype: bf16
+  trainable_groups: []
+  vision_checkpoint: F:/Xiyao_Wang/021_260129VIVID_vsl_cxr_outputs/qwen3vl/vsl_cxr_b3_sameq/checkpoints/final.pt
+auch:
+  variant: auch_sameq
+training:
+  learning_rate: 1.0e-3
+  weight_decay: 0.01
+  max_steps: 1000
+  batch_size: 2
+  eval_batch_size: 2
+  log_interval: 25
+  eval_interval: 250
+  max_grad_norm: 1.0
+  output_dir: F:/Xiyao_Wang/021_260129VIVID_vsl_cxr_outputs/qwen3vl/vsl_cxr_auch_sameq
+seed: 60
+device: cuda:1

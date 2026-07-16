@@ -5,8 +5,11 @@ data/instructions/
 outputs/
 History/
 .remote_upload_tmp/
+.remote_upload_*.txt
 pretrained/*.pth
 pretrained/*.pt
+experiments/**/bert-base-uncased/
+legacy/**/bert-base-uncased/
 
 __pycache__/
 *.py[cod]

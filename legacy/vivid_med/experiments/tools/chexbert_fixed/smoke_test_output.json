@@ -1,0 +1,230 @@
+{
+  "sample_report": "There is mild cardiomegaly. No pleural effusion or pneumothorax. Mild pulmonary edema is present.",
+  "elapsed_sec": 14.0,
+  "device": "cuda:0",
+  "stages": [
+    {
+      "name": "deps",
+      "ok": true,
+      "detail": "torch=2.5.1+cu121 transformers=5.5.3 cuda=True"
+    },
+    {
+      "name": "files",
+      "ok": true,
+      "detail": "bert_dir=bert-base-uncased (safetensors) ckpt=chexbert.pth"
+    },
+    {
+      "name": "model_build",
+      "ok": true,
+      "detail": "conditions=14 params=109.5M"
+    },
+    {
+      "name": "checkpoint_load",
+      "ok": true,
+      "detail": "keys_loaded=227 missing=0 unexpected=0 device=cuda:0"
+    },
+    {
+      "name": "inference",
+      "ok": true,
+      "detail": "14-dim prediction produced"
+    }
+  ],
+  "conditions": [
+    "Enlarged Cardiomediastinum",
+    "Cardiomegaly",
+    "Lung Opacity",
+    "Lung Lesion",
+    "Edema",
+    "Consolidation",
+    "Pneumonia",
+    "Atelectasis",
+    "Pneumothorax",
+    "Pleural Effusion",
+    "Pleural Other",
+    "Fracture",
+    "Support Devices",
+    "No Finding"
+  ],
+  "predictions": [
+    {
+      "condition": "Enlarged Cardiomediastinum",
+      "n_classes": 4,
+      "raw_class": 0,
+      "class_name": "Blank",
+      "probability": {
+        "Blank": 1.0,
+        "Positive": 0.0,
+        "Negative": 0.0,
+        "Uncertain": 0.0
+      },
+      "final_label": null
+    },
+    {
+      "condition": "Cardiomegaly",
+      "n_classes": 4,
+      "raw_class": 1,
+      "class_name": "Positive",
+      "probability": {
+        "Blank": 0.0,
+        "Positive": 0.9999,
+        "Negative": 0.0,
+        "Uncertain": 0.0
+      },
+      "final_label": 1
+    },
+    {
+      "condition": "Lung Opacity",
+      "n_classes": 4,
+      "raw_class": 0,
+      "class_name": "Blank",
+      "probability": {
+        "Blank": 1.0,
+        "Positive": 0.0,
+        "Negative": 0.0,
+        "Uncertain": 0.0
+      },
+      "final_label": null
+    },
+    {
+      "condition": "Lung Lesion",
+      "n_classes": 4,
+      "raw_class": 0,
+      "class_name": "Blank",
+      "probability": {
+        "Blank": 1.0,
+        "Positive": 0.0,
+        "Negative": 0.0,
+        "Uncertain": 0.0
+      },
+      "final_label": null
+    },
+    {
+      "condition": "Edema",
+      "n_classes": 4,
+      "raw_class": 1,
+      "class_name": "Positive",
+      "probability": {
+        "Blank": 0.0,
+        "Positive": 0.9994,
+        "Negative": 0.0006,
+        "Uncertain": 0.0
+      },
+      "final_label": 1
+    },
+    {
+      "condition": "Consolidation",
+      "n_classes": 4,
+      "raw_class": 0,
+      "class_name": "Blank",
+      "probability": {
+        "Blank": 1.0,
+        "Positive": 0.0,
+        "Negative": 0.0,
+        "Uncertain": 0.0
+      },
+      "final_label": null
+    },
+    {
+      "condition": "Pneumonia",
+      "n_classes": 4,
+      "raw_class": 0,
+      "class_name": "Blank",
+      "probability": {
+        "Blank": 0.9996,
+        "Positive": 0.0,
+        "Negative": 0.0003,
+        "Uncertain": 0.0001
+      },
+      "final_label": null
+    },
+    {
+      "condition": "Atelectasis",
+      "n_classes": 4,
+      "raw_class": 0,
+      "class_name": "Blank",
+      "probability": {
+        "Blank": 1.0,
+        "Positive": 0.0,
+        "Negative": 0.0,
+        "Uncertain": 0.0
+      },
+      "final_label": null
+    },
+    {
+      "condition": "Pneumothorax",
+      "n_classes": 4,
+      "raw_class": 2,
+      "class_name": "Negative",
+      "probability": {
+        "Blank": 0.0,
+        "Positive": 0.0,
+        "Negative": 0.9999,
+        "Uncertain": 0.0
+      },
+      "final_label": 0
+    },
+    {
+      "condition": "Pleural Effusion",
+      "n_classes": 4,
+      "raw_class": 2,
+      "class_name": "Negative",
+      "probability": {
+        "Blank": 0.0,
+        "Positive": 0.0,
+        "Negative": 0.9999,
+        "Uncertain": 0.0
+      },
+      "final_label": 0
+    },
+    {
+      "condition": "Pleural Other",
+      "n_classes": 4,
+      "raw_class": 0,
+      "class_name": "Blank",
+      "probability": {
+        "Blank": 1.0,
+        "Positive": 0.0,
+        "Negative": 0.0,
+        "Uncertain": 0.0
+      },
+      "final_label": null
+    },
+    {
+      "condition": "Fracture",
+      "n_classes": 4,
+      "raw_class": 0,
+      "class_name": "Blank",
+      "probability": {
+        "Blank": 1.0,
+        "Positive": 0.0,
+        "Negative": 0.0,
+        "Uncertain": 0.0
+      },
+      "final_label": null
+    },
+    {
+      "condition": "Support Devices",
+      "n_classes": 4,
+      "raw_class": 0,
+      "class_name": "Blank",
+      "probability": {
+        "Blank": 1.0,
+        "Positive": 0.0,
+        "Negative": 0.0,
+        "Uncertain": 0.0
+      },
+      "final_label": null
+    },
+    {
+      "condition": "No Finding",
+      "n_classes": 2,
+      "raw_class": 0,
+      "class_name": "Negative",
+      "probability": {
+        "Negative": 1.0,
+        "Positive": 0.0
+      },
+      "final_label": null
+    }
+  ]
+}

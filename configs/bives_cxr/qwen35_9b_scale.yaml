@@ -1,0 +1,56 @@
+experiment:
+  id: bives_cxr_qwen35_9b_scale
+  route: BiVES-CXR
+  phase: P2-scale
+
+data:
+  data_root: /ipfs/inspurfileset/home/dqxy/dqxy11/projects/xiyaowang/021_260129VIVID/data
+  train_manifest: data/bives_cxr/manifests/train_locked.jsonl
+  val_manifest: data/bives_cxr/manifests/val_locked.jsonl
+  image_size: 448
+  num_workers: 4
+
+model:
+  family: Qwen3.5
+  scale: 9B
+  path: /ipfs/inspurfileset/home/dqxy/dqxy11/projects/xiyaowang/model/Qwen3.5-9B
+  dtype: bf16
+  freeze_backbone: true
+  statement_dim: 512
+
+bives:
+  fusion_dim: 512
+  evidence_max: 8.0
+  mask:
+    type: hard_concrete
+    topk: 16
+    temperature: 0.5
+  decoder:
+    tau_a: 1.0
+    tau_d: 1.0
+    tau_p: 1.0
+
+loss:
+  lambda_ies: 0.5
+  lambda_nec: 1.0
+  lambda_ctrl: 0.5
+  # Disabled until the locked same-statement group sampler passes audit.
+  lambda_pair: 0.0
+  pair_margin: 0.2
+  lambda_i_mag: 0.1
+  lambda_min: 0.001
+  lambda_tv: 0.0001
+
+training:
+  lr_new_layers: 0.0001
+  lr_backbone: 0.00001
+  weight_decay: 0.05
+  max_steps: 5000
+  batch_size: 1
+  eval_batch_size: 1
+  eval_interval: 250
+  max_grad_norm: 1.0
+  output_dir: outputs/bives_cxr/qwen35_9b_scale
+
+seed: 17
+device: cuda:0

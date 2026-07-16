@@ -1,0 +1,57 @@
+experiment:
+  id: bives_cxr_qwen35_2b_p0
+  route: BiVES-CXR
+  phase: P0
+
+data:
+  data_root: /ipfs/inspurfileset/home/dqxy/dqxy11/projects/xiyaowang/021_260129VIVID/data
+  train_manifest: data/bives_cxr/manifests/p0_train.jsonl
+  val_manifest: data/bives_cxr/manifests/p0_val.jsonl
+  image_size: 448
+  max_train_samples: 256
+  max_val_samples: 128
+  num_workers: 2
+
+model:
+  family: Qwen3.5
+  scale: 2B
+  path: /ipfs/inspurfileset/home/dqxy/dqxy11/projects/xiyaowang/model/Qwen3.5-2B
+  dtype: bf16
+  freeze_backbone: true
+  statement_dim: 256
+
+bives:
+  fusion_dim: 256
+  evidence_max: 8.0
+  mask:
+    type: soft_topk
+    topk: 16
+    temperature: 0.5
+  decoder:
+    tau_a: 1.0
+    tau_d: 1.0
+    tau_p: 1.0
+
+loss:
+  lambda_ies: 0.5
+  lambda_nec: 1.0
+  lambda_ctrl: 0.5
+  lambda_pair: 0.0
+  pair_margin: 0.2
+  lambda_i_mag: 0.1
+  lambda_min: 0.001
+  lambda_tv: 0.0001
+
+training:
+  lr_new_layers: 0.0001
+  lr_backbone: 0.00001
+  weight_decay: 0.05
+  max_steps: 100
+  batch_size: 1
+  eval_batch_size: 1
+  eval_interval: 20
+  max_grad_norm: 1.0
+  output_dir: outputs/bives_cxr/qwen35_2b_p0
+
+seed: 17
+device: cuda:0

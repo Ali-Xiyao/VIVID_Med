@@ -1,0 +1,41 @@
+experiment:
+  id: vsl_cxr_b2_cf_qa
+  run_id: VSL-CXR-B2-CF-QA
+  route: VSL-CXR-Phase1
+  data_version: D1-CF-QA
+
+data:
+  data_root: .
+  train_instruction_path: outputs/instruction_data/next_stage/cf_10k_train.jsonl
+  val_instruction_path: outputs/instruction_data/next_stage/cf_10k_val.jsonl
+  max_length: 768
+  max_val_samples: 1000
+  num_workers: 0
+
+model:
+  model_path: H:/Xiyao_Wang/001_models/qwen3-vl-2b-thinking-new
+  dtype: bf16
+  trainable_groups:
+    - vision_tower
+    - visual_connector
+
+training:
+  learning_rate: 2.0e-5
+  vision_learning_rate: 1.0e-5
+  connector_learning_rate: 2.0e-5
+  weight_decay: 0.01
+  max_steps: 5000
+  batch_size: 1
+  eval_batch_size: 1
+  gradient_accumulation_steps: 1
+  max_grad_norm: 1.0
+  log_interval: 25
+  eval_interval: 500
+  save_interval: 5001
+  save_checkpoints: false
+  save_best_checkpoint: false
+  save_final_checkpoint: true
+  output_dir: F:/Xiyao_Wang/021_260129VIVID_vsl_cxr_outputs/qwen3vl/vsl_cxr_b2_cf_qa
+
+seed: 17
+device: cuda:1

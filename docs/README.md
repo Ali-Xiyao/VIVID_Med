@@ -1,55 +1,65 @@
-# VIVID-Med Docs Index
+# BiVES-CXR Handoff Index
 
-This directory is the handoff entry point for active research state, requirement ledgers, and boundary notes. Generated experiment artifacts remain under `outputs/` and are intentionally ignored by Git.
+BiVES-CXR is the only active paper and code mainline.
 
-## Active Entry Points
+## Start here
 
 | Purpose | File |
 | --- | --- |
-| Current SAMEQ-CVCP paper-ready experiment plan and final write-back | `../vivid_med_sameq_cvcp_next_experiment_plan_v4.md` |
-| Prior CVCP/CCSH full-plan closure reference | `../vivid_med_cvcp_ccsh_full_next_experiment_plan.md` |
-| CVCP/CCSH requirement ledger | `cvcp_ccsh_requirement_ledger.md` |
-| CVCP/CCSH readiness audit | `cvcp_ccsh_readiness_audit.md` |
-| Current task checklist and execution boundaries | `../task_plan.md` |
-| Durable findings and interpretation boundaries | `../findings.md` |
-| Chronological progress log | `../progress.md` |
+| Final research proposal | `../BiVES_CXR_MIA_TMI_ready_proposal.md` |
+| Repository overview | `../README.md` |
+| Implementation contract | `bives_cxr_implementation.md` |
+| Manifest schema | `bives_cxr_manifest_schema.md` |
+| Migration/archive manifest | `bives_cxr_migration_manifest.md` |
+| Persistent task plan | `../task_plan.md` |
+| Durable findings | `../findings.md` |
+| Chronological progress | `../progress.md` |
 
-## Current Result Artifacts
+## Active code
 
-| Purpose | Generated artifact |
+| Surface | Path |
 | --- | --- |
-| CVCP/CCSH training result table | `../outputs/final_tables/cvcp_training_results.md` |
-| CVCP/CCSH postprocess status | `../outputs/final_tables/cvcp_ccsh_postprocess_status.md` |
-| CVCP/CCSH module-combo result table | `../outputs/final_tables/module_combo_results.md` |
-| CVCP/CCSH model comparison audit | `../outputs/final_tables/model_comparison_results.md` |
-| CVCP/CCSH external-evaluation boundary/results | `../outputs/final_tables/external_eval_results.md` |
-| CVCP/CCSH completion audit | `../outputs/final_tables/cvcp_ccsh_completion_audit.md` |
-| SAMEQ v4 pure-seed live manifest | `../outputs/final_tables/sameq_v4_multiseed_manifest.md` |
-| SAMEQ v4 pure-seed stability/status snapshot | `../outputs/final_tables/sameq_v4_multiseed_stability.md` |
-| Prior case-study real-run status for seed stability + downstream diagnostics | `../outputs/final_tables/case_study_full_execution_status.md` |
-| Prior NIH available/full transfer status with 1k/5k/all subset rows | `../outputs/final_tables/nih_available_transfer_status.md` |
-| Prior extra queue status for curriculum-v2, embeddings, MMD/UMAP, and modules | `../outputs/final_tables/case_study_extra_execution_status.md` |
-| Embedding-backed domain shift MMD | `../outputs/final_tables/domain_shift_mmd.md` |
-| Embedding-backed dataset projection report | `../outputs/final_tables/dataset_embedding_projection.md` |
-| Formal module ablation result table | `../outputs/final_tables/module_ablation_results.md` |
-| Curriculum-v2 formal training package | `../outputs/qwen3vl_case_study_modules/cur_v2_progressive_replay/metrics_final.json` |
-| Case-study summary and casebook | `../outputs/final_tables/case_study_summary.md` |
-| Multi-seed manifest and legacy stability summary | `../outputs/final_tables/multiseed_stability.md` |
-| NIH label/domain diagnosis | `../outputs/final_tables/nih_domain_audit.md` |
-| TMI module smoke and experiment matrix | `../outputs/final_tables/module_candidate_results.md` |
-| Conservative family-level comparison | `../outputs/final_tables/locked_final_comparison.md` |
-| Completion audit | `../outputs/final_tables/case_study_modules_completion_audit.md` |
+| Core package | `../bives_cxr/` |
+| Qwen3.5 configs | `../configs/bives_cxr/` |
+| Training entry | `../scripts/train_bives_cxr.py` |
+| CPU smoke | `../scripts/smoke_bives_cxr.py` |
+| Manifest audit | `../scripts/audit_bives_manifest.py` |
+| CPU tests | `../tests/test_bives_core.py`, `../tests/test_bives_readiness.py` |
+| VinDr archive/integrity utilities | `../scripts/extract_vindr_cxr.py`, `../scripts/audit_vindr_cxr_integrity.py` |
 
-## Other Ledgers
+## Active model boundary
 
-| File | Scope |
-| --- | --- |
-| `next_stage_requirement_ledger.md` | Completed next-stage Qwen3-VL experiment suite and final audit. |
-| `next_stage_external_model_availability.md` | Local model and external dataset availability boundaries. |
-| `clinical_instruction_schema.md` | Clinical instruction JSONL schema and validation rules. |
+The active family is Qwen3.5 multimodal only:
 
-## Structure Notes
+- 2B for P0/debug;
+- 4B for the main model;
+- 9B for scale validation;
+- 0.8B for optional ultra-light smoke.
 
-- Keep medical datasets, generated instructions, model checkpoints, and experiment outputs under ignored paths such as `data/dataset/`, `data/instructions/`, `data/splits/`, `outputs/`, and `History/`.
-- Keep source scripts, configs, module code, and concise docs in tracked project paths.
-- Preserve failed or impossible runs as explicit case-study or boundary artifacts instead of silently deleting them.
+No active config may reference Qwen3-VL, Qwen2.5, InternVL, LLaDA, Gemma, or
+other prior model families.
+
+## Legacy boundary
+
+`../legacy/vsl_cxr/` preserves the prior VSL-CXR, CEQ, CCSH, AUCH, SAMEQ,
+CVCP, case-study, Qwen3-VL, and old external-evaluation implementation.
+
+`../legacy/vivid_med/` preserves pre-BiVES VIVID-Med scripts, models, training,
+evaluation, loaders, configs, profiles, prompts, and external tools.
+
+Historical result files under ignored `outputs/` remain untouched. They are
+pilot/provenance evidence only and cannot close a BiVES paper gate.
+
+## Current execution status
+
+The repository has an executable BiVES core, Qwen3.5 validation, a server
+training scaffold, synthetic CPU smoke, and proposal-level unit tests.
+
+Formal training has not been started by this consolidation. Before server P0:
+
+1. create a patient-disjoint BiVES manifest and pass
+   `scripts/audit_bives_manifest.py`;
+2. perform the uncertain-vs-insufficient expert pilot;
+3. verify same-statement cross-state coverage;
+4. run Qwen3.5-2B P0;
+5. unlock Qwen3.5-4B only after the proposal go/no-go gates pass.

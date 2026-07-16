@@ -1,0 +1,9 @@
+category,target,pre_cleanup_gib,decision,rationale
+completed_output_weights,outputs/**/*.pt,893.666,delete,"Formal metrics tables configs logs and plots are already durable; the active v5 suite is closed and these weights are not required for current claims"
+historical_interrupted_weights,History/**/*.pt,1.918,delete,"Interrupted and migrated historical checkpoints are superseded by completed result packages"
+local_virtual_environment,vivid_env/,5.938,delete,"Recreatable from requirements.txt and not research evidence"
+temporary_upload_staging,.remote_upload_tmp/,0.040,delete,"Temporary transfer staging only"
+git_unreachable_objects,.git/objects unreachable and garbage objects,122.08_audit_pool,garbage_collect,"Use Git reachability and reflogs during gc; do not manually delete object paths"
+medical_data,data/,152.594,preserve,"Sensitive source data and processed manifests are outside generated-weight cleanup"
+base_pretrained_models,pretrained/,0.958,preserve,"Still referenced as reproducible initialization assets and small relative to the dominant waste"
+result_evidence,outputs/final_tables plus metrics configs logs plots,less_than_4,preserve,"Durable evidence required for paper tables audits and handoff"
