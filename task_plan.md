@@ -228,7 +228,7 @@ Cleanup policy: preserve source code, configs, active documentation, final table
 - [x] B3: Implement the Qwen3.5-only BiVES-CXR core package, losses, interventions, metrics, manifest audit, config schema, and training/smoke entry points.
 - [x] B4: Update README/docs/AGENTS so BiVES-CXR is the only active mainline and all prior model families are explicitly legacy.
 - [x] B5: Run compile checks, 12 CPU unit tests, the synthetic BiVES smoke, the Qwen3.5 processor/grid smoke, and active-path navigation audits.
-- [ ] B6: Review the staged diff, commit all intended prior + current changes, push `main` to `origin`, and verify local/remote commit equality.
+- [x] B6: Reviewed the staged diff, committed the intended consolidation, pushed `main` to `origin`, verified commit equality, synchronized the source archive into the server project without touching data/outputs/pretrained/model, and reran server CPU validation.
 
 ### New errors / environment notes
 
