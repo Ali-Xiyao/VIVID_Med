@@ -11,6 +11,7 @@ import random
 import subprocess
 import sys
 import time
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -27,13 +28,19 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from bives_cxr.audit import audit_manifests
 from bives_cxr.backbones import Qwen35VisionAdapter, load_qwen35_visual_and_processor
+from bives_cxr.calibration import fit_decoder_temperatures
 from bives_cxr.data import (
     BiVESManifestDataset,
     SameStatementStateBatchSampler,
     build_group_loss_indices,
 )
 from bives_cxr.losses import BiVESLoss, BiVESLossConfig
-from bives_cxr.metrics import finalize_intervention_metrics, intervention_metric_counts
+from bives_cxr.metrics import (
+    classification_metrics,
+    finalize_intervention_metrics,
+    intervention_metric_counts,
+    patient_bootstrap_confidence_intervals,
+)
 from bives_cxr.model import BiVESCXR, BiVESModelConfig
 
 
@@ -102,9 +109,15 @@ class BiVESExperiment(nn.Module):
 
 
 class Qwen35BiVESCollator:
-    def __init__(self, processor: Any, image_size: int = 448) -> None:
+    def __init__(
+        self,
+        processor: Any,
+        image_size: int = 448,
+        include_group_indices: bool = True,
+    ) -> None:
         self.processor = processor
         self.image_size = int(image_size)
+        self.include_group_indices = bool(include_group_indices)
 
     def _letterbox(self, image: Image.Image) -> tuple[Image.Image, tuple[int, int, int, int]]:
         image = image.convert("RGB")
@@ -163,7 +176,12 @@ class Qwen35BiVESCollator:
         encoded["statement_indices"] = torch.tensor([item["statement_index"] for item in batch], dtype=torch.long)
         encoded["targets"] = torch.tensor([item["state_index"] for item in batch], dtype=torch.long)
         encoded["sample_ids"] = [str(item["sample_id"]) for item in batch]
-        encoded.update(build_group_loss_indices(batch))
+        encoded["patient_ids"] = [str(item["patient_id"]) for item in batch]
+        encoded["canonical_statement_ids"] = [
+            str(item["canonical_statement_id"]) for item in batch
+        ]
+        if self.include_group_indices:
+            encoded.update(build_group_loss_indices(batch))
         return encoded
 
 
@@ -213,6 +231,24 @@ def require_uniform_grid(grid_hw: list[tuple[int, int]]) -> tuple[int, int]:
     if len(unique) != 1:
         raise ValueError(f"BiVES batches currently require one padded image grid; got {sorted(unique)}")
     return grid_hw[0]
+
+
+def assert_full_sample_coverage(
+    expected_ids: list[str],
+    evaluated_ids: list[str],
+) -> None:
+    if len(evaluated_ids) != len(expected_ids):
+        raise RuntimeError(
+            f"primary evaluation covered {len(evaluated_ids)}/{len(expected_ids)} rows"
+        )
+    if len(set(evaluated_ids)) != len(evaluated_ids):
+        raise RuntimeError("primary evaluation emitted duplicate sample IDs")
+    if set(evaluated_ids) != set(expected_ids):
+        missing = sorted(set(expected_ids) - set(evaluated_ids))[:5]
+        unexpected = sorted(set(evaluated_ids) - set(expected_ids))[:5]
+        raise RuntimeError(
+            f"primary evaluation sample-ID mismatch; missing={missing}, unexpected={unexpected}"
+        )
 
 
 def save_json(path: Path, payload: dict[str, Any]) -> None:
@@ -291,13 +327,19 @@ def evaluate(
     loader: DataLoader,
     loss_fn: BiVESLoss,
     device: torch.device,
+    *,
+    assert_full_coverage: bool = True,
+    bootstrap_replicates: int = 0,
+    bootstrap_seed: int = 17,
 ) -> tuple[dict[str, float], list[dict[str, Any]]]:
     experiment.eval()
     loss_sum = 0.0
-    correct = 0
     samples = 0
     mechanism: dict[str, float] = {}
     rows: list[dict[str, Any]] = []
+    all_probabilities: list[torch.Tensor] = []
+    all_targets: list[torch.Tensor] = []
+    all_patient_ids: list[str] = []
     for batch in loader:
         batch = move_to_device(batch, device)
         outputs, grids = experiment(
@@ -311,35 +353,131 @@ def evaluate(
             outputs,
             batch["targets"],
             require_uniform_grid(grids),
-            batch["support_pair_indices"],
-            batch["contradict_pair_indices"],
-            batch["uncertain_indices"],
         )
         batch_size = int(batch["targets"].numel())
         loss_sum += float(losses["total"].cpu()) * batch_size
         probabilities = outputs["original"]["state_probs"]
-        correct += int((probabilities.argmax(dim=-1) == batch["targets"]).sum().item())
         samples += batch_size
+        all_probabilities.append(probabilities.detach().float().cpu())
+        all_targets.append(batch["targets"].detach().long().cpu())
+        all_patient_ids.extend(batch["patient_ids"])
         for key, value in intervention_metric_counts(outputs, batch["targets"]).items():
             mechanism[key] = mechanism.get(key, 0.0) + value
         for index, sample_id in enumerate(batch["sample_ids"]):
+            control_probabilities = [
+                branch["state_probs"][index].detach().float().cpu().tolist()
+                for branch in outputs["controls"]
+            ]
             rows.append(
                 {
                     "sample_id": sample_id,
+                    "patient_id": batch["patient_ids"][index],
+                    "canonical_statement_id": batch["canonical_statement_ids"][index],
                     "target": int(batch["targets"][index].item()),
                     "original_probs": probabilities[index].detach().float().cpu().tolist(),
+                    "evidence_pos": float(
+                        outputs["original"]["evidence_pos"][index].detach().float().cpu()
+                    ),
+                    "evidence_neg": float(
+                        outputs["original"]["evidence_neg"][index].detach().float().cpu()
+                    ),
                     "keep_probs": outputs["keep"]["state_probs"][index].detach().float().cpu().tolist(),
                     "drop_probs": outputs["drop"]["state_probs"][index].detach().float().cpu().tolist(),
                     "control_probs": outputs["control"]["state_probs"][index].detach().float().cpu().tolist(),
+                    "control_branch_probs": control_probabilities,
                 }
             )
+    if samples == 0:
+        raise ValueError("evaluation loader produced no samples")
+    if assert_full_coverage:
+        dataset = loader.dataset
+        expected_ids = [str(row["sample_id"]) for row in dataset.rows]
+        evaluated_ids = [row["sample_id"] for row in rows]
+        assert_full_sample_coverage(expected_ids, evaluated_ids)
+    probability_matrix = torch.cat(all_probabilities).numpy()
+    target_vector = torch.cat(all_targets).numpy()
     experiment.train()
-    result = {
+    result: dict[str, Any] = {
         "loss": float(loss_sum / samples) if samples else float("nan"),
-        "accuracy": float(correct / max(samples, 1)),
+        "evaluated_sample_count": samples,
+        "unique_sample_count": len({row["sample_id"] for row in rows}),
+        **classification_metrics(probability_matrix, target_vector),
     }
     result.update(finalize_intervention_metrics(mechanism))
+    if bootstrap_replicates > 0:
+        result["patient_bootstrap_95ci"] = patient_bootstrap_confidence_intervals(
+            probability_matrix,
+            target_vector,
+            all_patient_ids,
+            replicates=bootstrap_replicates,
+            seed=bootstrap_seed,
+        )
     return result, rows
+
+
+@torch.no_grad()
+def evaluate_grouped_mechanisms(
+    experiment: BiVESExperiment,
+    loader: DataLoader,
+    device: torch.device,
+    pair_margin: float,
+) -> dict[str, float]:
+    """Evaluate same-statement relations separately from primary row coverage."""
+
+    experiment.eval()
+    pair_violations: list[torch.Tensor] = []
+    uncertain_polarities: list[torch.Tensor] = []
+    groups = 0
+    for batch in loader:
+        batch = move_to_device(batch, device)
+        outputs, _ = experiment(
+            batch["pixel_values"],
+            batch["image_grid_thw"],
+            batch["statement_indices"],
+            batch["content_valid_mask"],
+            run_interventions=False,
+        )
+        original = outputs["original"]
+        rho = (original["evidence_pos"] - original["evidence_neg"]) / (
+            original["total_evidence"] + 1e-8
+        )
+        support = batch["support_pair_indices"].long()
+        contradict = batch["contradict_pair_indices"].long()
+        uncertain = batch["uncertain_indices"].long()
+        pair_violations.append(
+            torch.relu(pair_margin - rho[support] + rho[contradict]).detach().cpu()
+        )
+        uncertain_polarities.append(rho[uncertain].abs().detach().cpu())
+        groups += int(support.numel())
+    experiment.train()
+    if groups == 0:
+        raise ValueError("grouped evaluator produced no complete S/C/U/I groups")
+    return {
+        "groups": float(groups),
+        "pair_margin_violation": float(torch.cat(pair_violations).mean()),
+        "uncertain_absolute_polarity": float(torch.cat(uncertain_polarities).mean()),
+    }
+
+
+def set_decoder_temperatures(
+    experiment: BiVESExperiment,
+    temperatures: dict[str, float],
+) -> None:
+    for name in ("tau_a", "tau_d", "tau_p"):
+        value = float(temperatures[name])
+        if value <= 0:
+            raise ValueError(f"{name} must be positive")
+        getattr(experiment.head.decoder, name).fill_(value)
+
+
+def load_checkpoint_model_state(
+    experiment: BiVESExperiment,
+    checkpoint: dict[str, Any],
+) -> None:
+    experiment.statement_table.load_state_dict(checkpoint["statement_table"])
+    experiment.head.load_state_dict(checkpoint["bives_head"])
+    if "backbone" in checkpoint:
+        experiment.backbone.load_state_dict(checkpoint["backbone"])
 
 
 def synthetic_smoke() -> None:
@@ -453,6 +591,9 @@ def main() -> None:
     visual_model, processor, qwen_config = load_qwen35_visual_and_processor(
         config["model"]["path"],
         dtype=str(config["model"].get("dtype", "bf16")),
+        attention_implementation=str(
+            config["model"].get("attention_implementation", "eager")
+        ),
     )
     freeze_backbone = bool(config["model"].get("freeze_backbone", True))
     for parameter in visual_model.parameters():
@@ -478,6 +619,9 @@ def main() -> None:
         tau_p=float(config["bives"]["decoder"].get("tau_p", 1.0)),
         num_controls=int(intervention_config.get("num_controls", 4)),
         control_mode=str(intervention_config.get("control_mode", "random_disjoint")),
+        contextual_layers=int(config["bives"].get("contextual_layers", 1)),
+        contextual_heads=int(config["bives"].get("contextual_heads", 4)),
+        contextual_dropout=float(config["bives"].get("contextual_dropout", 0.0)),
     )
     experiment = BiVESExperiment(
         visual_adapter,
@@ -486,10 +630,22 @@ def main() -> None:
         head_config=head_config,
         frozen_statement_embeddings=frozen_statement_embeddings,
     ).to(device)
-    collator = Qwen35BiVESCollator(processor, image_size=int(config["data"].get("image_size", 448)))
+    image_size = int(config["data"].get("image_size", 448))
+    grouped_collator = Qwen35BiVESCollator(
+        processor,
+        image_size=image_size,
+        include_group_indices=True,
+    )
+    primary_collator = Qwen35BiVESCollator(
+        processor,
+        image_size=image_size,
+        include_group_indices=False,
+    )
     sampling = config.get("sampling", {})
     if sampling.get("type") != "same_statement_state_group":
-        raise ValueError("active BiVES training requires sampling.type=group")
+        raise ValueError(
+            "active BiVES training requires sampling.type=same_statement_state_group"
+        )
     groups_per_batch = int(sampling.get("groups_per_batch", 1))
     sampler_kwargs = {
         "groups_per_batch": groups_per_batch,
@@ -502,26 +658,28 @@ def main() -> None:
         shuffle=True,
         **sampler_kwargs,
     )
-    val_batch_sampler = SameStatementStateBatchSampler(
-        val_dataset,
-        shuffle=False,
-        **sampler_kwargs,
-    )
     train_loader = DataLoader(
         train_dataset,
         batch_sampler=train_batch_sampler,
         num_workers=int(config["data"].get("num_workers", 0)),
-        collate_fn=collator,
+        collate_fn=grouped_collator,
     )
-    val_loader = DataLoader(
-        val_dataset,
-        batch_sampler=val_batch_sampler,
-        num_workers=int(config["data"].get("num_workers", 0)),
-        collate_fn=collator,
-    )
-    def make_eval_loader(dataset: BiVESManifestDataset | None) -> DataLoader | None:
+    evaluation_config = config.get("evaluation", {})
+    evaluation_batch_size = int(evaluation_config.get("batch_size", groups_per_batch * 4))
+
+    def make_primary_eval_loader(dataset: BiVESManifestDataset | None) -> DataLoader | None:
         if dataset is None:
             return None
+        return DataLoader(
+            dataset,
+            batch_size=evaluation_batch_size,
+            shuffle=False,
+            drop_last=False,
+            num_workers=int(config["data"].get("num_workers", 0)),
+            collate_fn=primary_collator,
+        )
+
+    def make_grouped_eval_loader(dataset: BiVESManifestDataset) -> DataLoader:
         return DataLoader(
             dataset,
             batch_sampler=SameStatementStateBatchSampler(
@@ -530,12 +688,24 @@ def main() -> None:
                 **sampler_kwargs,
             ),
             num_workers=int(config["data"].get("num_workers", 0)),
-            collate_fn=collator,
+            collate_fn=grouped_collator,
         )
 
-    calibration_loader = make_eval_loader(calibration_dataset)
-    test_loader = make_eval_loader(test_dataset)
-    loss_fn = BiVESLoss(BiVESLossConfig(**config.get("loss", {})))
+    val_loader = make_primary_eval_loader(val_dataset)
+    assert val_loader is not None
+    val_grouped_loader = make_grouped_eval_loader(val_dataset)
+    calibration_loader = make_primary_eval_loader(calibration_dataset)
+    test_loader = make_primary_eval_loader(test_dataset)
+    loss_config = BiVESLossConfig(**config.get("loss", {}))
+    if head_config.gate_mode == "soft_topk" and loss_config.lambda_min != 0:
+        raise ValueError(
+            "fixed exact-K is a budgeted evidence set; lambda_min must be 0 "
+            "until an adaptive hard-concrete/L0 gate is implemented"
+        )
+    loss_fn = BiVESLoss(loss_config)
+    primary_eval_loss_fn = BiVESLoss(
+        replace(loss_config, lambda_pair=0.0, lambda_u_pol=0.0)
+    )
     head_parameters = [
         parameter
         for parameter in list(experiment.statement_table.parameters()) + list(experiment.head.parameters())
@@ -569,10 +739,7 @@ def main() -> None:
     events: list[dict[str, Any]] = []
     if args.resume is not None:
         checkpoint = torch.load(args.resume, map_location="cpu", weights_only=False)
-        experiment.statement_table.load_state_dict(checkpoint["statement_table"])
-        experiment.head.load_state_dict(checkpoint["bives_head"])
-        if "backbone" in checkpoint:
-            experiment.backbone.load_state_dict(checkpoint["backbone"])
+        load_checkpoint_model_state(experiment, checkpoint)
         optimizer.load_state_dict(checkpoint["optimizer"])
         scheduler.load_state_dict(checkpoint["scheduler"])
         step = int(checkpoint["step"])
@@ -607,10 +774,23 @@ def main() -> None:
             optimizer.zero_grad(set_to_none=True)
             step += 1
             if step % eval_interval == 0 or step == max_steps:
-                validation, validation_rows = evaluate(experiment, val_loader, loss_fn, device)
+                validation, validation_rows = evaluate(
+                    experiment,
+                    val_loader,
+                    primary_eval_loss_fn,
+                    device,
+                    assert_full_coverage=True,
+                )
+                grouped_validation = evaluate_grouped_mechanisms(
+                    experiment,
+                    val_grouped_loader,
+                    device,
+                    pair_margin=loss_config.pair_margin,
+                )
                 event = {
                     "step": step,
                     "train_loss": float(losses["total"].detach().cpu()),
+                    "grouped_mechanisms": grouped_validation,
                     **validation,
                 }
                 events.append(event)
@@ -621,6 +801,9 @@ def main() -> None:
                 ) as handle:
                     for row in validation_rows:
                         handle.write(json.dumps(row, ensure_ascii=False) + "\n")
+                improved = validation["loss"] < best_val_loss
+                if improved:
+                    best_val_loss = validation["loss"]
                 checkpoint = {
                     "step": step,
                     "best_val_loss": best_val_loss,
@@ -638,9 +821,7 @@ def main() -> None:
                     checkpoint["backbone"] = experiment.backbone.state_dict()
                 (output_dir / "checkpoints").mkdir(parents=True, exist_ok=True)
                 torch.save(checkpoint, output_dir / "checkpoints" / "last.pt")
-                if validation["loss"] < best_val_loss:
-                    best_val_loss = validation["loss"]
-                    checkpoint["best_val_loss"] = best_val_loss
+                if improved:
                     torch.save(checkpoint, output_dir / "checkpoints" / "best.pt")
             if step >= max_steps:
                 break
@@ -663,15 +844,98 @@ def main() -> None:
         checkpoint["backbone"] = experiment.backbone.state_dict()
     (output_dir / "checkpoints").mkdir(parents=True, exist_ok=True)
     torch.save(checkpoint, output_dir / "checkpoints" / "final.pt")
-    split_metrics: dict[str, Any] = {}
-    for split, loader in (("calibration", calibration_loader), ("test", test_loader)):
-        if loader is None:
-            continue
-        metrics, prediction_rows = evaluate(experiment, loader, loss_fn, device)
-        split_metrics[split] = metrics
-        with (output_dir / f"{split}_predictions.jsonl").open("w", encoding="utf-8") as handle:
+    best_path = output_dir / "checkpoints" / "best.pt"
+    if not best_path.is_file():
+        raise RuntimeError("training completed without a validation-selected best checkpoint")
+    best_checkpoint = torch.load(best_path, map_location="cpu", weights_only=False)
+    load_checkpoint_model_state(experiment, best_checkpoint)
+    selected_best_step = int(best_checkpoint["step"])
+    uncalibrated_temperatures = {
+        name: float(getattr(experiment.head.decoder, name).detach().cpu())
+        for name in ("tau_a", "tau_d", "tau_p")
+    }
+
+    def write_predictions(name: str, prediction_rows: list[dict[str, Any]]) -> None:
+        with (output_dir / f"{name}_predictions.jsonl").open(
+            "w", encoding="utf-8"
+        ) as handle:
             for row in prediction_rows:
                 handle.write(json.dumps(row, ensure_ascii=False) + "\n")
+
+    split_metrics: dict[str, Any] = {}
+    calibration_temperatures: dict[str, float] | None = None
+    calibration_pre_rows: list[dict[str, Any]] = []
+    if calibration_loader is not None:
+        calibration_pre, calibration_pre_rows = evaluate(
+            experiment,
+            calibration_loader,
+            primary_eval_loss_fn,
+            device,
+            assert_full_coverage=True,
+        )
+        split_metrics["calibration_pre"] = calibration_pre
+        write_predictions("calibration_pre", calibration_pre_rows)
+        calibration_temperatures = fit_decoder_temperatures(
+            torch.tensor([row["evidence_pos"] for row in calibration_pre_rows]),
+            torch.tensor([row["evidence_neg"] for row in calibration_pre_rows]),
+            torch.tensor([row["target"] for row in calibration_pre_rows]),
+            initial=(
+                uncalibrated_temperatures["tau_a"],
+                uncalibrated_temperatures["tau_d"],
+                uncalibrated_temperatures["tau_p"],
+            ),
+            max_iter=int(evaluation_config.get("calibration_max_iter", 100)),
+        )
+
+    bootstrap_replicates = int(evaluation_config.get("bootstrap_replicates", 1000))
+    test_pre_rows: list[dict[str, Any]] = []
+    if test_loader is not None:
+        test_pre, test_pre_rows = evaluate(
+            experiment,
+            test_loader,
+            primary_eval_loss_fn,
+            device,
+            assert_full_coverage=True,
+            bootstrap_replicates=bootstrap_replicates,
+            bootstrap_seed=int(config.get("seed", 17)),
+        )
+        split_metrics["test_pre"] = test_pre
+        write_predictions("test_pre", test_pre_rows)
+
+    if calibration_temperatures is not None:
+        set_decoder_temperatures(experiment, calibration_temperatures)
+        calibration_post, calibration_post_rows = evaluate(
+            experiment,
+            calibration_loader,
+            primary_eval_loss_fn,
+            device,
+            assert_full_coverage=True,
+        )
+        split_metrics["calibration_post"] = calibration_post
+        write_predictions("calibration_post", calibration_post_rows)
+        if test_loader is not None:
+            test_post, test_post_rows = evaluate(
+                experiment,
+                test_loader,
+                primary_eval_loss_fn,
+                device,
+                assert_full_coverage=True,
+                bootstrap_replicates=bootstrap_replicates,
+                bootstrap_seed=int(config.get("seed", 17)),
+            )
+            split_metrics["test_post"] = test_post
+            write_predictions("test_post", test_post_rows)
+        calibrated_checkpoint = {
+            **best_checkpoint,
+            "selected_best_step": selected_best_step,
+            "uncalibrated_temperatures": uncalibrated_temperatures,
+            "calibrated_temperatures": calibration_temperatures,
+            "bives_head": experiment.head.state_dict(),
+        }
+        torch.save(
+            calibrated_checkpoint,
+            output_dir / "checkpoints" / "best_calibrated.pt",
+        )
 
     final_metrics = {
         "step": step,
@@ -681,6 +945,10 @@ def main() -> None:
         "train_records": len(train_dataset),
         "val_records": len(val_dataset),
         "best_val_loss": best_val_loss,
+        "selected_best_step": selected_best_step,
+        "selected_checkpoint": str(best_path),
+        "uncalibrated_temperatures": uncalibrated_temperatures,
+        "calibrated_temperatures": calibration_temperatures,
         "split_metrics": split_metrics,
         "manifest_sha256": {
             split: file_sha256(path)

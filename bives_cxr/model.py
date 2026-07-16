@@ -31,6 +31,9 @@ class BiVESModelConfig:
     tau_p: float = 1.0
     num_controls: int = 4
     control_mode: str = "random_disjoint"
+    contextual_layers: int = 1
+    contextual_heads: int = 4
+    contextual_dropout: float = 0.0
 
 
 class BiVESCXR(nn.Module):
@@ -43,6 +46,10 @@ class BiVESCXR(nn.Module):
         super().__init__()
         if config.evidence_max <= 0:
             raise ValueError("evidence_max must be positive")
+        if config.contextual_layers <= 0:
+            raise ValueError("contextual_layers must be positive")
+        if config.contextual_heads <= 0 or config.fusion_dim % config.contextual_heads:
+            raise ValueError("contextual_heads must divide fusion_dim")
         self.config = config
         self.visual_projection = nn.Linear(config.visual_dim, config.fusion_dim)
         self.statement_projection = nn.Linear(config.statement_dim, config.fusion_dim)
@@ -52,6 +59,21 @@ class BiVESCXR(nn.Module):
             nn.GELU(),
             nn.LayerNorm(config.fusion_dim),
         )
+        contextual_layer = nn.TransformerEncoderLayer(
+            d_model=config.fusion_dim,
+            nhead=config.contextual_heads,
+            dim_feedforward=config.fusion_dim * 4,
+            dropout=config.contextual_dropout,
+            activation="gelu",
+            batch_first=True,
+            norm_first=True,
+        )
+        self.contextual_evidence = nn.TransformerEncoder(
+            contextual_layer,
+            num_layers=config.contextual_layers,
+            enable_nested_tensor=False,
+        )
+        self.contextual_norm = nn.LayerNorm(config.fusion_dim)
         self.evidence_head = nn.Linear(config.fusion_dim, 2)
         self.gate_head = nn.Linear(config.fusion_dim, 1)
         self.gate = EvidenceGate(
@@ -76,9 +98,21 @@ class BiVESCXR(nn.Module):
 
         visual = self.visual_projection(patch_tokens)
         statement = self.statement_projection(statement_embeddings).unsqueeze(1).expand_as(visual)
-        fused = self.fusion(torch.cat((visual, statement, visual * statement, torch.abs(visual - statement)), dim=-1))
-        evidence_pm = torch.sigmoid(self.evidence_head(fused)) * self.config.evidence_max
-        gate_logits = self.gate_head(fused).squeeze(-1)
+        fused = self.fusion(
+            torch.cat(
+                (visual, statement, visual * statement, torch.abs(visual - statement)),
+                dim=-1,
+            )
+        )
+        valid_float = valid_mask.to(dtype=fused.dtype).unsqueeze(-1)
+        fused = fused * valid_float
+        contextual = self.contextual_evidence(
+            fused,
+            src_key_padding_mask=~valid_mask.bool(),
+        )
+        contextual = self.contextual_norm(contextual) * valid_float
+        evidence_pm = torch.sigmoid(self.evidence_head(contextual)) * self.config.evidence_max
+        gate_logits = self.gate_head(contextual).squeeze(-1)
         gate = self.gate(gate_logits, valid_mask)
         evidence_maps = evidence_pm * gate.unsqueeze(-1)
         denominator = gate.sum(dim=-1, keepdim=True).clamp_min(1e-8)
@@ -87,6 +121,7 @@ class BiVESCXR(nn.Module):
         return {
             "gate_logits": gate_logits,
             "gate": gate,
+            "contextual_tokens": contextual,
             "evidence_pm": evidence_pm,
             "evidence_maps": evidence_maps,
             "evidence_pos": aggregated[:, 0],
@@ -114,6 +149,9 @@ class BiVESCXR(nn.Module):
         ).bool()
         keep_valid = valid_mask.bool() & evidence_hard_mask
         drop_valid = valid_mask.bool() & ~evidence_hard_mask
+        # The intervention is applied before the shared contextual evidence
+        # block. Forward values remain exact-K while the straight-through gate
+        # supplies selector gradients.
         keep_tokens = retain_evidence(patch_tokens, original["gate"])
         drop_tokens = delete_evidence(patch_tokens, original["gate"])
         control_masks = build_matched_control_masks(

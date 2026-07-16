@@ -193,3 +193,45 @@
   passed, synthetic smoke passed, and the real Qwen3.5-0.8B vision-only smoke
   returned one finite `1 x 784 x 768` patch tensor with zero language
   parameters. No formal experiment was started.
+
+## 2026-07-17 BiVES-CXR Round-2 Structural Review Findings
+
+- The round-2 review identifies a real structural shortcut. The active
+  `score_tokens()` path performs only per-patch fusion/heads, while keep and
+  control preserve the original exact-K evidence patches and rerun selection.
+  Without a post-mask cross-patch interaction, keep and disjoint-control
+  probabilities are algebraically driven to match original probabilities.
+- The repair must apply keep/drop/control validity masks before a shared
+  statement-conditioned contextual token block. Branches may then share the
+  same scorer and selector, but the evidence representation changes when
+  context is removed, making sufficiency and specificity empirical rather
+  than guaranteed.
+- Primary validation/calibration/test must use full sequential row coverage.
+  The same-statement sampler remains appropriate for training and a separate
+  deterministic grouped mechanism evaluator, but cannot define the primary
+  evaluation population.
+- Fixed exact-K is a budget constraint, not adaptive minimality. Active P0
+  documentation/configuration must say `K-budgeted evidence set` and set
+  `lambda_min: 0`; adaptive minimal-set claims remain locked behind a future
+  hard-concrete/L0 implementation.
+- Feature-space closure remains a training/mechanism claim. Pixel-causal
+  grounding requires later pixel-level keep/drop/control evaluation through
+  the full vision tower and must not be inferred from the active feature-space
+  intervention alone.
+- The initial official-vs-selective Qwen3.5-2B mismatch was not a parameter
+  loading error. The only divergent state was the non-persistent
+  `visual.rotary_pos_emb.inv_freq` buffer: the selective loader downcast it to
+  BF16 through `visual.to(dtype)`, while the official full model retained it in
+  FP32. Preserving that buffer in FP32 after the selective move gives exact
+  parameter and token-output equality.
+- The bounded server integration gate now passes on the A800 with
+  `331,416,576` selective visual parameters, `0` visual parameter mismatches,
+  `0.0` max/mean alignment error, `0` retained language parameters, and peak
+  alignment/training allocations of about `4.93` GiB / `1.16` GiB. Two
+  optimization steps completed with losses `6.9683 -> 6.0655`, exact
+  cardinality `16`, and nonzero keep/control effects.
+- Code readiness does not yet equal experiment readiness. A fresh server check
+  found none of the four P0 manifests, none of the four locked formal
+  manifests, and no frozen
+  `data/bives_cxr/statement_embeddings/qwen35_canonical.pt`; therefore P0 and
+  formal 4B/9B dataset training remain fail-fast blocked.

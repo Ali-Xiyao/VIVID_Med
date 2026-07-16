@@ -11,6 +11,7 @@ from PIL import Image
 from bives_cxr.audit import audit_manifests
 from bives_cxr.backbones import validate_qwen35_model_path
 from bives_cxr.data import BiVESManifestDataset, SameStatementStateBatchSampler
+from scripts.train_bives_cxr import assert_full_sample_coverage
 
 
 def write_jsonl(path: Path, rows: list[dict[str, str]]) -> None:
@@ -34,6 +35,8 @@ class BiVESReadinessTest(unittest.TestCase):
             self.assertGreater(float(payload["loss"].get("lambda_u_pol", 0.0)), 0.0)
             self.assertEqual(payload["sampling"]["type"], "same_statement_state_group")
             self.assertEqual(payload["bives"]["mask"]["type"], "soft_topk")
+            self.assertEqual(float(payload["loss"]["lambda_min"]), 0.0)
+            self.assertGreaterEqual(int(payload["bives"]["contextual_layers"]), 1)
             self.assertTrue(payload["audit"]["require_complete_statements"])
         main = yaml.safe_load((config_root / "qwen35_4b_main.yaml").read_text(encoding="utf-8"))
         self.assertIn("train_locked.jsonl", main["data"]["train_manifest"])
@@ -159,6 +162,14 @@ class BiVESReadinessTest(unittest.TestCase):
                     "insufficient",
                 ],
             )
+
+    def test_primary_evaluation_coverage_contract_rejects_subsets_and_duplicates(self) -> None:
+        expected = [f"sample-{index}" for index in range(24)]
+        assert_full_sample_coverage(expected, list(expected))
+        with self.assertRaises(RuntimeError):
+            assert_full_sample_coverage(expected, expected[:8])
+        with self.assertRaises(RuntimeError):
+            assert_full_sample_coverage(expected, expected[:-1] + [expected[0]])
 
     def test_strict_audit_rejects_semantic_and_label_conflicts(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

@@ -111,6 +111,7 @@ class Qwen35VisionAdapter(nn.Module):
 def load_qwen35_visual_and_processor(
     model_path: str | Path,
     dtype: str = "bf16",
+    attention_implementation: str = "eager",
 ) -> tuple[nn.Module, Any, dict[str, Any]]:
     """Load the vision tower without retaining the unused language model."""
 
@@ -126,7 +127,14 @@ def load_qwen35_visual_and_processor(
         raise ValueError(f"unsupported dtype: {dtype}")
     processor = AutoProcessor.from_pretrained(model_path)
     parent_config = AutoConfig.from_pretrained(model_path)
+    if attention_implementation not in {"eager", "sdpa"}:
+        raise ValueError(
+            f"unsupported Qwen3.5 visual attention implementation: {attention_implementation}"
+        )
+    parent_config.vision_config._attn_implementation = attention_implementation
+    parent_config.vision_config._attn_implementation_internal = attention_implementation
     visual = Qwen3_5VisionModel(parent_config.vision_config)
+    rotary_inv_freq = visual.rotary_pos_emb.inv_freq.detach().clone()
     model_root = Path(model_path)
     index_path = model_root / "model.safetensors.index.json"
     state_dict: dict[str, torch.Tensor] = {}
@@ -158,4 +166,8 @@ def load_qwen35_visual_and_processor(
     if incompatible.missing_keys or incompatible.unexpected_keys:
         raise RuntimeError(f"strict Qwen3.5 visual load failed: {incompatible}")
     visual.to(dtype=dtype_map[dtype])
+    # The official full Qwen3.5 model keeps the non-persistent rotary frequency
+    # buffer in FP32 even when model weights are BF16/FP16. Module.to(dtype)
+    # would silently downcast it and materially change visual outputs.
+    visual.rotary_pos_emb.inv_freq = rotary_inv_freq
     return visual, processor, config

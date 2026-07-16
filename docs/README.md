@@ -24,6 +24,7 @@ BiVES-CXR is the only active paper and code mainline.
 | Training entry | `../scripts/train_bives_cxr.py` |
 | CPU smoke | `../scripts/smoke_bives_cxr.py` |
 | Real-weight Qwen3.5 vision smoke | `../scripts/smoke_qwen35_vision.py` |
+| Qwen3.5-to-BiVES server integration gate | `../scripts/smoke_qwen35_bives_integration.py` |
 | Manifest audit | `../scripts/audit_bives_manifest.py` |
 | CPU tests | `../tests/test_bives_core.py`, `../tests/test_bives_readiness.py` |
 | VinDr archive/integrity utilities | `../scripts/extract_vindr_cxr.py`, `../scripts/audit_vindr_cxr_integrity.py` |
@@ -48,13 +49,19 @@ CVCP, case-study, Qwen3-VL, and old external-evaluation implementation.
 `../legacy/vivid_med/` preserves pre-BiVES VIVID-Med scripts, models, training,
 evaluation, loaders, configs, profiles, prompts, and external tools.
 
+`../legacy/delete_archive/` preserves the small retired root-level cleanup
+bundle that previously remained under `delete/`, including old Qwen2.5-era
+configs and utility scripts.
+
 Historical result files under ignored `outputs/` remain untouched. They are
 pilot/provenance evidence only and cannot close a BiVES paper gate.
 
 ## Current execution status
 
 The repository has an executable BiVES core, strict same-statement group
-training, exact-K interventional closure, a vision-only Qwen3.5 loader,
+training, mask-before-contextual-block exact-K interventional closure, full-row
+primary evaluation, a separate grouped mechanism evaluator, best-checkpoint
+selection, decoder-temperature calibration, a vision-only Qwen3.5 loader,
 synthetic CPU smoke, and proposal-level unit tests.
 
 Formal training has not been started by this consolidation. Before server P0:

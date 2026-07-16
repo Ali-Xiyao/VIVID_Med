@@ -17,6 +17,7 @@ model:
   scale: 4B
   path: /ipfs/inspurfileset/home/dqxy/dqxy11/projects/xiyaowang/model/Qwen3.5-4B
   dtype: bf16
+  attention_implementation: eager
   freeze_backbone: true
   statement_embeddings:
     mode: frozen_cached
@@ -25,6 +26,9 @@ model:
 bives:
   fusion_dim: 512
   evidence_max: 8.0
+  contextual_layers: 1
+  contextual_heads: 4
+  contextual_dropout: 0.0
   mask:
     type: soft_topk
     topk: 16
@@ -59,8 +63,13 @@ loss:
   pair_margin: 0.2
   lambda_u_pol: 0.1
   lambda_i_mag: 0.1
-  lambda_min: 0.001
+  lambda_min: 0.0
   lambda_tv: 0.0001
+
+evaluation:
+  batch_size: 8
+  calibration_max_iter: 100
+  bootstrap_replicates: 1000
 
 training:
   lr_new_layers: 0.0001

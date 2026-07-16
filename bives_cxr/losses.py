@@ -17,7 +17,7 @@ class BiVESLossConfig:
     pair_margin: float = 0.2
     lambda_u_pol: float = 0.0
     lambda_i_mag: float = 0.1
-    lambda_min: float = 1e-3
+    lambda_min: float = 0.0
     lambda_tv: float = 1e-4
     eps: float = 1e-8
 
@@ -122,14 +122,20 @@ class BiVESLoss(nn.Module):
         insufficient = targets == 3
         i_magnitude = original["total_evidence"][insufficient].mean() if bool(insufficient.any()) else state_loss.new_zeros(())
         valid_mask = original["valid_mask"].bool()
-        minimality = (
+        evidence_fraction = (
             original["gate"].sum(dim=-1)
             / valid_mask.sum(dim=-1).clamp_min(1).to(original["gate"].dtype)
         ).mean()
         tv = total_variation(original["gate"], grid_hw, valid_mask)
         total = total + self.config.lambda_i_mag * i_magnitude
-        total = total + self.config.lambda_min * minimality + self.config.lambda_tv * tv
-        losses.update({"insufficient_magnitude": i_magnitude, "minimality": minimality, "tv": tv})
+        total = total + self.config.lambda_min * evidence_fraction + self.config.lambda_tv * tv
+        losses.update(
+            {
+                "insufficient_magnitude": i_magnitude,
+                "evidence_fraction": evidence_fraction,
+                "tv": tv,
+            }
+        )
 
         rho = (original["evidence_pos"] - original["evidence_neg"]) / (
             original["total_evidence"] + self.config.eps

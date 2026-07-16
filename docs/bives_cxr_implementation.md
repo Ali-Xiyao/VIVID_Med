@@ -17,13 +17,15 @@ state_probs          [B, 4]  # support, contradict, uncertain, insufficient
 
 1. Project patch and statement embeddings.
 2. Fuse `[z, h, z*h, |z-h|]`.
-3. Predict bounded positive/negative patch evidence.
-4. Select an exact-K evidence set with a straight-through differentiable gate.
-5. Aggregate `E+` and `E-`.
-6. Derive four-state probabilities from availability, decisiveness, and
+3. Run a shared statement-conditioned cross-patch contextual evidence block.
+4. Predict bounded positive/negative patch evidence.
+5. Select an exact-K evidence set with a straight-through differentiable gate.
+6. Aggregate `E+` and `E-`.
+7. Derive four-state probabilities from availability, decisiveness, and
    polarity using the closed-form decoder.
-7. Re-score evidence-retained, evidence-deleted, and multiple random-disjoint
-   equal-area control interventions with branch-specific validity masks.
+8. Apply evidence-retained, evidence-deleted, and multiple random-disjoint
+   equal-area masks before the shared contextual block, then re-score with
+   branch-specific validity masks.
 
 The active model must not define `state_head`, `four_class_head`, or an
 independent trainable four-class classifier.
@@ -50,6 +52,11 @@ fixed order support, contradict, uncertain, insufficient. The collator emits
 aligned S/C pair indices and uncertain indices. A positive `lambda_pair` or
 `lambda_u_pol` without these indices is a hard error.
 
+Primary validation/calibration/test does not use the group sampler. It uses a
+sequential full-row loader and asserts exact sample-ID coverage. A separate
+deterministic grouped evaluator reports S/C pair-margin violation and uncertain
+absolute polarity.
+
 Letterbox padding is excluded by a row-major content-patch mask. Keep/drop and
 control branches cannot reselect deleted or padded positions.
 
@@ -58,6 +65,20 @@ require `data/bives_cxr/statement_embeddings/qwen35_canonical.pt`, stored as a
 `canonical_statement_id -> 1D tensor` mapping produced by a frozen Qwen3.5
 text encoder. Missing or dimension-inconsistent caches fail before visual
 weights load.
+
+Fixed exact-K is explicitly a `K-budgeted evidence set`. It can learn which K
+patches are selected, not per-example cardinality. Therefore active fixed-K
+configs set `lambda_min: 0`. The adaptive/minimal evidence-set claim remains a
+future hard-concrete/L0 gate.
+
+After training, the validation-selected `best.pt` checkpoint is reloaded before
+calibration or test. Positive `tau_a`, `tau_d`, and `tau_p` are fitted only on
+the locked calibration split, and test artifacts report both pre- and
+post-calibration classification, ECE/Brier/AURC, and intervention metrics.
+
+Feature-space keep/drop/control is a mechanism-training contract, not by itself
+proof of pixel-causal grounding. Paper-level causal claims require separate
+pixel keep/drop/equal-area controls through the full frozen vision tower.
 
 ## Initial training order
 

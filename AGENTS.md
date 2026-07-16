@@ -22,6 +22,7 @@ belong under `legacy/`.
 - `scripts/train_bives_cxr.py`: server training entry.
 - `scripts/smoke_bives_cxr.py`: synthetic CPU smoke.
 - `scripts/smoke_qwen35_vision.py`: read-only real-weight vision-only smoke.
+- `scripts/smoke_qwen35_bives_integration.py`: bounded server-only official-vs-selective visual alignment plus two-step synthetic S/C/U/I gate.
 - `scripts/audit_bives_manifest.py`: manifest and split readiness audit.
 - `scripts/{prepare,extract,audit}_vindr_cxr*.py`: current external-data tools.
 - `tests/`: active BiVES contract tests.
@@ -37,6 +38,9 @@ python scripts/smoke_bives_cxr.py
 python scripts/smoke_qwen35_vision.py \
   --model-path /path/to/Qwen3.5-0.8B \
   --dtype fp32
+python scripts/smoke_qwen35_bives_integration.py \
+  --model-path /path/to/Qwen3.5-2B \
+  --output-dir outputs/bives_cxr/integration_gate
 python -m unittest discover -s tests -p "test_bives_*.py" -v
 python scripts/audit_bives_manifest.py \
   --train data/bives_cxr/manifests/train_locked.jsonl \
@@ -57,6 +61,8 @@ on the server after the data readiness audit passes.
 - Keep data and model paths in YAML.
 - Keep the active decoder closed-form; do not add a trainable flat four-class
   head.
+- Fixed exact-K is a K-budgeted evidence set; keep `lambda_min: 0` until an
+  adaptive hard-concrete/L0 gate exists.
 
 ## Testing guidelines
 

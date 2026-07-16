@@ -1,0 +1,10 @@
+# BiVES-CXR formal server environment lock (vivid_med310, 2026-07-17).
+# Install the CUDA 12.8 PyTorch wheels from the official PyTorch index.
+torch==2.9.0
+torchvision==0.24.0
+transformers==5.12.1
+safetensors==0.8.0
+numpy==2.2.6
+pillow==12.2.0
+scikit-learn==1.7.2
+pyyaml==6.0.3

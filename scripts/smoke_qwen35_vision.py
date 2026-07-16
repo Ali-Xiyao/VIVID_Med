@@ -21,6 +21,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--image", type=Path)
     parser.add_argument("--dtype", choices=("bf16", "fp16", "fp32"), default="bf16")
     parser.add_argument("--device", default="cpu")
+    parser.add_argument("--attention-implementation", choices=("eager", "sdpa"), default="eager")
     return parser.parse_args()
 
 
@@ -30,6 +31,7 @@ def main() -> None:
     visual, processor, config = load_qwen35_visual_and_processor(
         args.model_path,
         dtype=args.dtype,
+        attention_implementation=args.attention_implementation,
     )
     language_parameters = sum(
         parameter.numel()

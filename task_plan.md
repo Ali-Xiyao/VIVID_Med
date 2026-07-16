@@ -276,3 +276,46 @@ into the matching server project without touching `data/`, `outputs/`,
 | Initial S/C polarity-swap unit test failed at a `1.44e-8` floating-point tail difference. | First BiVES CPU unit-test run | Kept the exact symmetry check but set explicit `atol=1e-7`, `rtol=1e-6`; no model formula change was required. |
 | The first `bives_cxr/model.py` add used `H:\Xiyaowang` instead of `H:\Xiyao_Wang`. | Initial core-package patch | Moved the only created file into the correct repository, verified the wrong tree contained no files, and removed the empty wrong-path directories. |
 | Initial Qwen3.5 adapter divided `image_grid_thw` patch counts by `spatial_merge_size**2` while reading `last_hidden_state`. | Independent Qwen3.5 compatibility review | Corrected the adapter to use merger-preceding spatial tokens: count=`T*H*W`, grid=`H,W`, feature dim=`vision_config.hidden_size`. |
+| A bash-style `python - <<'PY'` probe was accidentally issued in PowerShell during round-2 inspection. | One read-only dependency probe | No repository state changed; continue using PowerShell here-strings piped to Python. |
+| A nested PowerShell/SSH quote corrupted a one-line remote PyYAML version probe. | First server lock-version check | Re-ran with a remote here-document; server PyYAML is `6.0.3`. |
+| First Qwen3.5-2B integration-gate dispatch redirected into a missing `outputs/bives_cxr/` parent directory. | Initial tmux launch | No model process started; create the parent output directory before relaunching the bounded gate. |
+| First real Qwen3.5-2B official-vs-selective visual comparison failed (`max_abs_error=5088`, `mean_abs_error=0.8527`) even though both visual towers had `331,416,576` parameters and the BiVES training object retained zero language parameters. | Round-2 integration gate | Keep S4 blocked. Compare full/selective state tensors and attention implementations, force a common backend, then rerun; do not accept the two-step smoke alone as a passed integration gate. |
+| Replacing deprecated `np.trapz` directly with `np.trapezoid` broke the local NumPy 1.26 validation environment. | First cross-version metrics cleanup | Use `np.trapezoid` when available and fall back to `np.trapz`; formal server lock remains NumPy 2.2.6. |
+| A read-only SSH monitor timed out while the eager-attention 2B integration gate was running inside the retained GPU tmux allocation. | First post-relaunch poll | Do not duplicate or restart the GPU task; wait for login SSH recovery and inspect the existing log/artifact. |
+
+## 2026-07-17 BiVES-CXR Round-2 Structural Repair
+
+**Authority:** `BiVES_CXR_MIA_TMI_ready_proposal.md` plus the user-supplied
+round-2 review dated 2026-07-16.
+
+**Goal:** Remove structural intervention/evaluation shortcuts before any formal
+paper run. Keep fixed-K as an explicitly budgeted P0 mechanism, not a learned
+minimal-set claim. Do not unlock 4B/9B training in this phase.
+
+- [x] S0: Read the round-2 review, active authority, handoff docs, planning
+  files, Git state, and current server boundary.
+- [x] S1: Make keep/drop/control nontrivial by applying branch masks before a
+  shared statement-conditioned cross-patch contextual evidence block; add
+  regression tests proving keep/control are not algebraic identities and the
+  control objective has gradient.
+- [x] S2: Separate full row-level validation/calibration/test coverage from
+  deterministic grouped mechanism evaluation, with exact sample-ID coverage
+  assertions.
+- [x] S3: Close formal protocol gaps: fixed-K naming and zero minimality loss,
+  best-checkpoint reload, ordered checkpoint metadata, fitted positive
+  decoder-temperature calibration, answerable-only EOS, full classification
+  and calibration metrics, and per-control mean/worst-case reporting.
+- [x] S4: Pin the real Qwen3.5 integration dependencies and add a bounded
+  server Qwen3.5-2B integration gate covering official-vs-vision-only alignment,
+  a complete S/C/U/I forward/backward smoke, dtype/cardinality/memory evidence,
+  and no language-model parameters.
+- [ ] S5: Run local and server regression validation, update docs/planning,
+  commit, push `main`, and synchronize the source-only repair into the server
+  project. Formal training remains blocked until locked manifests and frozen
+  statement embeddings pass readiness.
+
+**S4 evidence:** On the retained A800 allocation, selective Qwen3.5-2B visual
+loading matched the official full model with `0` parameter mismatches and
+exactly `0.0` max/mean token error. The BiVES training object retained `0`
+language parameters, completed exactly two optimization steps, preserved
+`K=16` on every S/C/U/I row, and produced nonzero keep/control changes.

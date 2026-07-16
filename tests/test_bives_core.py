@@ -8,6 +8,7 @@ import torch
 import torch.nn as nn
 
 from bives_cxr.backbones import PatchBatch, restore_qwen35_row_major
+from bives_cxr.calibration import fit_decoder_temperatures, probabilities_from_evidence
 from bives_cxr.gates import EvidenceGate
 from bives_cxr.decoder import EvidenceStateDecoder
 from bives_cxr.interventions import (
@@ -15,10 +16,20 @@ from bives_cxr.interventions import (
     delete_evidence,
     retain_evidence,
 )
-from bives_cxr.losses import BiVESLoss, BiVESLossConfig, nll_from_probs, total_variation
-from bives_cxr.metrics import finalize_intervention_metrics, intervention_metric_counts
+from bives_cxr.losses import (
+    BiVESLoss,
+    BiVESLossConfig,
+    jensen_shannon,
+    nll_from_probs,
+    total_variation,
+)
+from bives_cxr.metrics import (
+    classification_metrics,
+    finalize_intervention_metrics,
+    intervention_metric_counts,
+)
 from bives_cxr.model import BiVESCXR, BiVESModelConfig
-from scripts.train_bives_cxr import BiVESExperiment
+from scripts.train_bives_cxr import BiVESExperiment, load_checkpoint_model_state
 
 
 class DecoderTests(unittest.TestCase):
@@ -200,6 +211,50 @@ class ModelContractTests(unittest.TestCase):
         self.assertIn("pair", losses)
         self.assertIn("uncertain_polarity", losses)
 
+    def test_contextual_interventions_are_not_algebraic_identities(self) -> None:
+        torch.manual_seed(29)
+        model = BiVESCXR(
+            BiVESModelConfig(
+                visual_dim=8,
+                statement_dim=6,
+                fusion_dim=16,
+                gate_mode="soft_topk",
+                topk=2,
+                num_controls=3,
+                contextual_layers=1,
+                contextual_heads=4,
+                contextual_dropout=0.0,
+            )
+        ).eval()
+        outputs = model(
+            torch.randn(4, 8, 8),
+            torch.randn(4, 6),
+            torch.ones(4, 8, dtype=torch.bool),
+        )
+        original_probs = outputs["original"]["state_probs"]
+        keep_difference = (outputs["keep"]["state_probs"] - original_probs).abs().max()
+        control_differences = torch.stack(
+            [
+                (branch["state_probs"] - original_probs).abs().max()
+                for branch in outputs["controls"]
+            ]
+        )
+        self.assertGreater(float(keep_difference.detach()), 1e-7)
+        self.assertGreater(float(control_differences.max().detach()), 1e-7)
+
+        control_loss = torch.stack(
+            [
+                jensen_shannon(original_probs, branch["state_probs"]).mean()
+                for branch in outputs["controls"]
+            ]
+        ).mean()
+        self.assertGreater(float(control_loss), 0.0)
+        model.zero_grad(set_to_none=True)
+        control_loss.backward()
+        gradient = model.contextual_evidence.layers[0].self_attn.in_proj_weight.grad
+        self.assertIsNotNone(gradient)
+        self.assertGreater(float(gradient.abs().sum()), 0.0)
+
 
 class BackboneContractTests(unittest.TestCase):
     def test_inverse_unshuffle_restores_row_major(self) -> None:
@@ -247,6 +302,51 @@ class BackboneContractTests(unittest.TestCase):
         )
         self.assertEqual(outputs["original"]["state_probs"].dtype, torch.float32)
 
+    def test_validation_selected_checkpoint_state_is_reloaded(self) -> None:
+        class DummyBackbone(nn.Module):
+            def forward(self, pixel_values: torch.Tensor, image_grid_thw: torch.Tensor) -> PatchBatch:
+                del pixel_values, image_grid_thw
+                return PatchBatch(
+                    tokens=torch.zeros(4, 8, 8),
+                    valid_mask=torch.ones(4, 8, dtype=torch.bool),
+                    grid_hw=[(2, 4)] * 4,
+                )
+
+        experiment = BiVESExperiment(
+            DummyBackbone(),
+            num_statements=1,
+            statement_dim=6,
+            head_config=BiVESModelConfig(
+                visual_dim=8,
+                statement_dim=6,
+                fusion_dim=16,
+                gate_mode="soft_topk",
+                topk=2,
+                num_controls=1,
+            ),
+        )
+        with torch.no_grad():
+            experiment.head.evidence_head.bias.fill_(1.0)
+        selected = {
+            "statement_table": {
+                key: value.clone()
+                for key, value in experiment.statement_table.state_dict().items()
+            },
+            "bives_head": {
+                key: value.clone()
+                for key, value in experiment.head.state_dict().items()
+            },
+        }
+        with torch.no_grad():
+            experiment.head.evidence_head.bias.fill_(2.0)
+        load_checkpoint_model_state(experiment, selected)
+        self.assertTrue(
+            torch.equal(
+                experiment.head.evidence_head.bias,
+                torch.ones_like(experiment.head.evidence_head.bias),
+            )
+        )
+
 
 class MetricContractTests(unittest.TestCase):
     def test_eos_and_eri_condition_on_original_correct(self) -> None:
@@ -265,6 +365,76 @@ class MetricContractTests(unittest.TestCase):
         metrics = finalize_intervention_metrics(intervention_metric_counts(outputs, targets))
         self.assertEqual(metrics["evidence_only_sufficiency"], 0.5)
         self.assertEqual(metrics["evidence_removal_insufficient"], 1.0)
+
+    def test_eos_excludes_insufficient_targets(self) -> None:
+        def branch(predictions: list[int]) -> dict[str, torch.Tensor]:
+            probs = torch.zeros(len(predictions), 4)
+            probs[torch.arange(len(predictions)), torch.tensor(predictions)] = 1.0
+            return {"state_probs": probs}
+
+        outputs = {
+            "original": branch([0, 3]),
+            "keep": branch([0, 0]),
+            "drop": branch([3, 3]),
+            "control": branch([0, 3]),
+            "controls": [branch([0, 3]), branch([0, 0])],
+        }
+        counts = intervention_metric_counts(outputs, torch.tensor([0, 3]))
+        self.assertEqual(counts["eos_denominator"], 1.0)
+        metrics = finalize_intervention_metrics(counts)
+        self.assertEqual(metrics["evidence_only_sufficiency"], 1.0)
+        self.assertEqual(metrics["irrelevant_stability_worst_case"], 0.5)
+
+    def test_primary_and_calibration_metrics(self) -> None:
+        probabilities = torch.tensor(
+            [
+                [0.8, 0.1, 0.05, 0.05],
+                [0.1, 0.8, 0.05, 0.05],
+                [0.05, 0.05, 0.8, 0.1],
+                [0.05, 0.05, 0.1, 0.8],
+            ]
+        )
+        metrics = classification_metrics(probabilities, torch.arange(4))
+        self.assertEqual(metrics["accuracy"], 1.0)
+        self.assertEqual(metrics["macro_f1"], 1.0)
+        self.assertEqual(
+            metrics["confusion_matrix"],
+            torch.eye(4, dtype=torch.int64).tolist(),
+        )
+        self.assertIn("aurc", metrics)
+
+    def test_decoder_temperature_fit_is_positive_and_improves_nll(self) -> None:
+        positive = torch.tensor([8.0, 1.0, 5.0, 0.1] * 4)
+        negative = torch.tensor([1.0, 8.0, 5.0, 0.1] * 4)
+        targets = torch.tensor([0, 1, 2, 3] * 4)
+        initial = (5.0, 5.0, 5.0)
+        before = nll_from_probs(
+            probabilities_from_evidence(
+                positive,
+                negative,
+                *(torch.tensor(value) for value in initial),
+            ),
+            targets,
+        ).mean()
+        fitted = fit_decoder_temperatures(
+            positive,
+            negative,
+            targets,
+            initial=initial,
+            max_iter=50,
+        )
+        after = nll_from_probs(
+            probabilities_from_evidence(
+                positive,
+                negative,
+                torch.tensor(fitted["tau_a"]),
+                torch.tensor(fitted["tau_d"]),
+                torch.tensor(fitted["tau_p"]),
+            ),
+            targets,
+        ).mean()
+        self.assertTrue(all(value > 0 for value in fitted.values()))
+        self.assertLess(float(after), float(before))
 
 
 if __name__ == "__main__":
