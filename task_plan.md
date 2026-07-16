@@ -282,6 +282,8 @@ into the matching server project without touching `data/`, `outputs/`,
 | First real Qwen3.5-2B official-vs-selective visual comparison failed (`max_abs_error=5088`, `mean_abs_error=0.8527`) even though both visual towers had `331,416,576` parameters and the BiVES training object retained zero language parameters. | Round-2 integration gate | Keep S4 blocked. Compare full/selective state tensors and attention implementations, force a common backend, then rerun; do not accept the two-step smoke alone as a passed integration gate. |
 | Replacing deprecated `np.trapz` directly with `np.trapezoid` broke the local NumPy 1.26 validation environment. | First cross-version metrics cleanup | Use `np.trapezoid` when available and fall back to `np.trapz`; formal server lock remains NumPy 2.2.6. |
 | A read-only SSH monitor timed out while the eager-attention 2B integration gate was running inside the retained GPU tmux allocation. | First post-relaunch poll | Do not duplicate or restart the GPU task; wait for login SSH recovery and inspect the existing log/artifact. |
+| A combined PowerShell/SSH archive command parsed the remote Python parentheses locally and stopped before upload. | First final source-sync attempt | Split archive creation, SCP, SHA256 verification, and extraction into separate commands. |
+| `tmux send-keys` treated a multiword command as separate key arguments and removed spaces; a stale partial command then remained at the prompt. | First final-gate dispatch | Send `Ctrl-C`, load the complete command through a Base64 tmux buffer, paste it as one string, and then press Enter. No model process had started during the failed dispatches. |
 
 ## 2026-07-17 BiVES-CXR Round-2 Structural Repair
 
@@ -309,7 +311,7 @@ minimal-set claim. Do not unlock 4B/9B training in this phase.
   server Qwen3.5-2B integration gate covering official-vs-vision-only alignment,
   a complete S/C/U/I forward/backward smoke, dtype/cardinality/memory evidence,
   and no language-model parameters.
-- [ ] S5: Run local and server regression validation, update docs/planning,
+- [x] S5: Run local and server regression validation, update docs/planning,
   commit, push `main`, and synchronize the source-only repair into the server
   project. Formal training remains blocked until locked manifests and frozen
   statement embeddings pass readiness.
