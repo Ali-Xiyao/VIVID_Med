@@ -349,6 +349,6 @@ formal 4B/9B training in this phase.
 - [x] T6: Add eligible-conditioned specificity metrics, fixed-four-class
   patient bootstrap accounting, compute-match the 9B config, and update the
   proposal wording from minimal to K-budgeted.
-- [ ] T7: Run local/server regression gates, commit/push `main`, and synchronize
+- [x] T7: Run local/server regression gates, commit/push `main`, and synchronize
   source-only changes to the server. Formal training remains blocked until
   manifests/cache are built and audited.
