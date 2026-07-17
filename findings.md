@@ -819,3 +819,35 @@
   (`[-0.0637, -0.0167]`). Top-K localization gain over random is significantly
   positive for both findings, but target deletion does not beat control. This
   triggers the declared stop despite the localization overlap signal.
+
+## 2026-07-18 post-stop read-only diagnosis
+
+- The final proposal and `BiVES_995fb81_code_review_and_next_plan.md` do not
+  authorize another seed, CheXlocalize download, method modification, or
+  Qwen3.5-4B/9B run after E8 fails. The only non-divergent continuation is a
+  read-only failure taxonomy over the frozen seed-17 rows.
+- This diagnosis may localize the failure by finding, intervention geometry,
+  score response, and outliers, but it cannot retroactively turn the failed
+  causal gate green or authorize scaling.
+- The frozen 410-row taxonomy shows that pleural-effusion failure is not an
+  outlier artifact: its primary TCIG remains `-0.0223` after symmetric 10%
+  trimming, and every leave-one-out mean remains negative
+  (`[-0.0443, -0.0334]`). Consolidation is centered near zero instead of
+  carrying a stable positive causal effect.
+- Localization quality separates good and bad cases. Low/high localization-gain
+  quartile mean TCIG is `-0.0569/+0.0514` for consolidation and
+  `-0.0924/+0.0234` for pleural effusion. The aggregate positive localization
+  overlap therefore hides substantial selector inconsistency across images.
+- Intervention area is a second independent warning. For pleural effusion,
+  low/high target-area quartile mean TCIG is `+0.0023/-0.1165`, while control
+  deletion effect correlates more strongly with area than target deletion
+  (`r=0.588` versus `0.340`). The failed causal gate is consistent with broad
+  score sensitivity to arbitrary large deletions, not a decoder failure.
+- A standardized descriptive regression supports the same directions but
+  explains only `R2=0.220/0.252` for consolidation/pleural effusion. Selector
+  localization and area sensitivity are therefore the best supported aggregate
+  failure taxonomy, not a complete per-image causal explanation.
+- Post-stop inspection changes the evidence boundary: VinDr test is now a
+  diagnostic surface for this frozen failure. Any future method rescue must use
+  a separate development set and an independent final evaluation; changing the
+  method from these findings and retesting on VinDr would be test-set tuning.

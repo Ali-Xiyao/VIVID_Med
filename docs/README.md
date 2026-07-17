@@ -53,6 +53,7 @@ BiVES-CXR is the only active paper and code mainline.
 | Cached-token B0/B1/B2 polarity route | `../scripts/run_bives_sc_b0_pooled.py`, `../scripts/train_bives_sc_cached.py` |
 | Locked VinDr B0-vs-B2 expert polarity evaluation | `../scripts/evaluate_bives_vindr_sc.py` |
 | Locked VinDr target/control/evidence-only evaluation | `../scripts/evaluate_bives_vindr_interventions.py`, `../bives_cxr/pixel_interventions.py` |
+| Post-stop read-only intervention failure taxonomy | `../scripts/analyze_bives_vindr_intervention_failures.py`, `bives_cxr_post_stop_failure_taxonomy.md` |
 | P0 data-source and audit boundary | `bives_cxr_p0_data_readiness.md` |
 
 ## Active model boundary
@@ -165,6 +166,12 @@ with a wholly negative CI. Top-K box overlap is better than random, but it does
 not establish causal evidence sufficiency. The route stops at seed 17; no more
 seeds or 4B/9B runs are authorized. See
 [`bives_cxr_expert_polarity_intervention_verdict.md`](bives_cxr_expert_polarity_intervention_verdict.md).
+The read-only post-stop diagnosis is recorded in
+[`bives_cxr_post_stop_failure_taxonomy.md`](bives_cxr_post_stop_failure_taxonomy.md).
+It attributes the failed causal gate to inconsistent selector localization
+plus broad sensitivity to large arbitrary pixel deletions. Because that
+diagnosis inspected VinDr test outcomes, it cannot be used to tune and retest
+on the same evaluation surface.
 
 ## Current mechanism-gate status
 

@@ -109,6 +109,12 @@ random mask, yet target deletion is not stronger than the equal-area disjoint
 control; pleural-effusion TCIG is significantly negative. The declared stop
 rule therefore keeps more seeds and 4B/9B closed. See
 [`docs/bives_cxr_expert_polarity_intervention_verdict.md`](docs/bives_cxr_expert_polarity_intervention_verdict.md).
+The aggregate post-stop failure taxonomy is in
+[`docs/bives_cxr_post_stop_failure_taxonomy.md`](docs/bives_cxr_post_stop_failure_taxonomy.md):
+the failed causal gate is associated with inconsistent selector localization
+and disproportionate sensitivity to large arbitrary control deletions. This
+VinDr-test diagnosis is descriptive only and cannot authorize tuning or a
+same-test rerun.
 
 For a bounded local engineering run, first copy the tracked template to the
 ignored local-config area and point it at local manifest paths. This run is

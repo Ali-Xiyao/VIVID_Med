@@ -763,12 +763,17 @@ sufficiency. U/I remain exploratory only.
 | E7 B0/B1/B2 local 2B gate | complete_B2_promoted_to_external_gate | B0 pooled is frozen at macro AUROC/AUPRC `0.7857/0.7992`; B1 dense selected step 300 at `0.7713/0.7910`. B2 exact-K=16 selected step 450 at `0.8423/0.8240`, with both retained findings above B0/B1 in aggregate ranking; its 8/20 clipped eval points and maximum pre-clip norm `520.3` remain explicit limitations. |
 | E8 expert polarity/intervention gate | complete_failed_stop | Corrected per-image-isolated seed-17 expert inference and 205-image paired intervention are complete. B2 fails the all-finding B0 comparison because consolidation AUPRC is `0.2338 < 0.2628`. Primary TCIG crosses zero for consolidation and is significantly negative for pleural effusion; localization gain alone cannot promote the route. Stop before more seeds or 4B/9B. |
 | E9 CheXlocalize | not_started_by_E8_stop | No download/auth action was started. A new dataset or patient-level route requires a new reviewed authority rather than automatic continuation after the failed seed-17 causal gate. |
+| E10 post-stop failure taxonomy | complete_failed_explained_no_rescue | Frozen 410-row analysis rules out a single-outlier explanation and localizes the failure to inconsistent selector localization plus disproportionate sensitivity to large arbitrary control deletions. Because VinDr test outcomes informed this diagnosis, it cannot authorize tuning or a same-test rerun. No model load, new experiment, method change, seed expansion, CheXlocalize action, or 4B/9B unlock occurred. |
 
 Final closure validation passed on 2026-07-18: all `88/88` active BiVES
 tests, the synthetic CPU smoke, Python compilation, `git diff --check`, and an
 active `bives_cxr/` + `configs/bives_cxr/` + `scripts/` legacy-model-path scan.
 The experimental stop verdict is therefore an evidence result, not a software
 or packaging failure.
+
+E10 closure validation then passed `90/90` active tests after adding the
+read-only taxonomy tool and contracts. The synthetic smoke, Python compilation,
+diff check, and active old-model-path scan also remain green.
 
 ## Route hard stops
 
@@ -796,3 +801,5 @@ or packaging failure.
 | Two attempts to restart the VinDr decode audit with worker arguments failed before execution because `Start-Process` split the public-dataset path at spaces. | E4 parallel decode resume | No audit record was changed by either failed launch. Relaunched with a correctly quoted argument string; the resumed four-worker audit completed and the final audit passed. |
 | The first batched expert evaluator saved only when the cumulative count happened to be divisible by 10, so batch size 32 produced sparse 160-unit checkpoints. | E8 expert inference resume | Preserved the valid 410-unit checkpoint, stopped only the owned watcher/child, changed progress to atomic save after every batch, and resumed from 410 with the same result identity. |
 | Packed multi-image Qwen3.5 eager attention produced batch-dependent patch tokens and scores; one reconstructed sample differed by `0.0213` in support probability and one exact-K patch. | E8 expert/intervention validity | Located the upstream non-Flash rejoin on the head dimension, added a repository adapter guard that calls the official vision tower once per image, and proved on the real failing batch that patch/token/score/gate differences are exactly zero. Archived the packed expert/intervention outputs as invalid and restarted expert inference from zero. |
+| A first E10 evidence inventory recursively listed hundreds of mask files and then requested nonexistent `metrics.json`. | E10 read-only diagnosis | No artifact was modified. Restrict subsequent reads to `metrics_final.json`, `intervention_rows.jsonl`, and explicit mask samples; do not use a broad recursive listing. |
+| The first E10 planning writeback patch contained an empty `findings.md` hunk and was rejected by `apply_patch`. | E10 bookkeeping | No file changed. Split the writeback into a valid task-plan patch followed by anchored findings/progress append operations. |
