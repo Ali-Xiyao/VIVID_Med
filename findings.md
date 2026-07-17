@@ -526,3 +526,20 @@
   report text or BiVES state emitted. This is suitable input to a frozen
   parser-plus-blinded-review workflow, but is not evidence that any P0 label
   is correct.
+
+## 2026-07-17 P0 parser and blinded-review gate
+
+- The frozen rule candidate run over the first intake shard produced `4,070`
+  finding candidates from `1,632` image rows. It is explicitly nonclinical:
+  `2,253` support-like, `1,608` contradict-like, `34` uncertain-like, and
+  `175` internally conflicting heuristic candidates are review proposals, not
+  labels.
+- The stratified blinded packet has `433` rows. It includes local image/report
+  paths and canonical statement text, but excludes parser state, parser cue,
+  report hash, and report text.
+- The packet validator was deliberately run before any review fields were
+  filled and failed for all `433` rows. It requires distinct reviewer IDs,
+  valid independent four-state selections, an adjudicator ID, and an
+  adjudicated state. This is the current external-human-input boundary.
+- No automatic process may turn these candidates into a P0 manifest, infer
+  uncertain/insufficient adjudication, or launch Qwen3.5-2B P0.

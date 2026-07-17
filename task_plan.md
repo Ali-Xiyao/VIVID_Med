@@ -545,3 +545,23 @@ data-side repair and rerun one non-formal 100-step mechanism gate.
 | CheXpert role | complete | Keep CheXpert as secondary external/linear-probe material, not a substitute for report-derived four-state P0 labels. |
 | Active P0 intake chain | in_progress | Added an active path-only MIMIC intake indexer and generated the first ignored shard (`1,000` paired studies / `1,632` images). A frozen parser candidate table, blind review, adjudication, matching, four-split manifest construction, and cache build remain before training. |
 | Source sync / formal launch | blocked | The remote project lacks the raw-data root and remains on historical source `3edb9f4`; synchronize only after local P0 audit artifacts pass. |
+
+## P0 automated completion boundary
+
+The user authorized completion of the P0 chain and formal launch. The active
+work is limited to automatable, provenance-preserving preparation:
+
+1. fixed-rule report parser candidates with no clinical-label claim; complete;
+2. blinded reviewer packet generation and validator; complete and fail-closed;
+3. post-review manifest/lock/cache build only when two reviewer labels and an
+   adjudicated state are actually supplied.
+
+No code path may fill reviewer fields, infer an adjudication, or submit a
+Qwen3.5 P0 job from parser candidates alone.
+
+| Gate | Status | Evidence |
+| --- | --- | --- |
+| Frozen parser candidate preparation | complete_nonclinical | The first 1,000-study intake shard produced 4,070 parser candidates under rules SHA256 `3340d89e...d55bee`; every row declares `labeling_claim: none`. |
+| Blinded review packet | complete_waiting_for_human_review | A 433-row packet is ready under ignored `local_runs/bives_cxr/p0_intake/`; it omits parser state and report text. |
+| Independent review/adjudication | blocked_external_human_input | Validator fails closed: all 433 rows lack reviewer-1, reviewer-2, and adjudicator fields. |
+| Formal manifest/cache/2B P0 launch | blocked | Cannot proceed until qualified reviewers complete and adjudicate the packet, then the reviewed labels pass audit and matching construction. |

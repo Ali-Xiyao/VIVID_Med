@@ -63,6 +63,36 @@ an image path, a report path, `candidate_status: unparsed`, and
 `p0_role: parser_and_blind_review_input`. It intentionally contains neither
 report text nor a state label.
 
+## Frozen parser candidates and blinded review
+
+`scripts/prepare_bives_p0_report_review.py` reads an intake index, applies a
+versioned conservative six-finding rule set, writes an ignored parser-candidate
+JSONL, and creates a blinded CSV packet. The parser output includes only a
+matched cue phrase and report SHA256; it does not export report text. The
+reviewer packet excludes parser state, cue, and report hash.
+
+```powershell
+python scripts/prepare_bives_p0_report_review.py `
+  --candidates local_runs/bives_cxr/p0_intake/mimic_candidates_shard0.jsonl `
+  --parsed-output local_runs/bives_cxr/p0_intake/mimic_parser_candidates_shard0.jsonl `
+  --review-packet local_runs/bives_cxr/p0_intake/mimic_blinded_review_shard0.csv `
+  --summary local_runs/bives_cxr/p0_intake/mimic_parser_review_summary_shard0.json
+```
+
+Two qualified reviewers must independently fill the state fields, then an
+adjudicator must complete the final state. Verify this before any manifest
+construction:
+
+```powershell
+python scripts/validate_bives_p0_review_packet.py `
+  --review-packet local_runs/bives_cxr/p0_intake/mimic_blinded_review_shard0.csv `
+  --output local_runs/bives_cxr/p0_intake/mimic_blinded_review_validation.json
+```
+
+The validator fails on blank reviewer/adjudicator fields, invalid states, or
+the same reviewer recorded twice. It deliberately does not infer missing
+expert labels.
+
 ## Formal stop rules
 
 - Report omission is never a contradict label.

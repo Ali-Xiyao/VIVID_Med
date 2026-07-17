@@ -30,6 +30,7 @@ BiVES-CXR is the only active paper and code mainline.
 | Direct uncertain selector/evidence replay | `../scripts/replay_bives_uncertain_selector.py` |
 | Manifest audit | `../scripts/audit_bives_manifest.py` |
 | P0 MIMIC intake index | `../scripts/index_mimic_bives_p0_candidates.py` |
+| P0 parser candidate and blinded-review packet | `../scripts/prepare_bives_p0_report_review.py`, `../scripts/validate_bives_p0_review_packet.py` |
 | Joint four-split dataset lock | `../scripts/lock_bives_dataset.py` |
 | Source-only deployment manifest | `../scripts/write_bives_source_manifest.py` |
 | Statement cache builder | `../scripts/build_bives_statement_embeddings.py` |
