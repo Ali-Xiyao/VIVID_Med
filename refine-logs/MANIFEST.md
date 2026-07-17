@@ -26,3 +26,19 @@ server execution, or a new clinical claim.
 - An independent patient-grouped final dataset remains unavailable.
 - A new continuation requires a separately reviewed control-family authority;
   it cannot lower the 90% threshold or reuse VinDr test for selection.
+
+## New connected-control candidate (not yet accepted)
+
+The stopped R001/R002 package above remains immutable. A separate candidate
+authority now defines an exact-area, target-disjoint, 4-connected control from
+the same coarse content-coordinate zone. It explicitly weakens exact
+target-shape matching and does not call the coordinate bins true anatomy.
+
+| Artifact | Versioned file | Fixed alias | SHA-256 | Status |
+| --- | --- | --- | --- | --- |
+| Connected-control plan | `CONNECTED_CONTROL_RESCUE_PLAN_20260718.md` | `CONNECTED_CONTROL_RESCUE_PLAN.md` | `a07c7df977cad30f9888762cf8de4c2bb5a81d24c8583560105c7632bb6d6cd6` | byte-identical; `DRAFT_REVIEW_REQUIRED` |
+| Connected-control tracker | `CONNECTED_CONTROL_RESCUE_TRACKER_20260718.md` | `CONNECTED_CONTROL_RESCUE_TRACKER.md` | `86967404dd96aed241c7b17fec949aedeec6aba5b645564419ab8bd98aeb30c1` | byte-identical; C001-C007 blocked |
+
+This candidate does not authorize implementation or execution. It requires an
+explicit user acceptance after review. If accepted, C001 is recorded first and
+C1/C2 remain CPU-only, model-free dependency gates.

@@ -840,3 +840,25 @@ method mutation, extra seed, Qwen3.5-4B/9B, or server work.
 | R002 geometry attempt 1 reached only `278/377 = 73.74%` feasibility; consolidation passed `56/62 = 90.32%`, but pleural effusion failed `222/315 = 70.48%`. | Conservative topology-control search | The implementation imposed an extra bounding-box-disjoint constraint not required by the accepted plan. Keep the failed artifact as diagnostic evidence, do not unlock R003, and test exact translated-mask disjointness with overlapping bounding boxes before deciding the gate. |
 | The first R001 lock hashed `rescue_protocol.py` before R002 replaced the conservative geometry search with the complete legal translation search. | Final provenance audit | The split result is unaffected, but the lock's code hash no longer matches the final module. Archive the ignored pre-replay artifacts, rerun R001 with final code, then rerun R002 so the data-lock and geometry-lock chain binds the committed implementation. |
 | A combined final-provenance writeback patch used a nonmatching sentence anchor in the execution log and was rejected atomically. | Final record update | No file changed. Replaced it with a smaller patch anchored on exact manifest/geometry hash lines, then updated the execution-log hash in the manifest. |
+
+# 2026-07-18 Coordinate-Zone Connected-Control Candidate
+
+## Scope
+
+Create a separately review-gated control-family authority after the immutable
+R002 exact-shape translation failure. This phase is planning only. It does not
+authorize implementation, data mutation, model loading, GPU work, confirmation
+access, VinDr-test reuse, training, or Qwen3.5-4B/9B.
+
+| Phase | Status | Gate |
+| --- | --- | --- |
+| C0.1 preserve stopped provenance | complete | R001 remains pass; R002 remains hard-stop fail; R003-R010 remain not run under the predecessor. |
+| C0.2 freeze new control definition | complete_draft | Exact area, content containment, target disjointness, one 4-connected component, and same frozen vertical/horizontal coordinate-zone centroid. Exact target topology is explicitly not matched. |
+| C0.3 freeze survival gates | complete_draft | Geometry requires >=95% overall/per finding and >=90% every finding-area quartile before any model load. Mechanism requires positive per-finding TCIG under local-mean and blur with prespecified CI/stratum gates. |
+| C0.4 register fixed artifacts | complete | Timestamped/fixed plan and tracker pairs are byte-identical and registered in `refine-logs/MANIFEST.md`. |
+| C0.5 review gate | pending_user_acceptance | C001 remains `BLOCKED_REVIEW`; no downstream row may start before explicit acceptance. |
+
+## Candidate artifact hashes
+
+- Plan: `a07c7df977cad30f9888762cf8de4c2bb5a81d24c8583560105c7632bb6d6cd6`.
+- Tracker: `86967404dd96aed241c7b17fec949aedeec6aba5b645564419ab8bd98aeb30c1`.

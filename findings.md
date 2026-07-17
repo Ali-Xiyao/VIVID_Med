@@ -922,3 +922,16 @@
   23 are 3-of-3 pleural-effusion positives in the largest area quartile.
   Lowering the gate or discarding those large lesions would be post-hoc and
   would bias the mechanism evaluation toward easier, smaller targets.
+- A scientifically honest continuation must change the control estimand, not
+  relabel R002 as nearly passing. The new draft therefore compares targets to
+  an exact-area, target-disjoint, single-connected control whose centroid lies
+  in the same fixed content-coordinate zone. It does not preserve target shape
+  or component count and is explicitly an anatomy proxy rather than an anatomy
+  segmentation.
+- The new control is generated from geometry alone using a frozen 17-by-17
+  normalized seed lattice, valid-space component centroids, deterministic
+  4-neighbour frontier growth, and a prespecified geometry-only objective. No
+  pixel intensity or model signal can influence feasibility or selection.
+- The new geometry gate is deliberately not relaxed: it requires at least 95%
+  feasibility overall and per finding plus at least 90% in every finding-area
+  quartile. A failure ends this control family before any Qwen3.5 load.

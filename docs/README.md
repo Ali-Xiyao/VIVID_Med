@@ -56,6 +56,7 @@ BiVES-CXR is the only active paper and code mainline.
 | Post-stop read-only intervention failure taxonomy | `../scripts/analyze_bives_vindr_intervention_failures.py`, `bives_cxr_post_stop_failure_taxonomy.md` |
 | Stopped selector/intervention rescue authority | `../refine-logs/EXPERIMENT_PLAN.md`, `../refine-logs/EXPERIMENT_TRACKER.md`, `../refine-logs/MANIFEST.md` |
 | VinDr-train rescue lock and geometry audit | `../scripts/prepare_bives_vindr_rescue_dev.py`, `../scripts/audit_bives_vindr_rescue_geometry.py`, `../refine-logs/R001_R002_EXECUTION_LOG_20260718.md` |
+| Draft coordinate-zone connected-control rescue authority | `../refine-logs/CONNECTED_CONTROL_RESCUE_PLAN.md`, `../refine-logs/CONNECTED_CONTROL_RESCUE_TRACKER.md` |
 | P0 data-source and audit boundary | `bives_cxr_p0_data_readiness.md` |
 
 ## Active model boundary
