@@ -2,11 +2,13 @@ experiment:
   id: bives_cxr_qwen35_2b_proxy_p0
   route: BiVES-CXR
   phase: proxy_p0
-  mode: local_overfit
+  mode: local_proxy
 data:
   data_root: .
-  train_manifest: local_runs/bives_cxr/proxy_p0_input/train_proxy.jsonl
-  val_manifest: local_runs/bives_cxr/proxy_p0_input/val_proxy.jsonl
+  train_manifest: local_runs/bives_cxr/proxy_p0_sc_v3_input/train_proxy.jsonl
+  val_manifest: local_runs/bives_cxr/proxy_p0_sc_v3_input/val_proxy.jsonl
+  max_train_samples: 16
+  max_val_samples: 16
   image_size: 448
   num_workers: 0
 model:
@@ -67,6 +69,6 @@ training:
   gradient_accumulation_steps: 1
   eval_interval: 10
   max_grad_norm: 1.0
-  output_dir: local_runs/bives_cxr/qwen35_2b_proxy_p0_v2
+  output_dir: local_runs/bives_cxr/qwen35_2b_proxy_p0_v3
 seed: 17
 device: cuda:1

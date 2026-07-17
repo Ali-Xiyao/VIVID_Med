@@ -18,7 +18,8 @@ from pathlib import Path
 from typing import Any
 
 
-PARSER_VERSION = "bives_mimic_rule_candidates_v2"
+PARSER_VERSION = "bives_mimic_rule_candidates_v3"
+SCOPE_VERSION = "target_local_prefix_v1"
 REVIEW_FIELDS = (
     "candidate_id",
     "source_dataset",
@@ -69,12 +70,28 @@ FINDING_RULES: dict[str, dict[str, Any]] = {
         "entities": (r"consolidation", r"airspace opacity", r"air-space opacity"),
     },
 }
-NEGATION = re.compile(r"\b(no|without|negative for|free of|absent)\b", flags=re.IGNORECASE)
+NEGATION = re.compile(
+    r"\b(no|without|negative for|free of|clear of|absence of|absent)\b",
+    flags=re.IGNORECASE,
+)
 UNCERTAINTY = re.compile(
     r"\b(possible|possibly|may represent|may reflect|cannot exclude|questionable|question of|suggestive of)\b",
     flags=re.IGNORECASE,
 )
-SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+|[\r\n]+")
+SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+")
+SCOPE_BOUNDARY = re.compile(r"\b(but|however|although|though|with|while)\b", re.IGNORECASE)
+NEGATION_SUFFIX = re.compile(
+    r"^\s*(is|are|was|were)?\s*(not\s+(seen|present)|absent)\b",
+    re.IGNORECASE,
+)
+UNCERTAINTY_SUFFIX = re.compile(
+    r"^\s*(is|are|was|were|remains?)?\s*(possible|questionable)\b",
+    re.IGNORECASE,
+)
+POSITIVE_OVERRIDE = re.compile(
+    r"\b(unchanged|persistent|stable|increased|decreased|improved|worsening|residual)\b",
+    re.IGNORECASE,
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -101,7 +118,21 @@ def file_sha256(path: Path) -> str:
 
 
 def rules_sha256() -> str:
-    payload = json.dumps(FINDING_RULES, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
+    payload = json.dumps(
+        {
+            "finding_rules": FINDING_RULES,
+            "scope_version": SCOPE_VERSION,
+            "negation": NEGATION.pattern,
+            "uncertainty": UNCERTAINTY.pattern,
+            "scope_boundary": SCOPE_BOUNDARY.pattern,
+            "negation_suffix": NEGATION_SUFFIX.pattern,
+            "uncertainty_suffix": UNCERTAINTY_SUFFIX.pattern,
+            "positive_override": POSITIVE_OVERRIDE.pattern,
+        },
+        sort_keys=True,
+        ensure_ascii=False,
+        separators=(",", ":"),
+    )
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
@@ -123,17 +154,35 @@ def read_jsonl(path: Path) -> list[dict[str, Any]]:
 
 
 def _sentences(report: str) -> list[str]:
-    return [item.strip() for item in SENTENCE_SPLIT.split(report) if item.strip()]
+    normalized = re.sub(r"\s+", " ", report).strip()
+    return [item.strip() for item in SENTENCE_SPLIT.split(normalized) if item.strip()]
 
 
 def _state_for_sentence(sentence: str, entities: tuple[str, ...]) -> tuple[str, str] | None:
-    lowered = sentence.lower()
-    entity = next((pattern for pattern in entities if re.search(pattern, lowered, flags=re.IGNORECASE)), None)
-    if entity is None:
+    match_info = next(
+        (
+            (pattern, match)
+            for pattern in entities
+            for match in [re.search(pattern, sentence, flags=re.IGNORECASE)]
+            if match is not None
+        ),
+        None,
+    )
+    if match_info is None:
         return None
-    if NEGATION.search(lowered):
+    entity, entity_match = match_info
+    prefix = sentence[max(0, entity_match.start() - 120) : entity_match.start()]
+    boundaries = list(SCOPE_BOUNDARY.finditer(prefix))
+    local_prefix = prefix[boundaries[-1].end() :] if boundaries else prefix
+    suffix = sentence[entity_match.end() : entity_match.end() + 48]
+    negation_matches = list(NEGATION.finditer(local_prefix))
+    positive_matches = list(POSITIVE_OVERRIDE.finditer(local_prefix))
+    prefix_negated = bool(negation_matches)
+    if prefix_negated and positive_matches:
+        prefix_negated = positive_matches[-1].start() < negation_matches[-1].start()
+    if prefix_negated or NEGATION_SUFFIX.search(suffix):
         return "contradict", entity
-    if UNCERTAINTY.search(lowered):
+    if UNCERTAINTY.search(local_prefix) or UNCERTAINTY_SUFFIX.search(suffix):
         return "uncertain", entity
     return "support", entity
 

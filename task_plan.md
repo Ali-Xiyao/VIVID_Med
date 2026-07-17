@@ -646,3 +646,28 @@ into clinical ground truth.
 | The renamed package lock still contained server-era versions. | Local runtime preflight | Replaced them with the actually installed local versions and revalidated imports. |
 | `candidate_id` omitted the finding and collided across six statements for each image. | First proxy-run provenance diagnostic | Parser v2 emits `<image-candidate>::<finding>` IDs, builder rejects global duplicates, artifacts were regenerated, and the v1 run/lock was invalidated. |
 | Recursive cleanup of the ignored proxy directory was blocked by local command policy. | Pre-regeneration cleanup | Performed safe in-place overwrite; the regenerated manifests and lock enumerate only current files. |
+
+# 2026-07-17 Weak-Label S/C Diagnostic
+
+## Objective
+
+Explain the corrected proxy-P0 held-out support/contradict failure without
+changing the decoder, losses, exact-K budget, model capacity, or starting a new
+training run. Diagnose the weak-label/data boundary first.
+
+| Work item | Status | Acceptance criterion |
+| --- | --- | --- |
+| Failure-case collection | complete | Preserve selected-step train/validation evidence signs and confirm the failure is S/C-specific rather than a runtime or U/I failure. |
+| Parser/sample audit | complete | Parser v3 scopes negation/uncertainty to the target mention and preserves cross-line context. It regenerated 4,201 unique candidate rows with rules hash `224cb4c4...530a`. |
+| Frozen-feature audit | complete | Read-only local Qwen3.5-2B features show AUROC 0.750 for pleural effusion and 0.785 for pulmonary edema; atelectasis remains 0.360 with only five contradict patients. |
+| Root-cause decision | complete | The failure combines a real parser scope bug, an unreliable atelectasis ontology, and a one-quartet validation split. The one justified repair is a larger patient-disjoint proxy restricted to the two feature-separable findings. |
+| Training boundary | complete_mixed_proxy_result | The one permitted local Qwen3.5-2B run completed 50/50 steps. Aggregate held-out S/C AUROC is 0.8125, but pleural effusion is 0.5 versus pulmonary edema 1.0; no second run or 4B/9B scaling is authorized. |
+
+## S/C diagnostic errors
+
+| Error | Attempt | Resolution |
+| --- | --- | --- |
+| Foreground frozen-feature command exceeded the terminal's short yield timeout. | First real Qwen3.5 feature run | The process had already completed and wrote valid JSON/NPZ; verified GPU release and consumed the structured artifacts instead of relaunching. |
+| One-off negation-scope probe referenced `s` instead of `sent`. | First contextual report audit | It failed before producing counts; corrected the local variable and reran the read-only probe. |
+| `Start-Process` returned a PID but the diagnostic child exited before logging. | First parser-v3 feature launch | Relaunched the same read-only command as a bounded foreground job; it completed in 20.5 seconds and released GPU1. |
+| `metrics_final.json` had an empty `split_metrics` map for nonformal runs. | Parser-v3 result collection | The step events and predictions were intact. Patched the trainer to re-evaluate the validation-selected checkpoint and write final `val` plus `train_proxy` metrics for future local runs. |

@@ -645,22 +645,37 @@ def main() -> None:
     if str(config["model"]["family"]).lower() != "qwen3.5":
         raise ValueError("active BiVES-CXR configs are Qwen3.5-only")
     experiment_mode = str(config.get("experiment", {}).get("mode", "local_formal"))
-    if experiment_mode not in {"local_debug", "local_overfit", "local_formal"}:
-        raise ValueError("experiment.mode must be local_debug, local_overfit, or local_formal")
+    nonformal_modes = {"local_debug", "local_overfit", "local_proxy"}
+    if experiment_mode not in nonformal_modes | {"local_formal"}:
+        raise ValueError(
+            "experiment.mode must be local_debug, local_overfit, local_proxy, or local_formal"
+        )
     if args.debug and experiment_mode != "local_debug":
         raise ValueError(
             "--debug is only valid with local_debug; "
             "use qwen35_2b_local_debug.template.yaml instead"
         )
-    if experiment_mode in {"local_debug", "local_overfit"}:
-        # Explicitly non-formal: two small matched quartets, train/val only, no lock/release artifacts.
-        config["data"]["max_train_samples"] = min(int(config["data"].get("max_train_samples", 8)), 8)
-        config["data"]["max_val_samples"] = min(int(config["data"].get("max_val_samples", 4)), 4)
+    if experiment_mode in nonformal_modes:
+        # Explicitly non-formal: train/val only, with no formal lock or release artifacts.
+        # local_proxy permits a larger patient-disjoint weak-label audit while retaining
+        # a hard ceiling; debug and overfit keep their original tiny caps.
+        if experiment_mode == "local_proxy":
+            max_train_samples = min(int(config["data"].get("max_train_samples", 64)), 64)
+            max_val_samples = min(int(config["data"].get("max_val_samples", 64)), 64)
+            if min(max_train_samples, max_val_samples) < 4:
+                raise ValueError("local_proxy requires at least one complete quartet per split")
+            if max_train_samples % 4 or max_val_samples % 4:
+                raise ValueError("local_proxy sample limits must be multiples of four")
+        else:
+            max_train_samples = min(int(config["data"].get("max_train_samples", 8)), 8)
+            max_val_samples = min(int(config["data"].get("max_val_samples", 4)), 4)
+        config["data"]["max_train_samples"] = max_train_samples
+        config["data"]["max_val_samples"] = max_val_samples
         config["data"]["num_workers"] = 0
         max_debug_steps = 2 if experiment_mode == "local_debug" else 200
         config["training"]["max_steps"] = min(int(config["training"].get("max_steps", max_debug_steps)), max_debug_steps)
-        if experiment_mode == "local_overfit" and int(config["training"]["max_steps"]) < 1:
-            raise ValueError("local_overfit requires at least one optimization step")
+        if experiment_mode in {"local_overfit", "local_proxy"} and int(config["training"]["max_steps"]) < 1:
+            raise ValueError(f"{experiment_mode} requires at least one optimization step")
         if experiment_mode == "local_debug":
             config["training"]["eval_interval"] = 1
         config.setdefault("sampling", {})["groups_per_batch"] = 1
@@ -697,14 +712,14 @@ def main() -> None:
 
     train_rows = read_manifest(config["data"]["train_manifest"])
     val_rows = read_manifest(config["data"]["val_manifest"])
-    if experiment_mode in {"local_debug", "local_overfit"}:
+    if experiment_mode in nonformal_modes:
         train_rows, val_rows = select_local_debug_rows(
             train_rows,
             val_rows,
             config["data"].get("max_train_samples"),
             config["data"].get("max_val_samples"),
         )
-    if experiment_mode in {"local_debug", "local_overfit"}:
+    if experiment_mode in nonformal_modes:
         debug_manifest_dir = output_dir / "selected_manifests"
         debug_manifest_dir.mkdir(exist_ok=True)
         train_selected = debug_manifest_dir / "train.jsonl"
@@ -960,8 +975,8 @@ def main() -> None:
     val_loader = make_primary_eval_loader(val_dataset, "val")
     assert val_loader is not None
     overfit_train_loader = (
-        make_primary_eval_loader(train_dataset, "local_overfit_train_eval")
-        if experiment_mode == "local_overfit"
+        make_primary_eval_loader(train_dataset, f"{experiment_mode}_train_eval")
+        if experiment_mode in {"local_overfit", "local_proxy"}
         else None
     )
     val_grouped_loader = make_grouped_eval_loader(val_dataset, "val")
@@ -1249,6 +1264,25 @@ def main() -> None:
                 handle.write(json.dumps(row, ensure_ascii=False) + "\n")
 
     split_metrics: dict[str, Any] = {}
+    selected_val_metrics, selected_val_rows = evaluate(
+        experiment,
+        val_loader,
+        primary_eval_loss_fn,
+        device,
+        assert_full_coverage=True,
+    )
+    split_metrics["val"] = selected_val_metrics
+    write_predictions("val_selected", selected_val_rows)
+    if overfit_train_loader is not None:
+        selected_train_metrics, selected_train_rows = evaluate(
+            experiment,
+            overfit_train_loader,
+            primary_eval_loss_fn,
+            device,
+            assert_full_coverage=True,
+        )
+        split_metrics["train_proxy"] = selected_train_metrics
+        write_predictions("train_proxy_selected", selected_train_rows)
     calibrated_decoder_parameters: dict[str, float] | None = None
     calibration_pre_rows: list[dict[str, Any]] = []
     if calibration_loader is not None:

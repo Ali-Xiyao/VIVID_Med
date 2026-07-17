@@ -606,3 +606,23 @@
   decoder needs another redesign.
 - Stop at this failed survival gate. Larger 4B/9B proxy runs and formal/locked
   claims are not justified; the next work is a read-only S/C data diagnostic.
+
+## 2026-07-17 parser-v3 S/C diagnosis and bounded rerun
+
+- The failure audit identified concrete target-scope errors in parser v2,
+  including cross-finding negation, missing `clear of` absence handling, and
+  newline sentence fragmentation. Parser v3 fixes these without changing the
+  accepted BiVES model, decoder, losses, K, or capacity.
+- Frozen Qwen3.5-2B feature screening showed the old atelectasis ontology is
+  not viable: only five independent contradict patients and LOO centroid S/C
+  AUROC `0.360`. Pleural effusion (`0.750`) and pulmonary edema (`0.785`) were
+  the only two findings above the bounded screening threshold.
+- A new patient-disjoint two-finding proxy passed audit with 16 train and 16
+  validation rows; its nonformal dataset-lock SHA256 is
+  `7ba18607e835154796378b6b79871b6367031877b7f7f7f7fa0ebb67bfec583753`.
+- The one authorized local Qwen3.5-2B rerun completed 50 steps in `29.4116s`
+  and selected step 40. Aggregate held-out S/C AUROC improved from `0.0` to
+  `0.8125`, U/I AUROC remained `1.0`, and accuracy reached `0.75`.
+- Per-finding evidence remains mixed: pulmonary edema S/C AUROC is `1.0`, but
+  pleural effusion is `0.5` on four S/C examples. This supports the parser/data
+  root cause while still blocking 4B/9B scaling and formal claims.

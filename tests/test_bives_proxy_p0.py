@@ -5,10 +5,16 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import numpy as np
 from PIL import Image
 
 from bives_cxr.audit import audit_manifests
 from scripts.build_bives_proxy_p0 import build_proxy_manifests
+from scripts.diagnose_bives_proxy_sc import (
+    leave_one_out_centroid_metrics,
+    select_balanced_sc,
+    summarize_candidates,
+)
 
 
 class ProxyP0Tests(unittest.TestCase):
@@ -135,6 +141,41 @@ class ProxyP0Tests(unittest.TestCase):
                     val_groups_per_finding=1,
                     seed=7,
                 )
+
+    def test_sc_diagnostic_selects_patient_disjoint_balanced_rows(self) -> None:
+        rows = []
+        for finding in ("atelectasis", "consolidation"):
+            for state in ("support", "contradict"):
+                for index in range(4):
+                    rows.append(
+                        {
+                            "candidate_id": f"{finding}-{state}-{index}",
+                            "canonical_statement_id": finding,
+                            "parser_status": "candidate",
+                            "parser_state_candidate": state,
+                            "patient_id": f"{finding}-{state}-patient-{index}",
+                            "study_id": f"study-{finding}-{state}-{index}",
+                            "image_path": f"image-{finding}-{state}-{index}.png",
+                            "report_sha256": f"report-{finding}-{state}-{index}",
+                            "parser_cue": finding,
+                        }
+                    )
+        selected = select_balanced_sc(rows, ["atelectasis", "consolidation"], 3, 7)
+        self.assertEqual(len(selected), 12)
+        self.assertEqual(len({row["patient_id"] for row in selected}), 12)
+        summary = summarize_candidates(rows, ["atelectasis", "consolidation"])
+        self.assertEqual(summary["duplicate_candidate_ids"], 0)
+        self.assertEqual(summary["findings"]["atelectasis"]["states"]["support"]["patients"], 4)
+
+    def test_sc_centroid_metric_detects_separable_features(self) -> None:
+        features = np.asarray(
+            [[-2.0, 0.0], [-1.0, 0.1], [-1.5, -0.1], [1.0, 0.0], [2.0, 0.1], [1.5, -0.1]],
+            dtype=np.float32,
+        )
+        labels = np.asarray([0, 0, 0, 1, 1, 1])
+        metrics = leave_one_out_centroid_metrics(features, labels)
+        self.assertEqual(metrics["loo_centroid_auroc"], 1.0)
+        self.assertEqual(metrics["loo_centroid_accuracy"], 1.0)
 
 
 if __name__ == "__main__":

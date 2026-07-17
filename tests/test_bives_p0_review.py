@@ -8,6 +8,12 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from scripts.prepare_bives_p0_report_review import (
+    FINDING_RULES,
+    _sentences,
+    _state_for_sentence,
+)
+
 
 ROOT = Path(__file__).resolve().parents[1]
 PREPARE = ROOT / "scripts" / "prepare_bives_p0_report_review.py"
@@ -78,3 +84,33 @@ class P0ReviewTests(unittest.TestCase):
                 })
             passed = subprocess.run([sys.executable, str(VALIDATE), "--review-packet", str(packet)], check=True, capture_output=True, text=True)
             self.assertIn('"status": "pass"', passed.stdout)
+
+    def test_parser_scopes_negation_to_the_target_finding(self) -> None:
+        sentence = "Mild basilar atelectasis is seen without focal consolidation."
+        atelectasis = tuple(FINDING_RULES["atelectasis"]["entities"])
+        consolidation = tuple(FINDING_RULES["consolidation"]["entities"])
+        self.assertEqual(_state_for_sentence(sentence, atelectasis)[0], "support")
+        self.assertEqual(_state_for_sentence(sentence, consolidation)[0], "contradict")
+        self.assertEqual(
+            _state_for_sentence(
+                "The lungs are clear of focal consolidation, pleural effusion or pneumothorax.",
+                consolidation,
+            )[0],
+            "contradict",
+        )
+
+    def test_parser_preserves_cross_line_negation_and_positive_override(self) -> None:
+        pneumothorax = tuple(FINDING_RULES["pneumothorax"]["entities"])
+        sentences = _sentences(
+            "There is no focal consolidation, pleural effusion,\n or pneumothorax."
+        )
+        self.assertEqual(len(sentences), 1)
+        self.assertEqual(_state_for_sentence(sentences[0], pneumothorax)[0], "contradict")
+        edema = tuple(FINDING_RULES["pulmonary_edema"]["entities"])
+        self.assertEqual(
+            _state_for_sentence(
+                "Unchanged without new pulmonary opacities and unchanged mild pulmonary edema.",
+                edema,
+            )[0],
+            "support",
+        )

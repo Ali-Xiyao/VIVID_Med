@@ -132,7 +132,10 @@ class BiVESReadinessTest(unittest.TestCase):
             )
             for remote_marker in ("/ipfs/", "sues-hpc", "slurm", "sbatch"):
                 self.assertNotIn(remote_marker, raw.lower(), path)
-            self.assertIn(payload["experiment"].get("mode"), {"local_debug", "local_overfit", "local_formal"})
+            self.assertIn(
+                payload["experiment"].get("mode"),
+                {"local_debug", "local_overfit", "local_proxy", "local_formal"},
+            )
             self.assertGreater(float(payload["loss"].get("lambda_pair", 0.0)), 0.0)
             self.assertGreater(float(payload["loss"].get("lambda_u_pol", 0.0)), 0.0)
             self.assertEqual(payload["sampling"]["type"], "same_statement_state_group")
@@ -168,7 +171,9 @@ class BiVESReadinessTest(unittest.TestCase):
         proxy = yaml.safe_load(
             (config_root / "qwen35_2b_proxy_p0.template.yaml").read_text(encoding="utf-8")
         )
-        self.assertEqual(proxy["experiment"]["mode"], "local_overfit")
+        self.assertEqual(proxy["experiment"]["mode"], "local_proxy")
+        self.assertEqual(proxy["data"]["max_train_samples"], 16)
+        self.assertEqual(proxy["data"]["max_val_samples"], 16)
         self.assertFalse(proxy["audit"]["require_both_insufficient_kinds"])
         self.assertFalse(proxy["evaluation"]["run_test"])
 
