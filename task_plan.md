@@ -408,6 +408,7 @@ without changing the frozen evidence architecture or launching formal training.
 - [x] Strict calibrated-release validation including canonical artifact integrity, finite bounded decoder temperatures, checkpoint-temperature equality, protocol/seed/manifest binding, and prediction hash verification.
 - [x] Formal P0 dynamic caps removed; debug selection happens before statement vocabulary construction.
 - [x] Local regression gate: compile, 38/38 active BiVES tests, synthetic smoke, and Qwen3.5-only active-source scan.
+- [x] Git/server handoff: commits `9a04245`, `03d2f0e`, and `3edb9f4` are pushed; the server source-only deployment passed compile, 38/38 tests, synthetic smoke, and archive-source snapshot verification.
 
 ## Deferred fifth-review work
 
