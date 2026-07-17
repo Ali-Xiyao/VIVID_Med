@@ -430,4 +430,4 @@ manifests and statement cache are present locally.
 | P0-2 source inventory closure | complete | Git and source-only snapshots reject unlisted files under active protected roots and root startup/config hooks; injected module and `sitecustomize.py` tests pass. |
 | P0-3 calibration evidence closure | complete | Calibration predictions are required, hash-verified, and recompute both recorded pre/post NLL values from immutable evidence/target rows. |
 | Local-first execution | complete | Active YAMLs use local `data` and `H:/Xiyao_Wang/001_models/Qwen3.5-*` paths; local synthetic and read-only real-weight smoke pass. |
-| Regression and Git handoff | in_progress | Compile, 41/41 active tests, synthetic smoke, local path audit, active-path scan, and 0.8B vision smoke pass; commit/push remains. |
+| Regression and Git handoff | complete | Commit `b6e77d8` contains the repair; compile, 41/41 active tests, synthetic smoke, local path audit, active-path scan, 0.8B vision smoke, and a clean 896-file source snapshot all pass. |
