@@ -3,6 +3,8 @@ data/dataset/
 data/splits/
 data/instructions/
 outputs/
+local_runs/
+configs_local/
 History/
 .remote_upload_tmp/
 .remote_upload_*.txt

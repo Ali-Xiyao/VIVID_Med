@@ -431,3 +431,20 @@ manifests and statement cache are present locally.
 | P0-3 calibration evidence closure | complete | Calibration predictions are required, hash-verified, and recompute both recorded pre/post NLL values from immutable evidence/target rows. |
 | Local-first execution | complete | Active YAMLs use local `data` and `H:/Xiyao_Wang/001_models/Qwen3.5-*` paths; local synthetic and read-only real-weight smoke pass. |
 | Regression and Git handoff | complete | Commit `b6e77d8` contains the repair; compile, 41/41 active tests, synthetic smoke, local path audit, active-path scan, 0.8B vision smoke, and a clean 896-file source snapshot all pass. |
+
+# 2026-07-17 Round-7 Local Experiment Repair
+
+## Objective
+
+Close the verified local-experiment blockers without altering the frozen BiVES
+network: prove real Dataset/DataLoader behavior, split local debug from local
+formal protocol, make local cache/lock preparation reproducible without
+dirtying tracked YAML, and add fail-fast local runtime diagnostics.
+
+| Gate | Status | Acceptance criterion |
+| --- | --- | --- |
+| Dataset P0 verification | complete | Restored Dataset methods; temporary RGB image, item, and `DataLoader(num_workers=0)` regression pass. |
+| Local debug/formal split | complete | Explicit debug/formal modes; debug caps complete matched groups/two steps and emits `formal_result: false`; formal keeps locks. |
+| Local preparation workflow | complete | Cache builder writes a caller-selected local config; dataset-lock CLI revalidates the generated four-split lock. |
+| Local runtime preflight | complete | Repo-root path resolution, Windows-safe workers, CUDA/BF16 diagnostics, and offline Qwen loading fail before costly work. |
+| Regression and Git handoff | in_progress | 43 tests, synthetic smoke, py_compile, and diff check pass; commit/push remains. |

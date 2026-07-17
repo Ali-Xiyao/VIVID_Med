@@ -9,7 +9,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from bives_cxr.dataset_lock import build_dataset_lock, dataset_lock_sha256
+from bives_cxr.dataset_lock import build_dataset_lock, dataset_lock_sha256, validate_dataset_lock
 
 
 def parse_args() -> argparse.Namespace:
@@ -40,6 +40,13 @@ def main() -> None:
     lock_sha256 = dataset_lock_sha256(lock)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(lock, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    # A lock is not usable until the same verifier accepts what was written.
+    validate_dataset_lock(
+        args.output,
+        {split: getattr(args, split) for split in ("train", "val", "calibration", "test")},
+        data_root=args.data_root,
+        audit_options=options,
+    )
     print(json.dumps({"status": "pass", "dataset_lock_sha256": lock_sha256}, ensure_ascii=False))
 
 

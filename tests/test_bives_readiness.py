@@ -8,11 +8,13 @@ from pathlib import Path
 
 import yaml
 from PIL import Image
+import torch
+from torch.utils.data import DataLoader
 
 from bives_cxr.audit import audit_manifests
 from bives_cxr.backbones import validate_qwen35_model_path
 from bives_cxr.data import BiVESManifestDataset, SameStatementStateBatchSampler
-from scripts.train_bives_cxr import assert_full_sample_coverage
+from scripts.train_bives_cxr import assert_full_sample_coverage, load_config, runtime_preflight
 
 
 def write_jsonl(path: Path, rows: list[dict[str, str]]) -> None:
@@ -23,6 +25,45 @@ def write_jsonl(path: Path, rows: list[dict[str, str]]) -> None:
 
 
 class BiVESReadinessTest(unittest.TestCase):
+    def test_manifest_dataset_loads_images_and_dataloader_batches(self) -> None:
+        """Regression for Dataset methods accidentally nesting under a helper."""
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            image_path = root / "image.png"
+            Image.new("L", (9, 7), color=127).save(image_path)
+            row = {
+                "sample_id": "sample-0",
+                "patient_id": "patient-0",
+                "image_path": image_path.name,
+                "group_id": "group-0",
+                "canonical_statement_id": "effusion-right",
+                "statement_text": "Right pleural effusion.",
+                "state": "support",
+            }
+            manifest = root / "manifest.jsonl"
+            write_jsonl(manifest, [row])
+            dataset = BiVESManifestDataset(manifest, root)
+
+            self.assertEqual(len(dataset), 1)
+            item = dataset[0]
+            self.assertEqual(item["image"].mode, "RGB")
+            self.assertEqual(item["image"].size, (9, 7))
+            self.assertEqual(item["statement_index"], 0)
+            self.assertEqual(item["state_index"], 0)
+            batch = next(iter(DataLoader(dataset, batch_size=1, num_workers=0, collate_fn=list)))
+            self.assertEqual(batch[0]["sample_id"], "sample-0")
+
+    def test_local_debug_template_is_explicitly_nonformal_and_paths_resolve(self) -> None:
+        root = Path(__file__).resolve().parents[1]
+        config = load_config(root / "configs" / "bives_cxr" / "qwen35_2b_local_debug.template.yaml")
+        self.assertEqual(config["experiment"]["mode"], "local_debug")
+        self.assertEqual(config["data"]["num_workers"], 0)
+        self.assertFalse(config["evaluation"]["run_calibration"])
+        self.assertFalse(config["evaluation"]["run_test"])
+        self.assertTrue(Path(config["data"]["data_root"]).is_absolute())
+        report = runtime_preflight(torch.device("cpu"), "fp32")
+        self.assertEqual(report["device"], "cpu")
+
     def test_active_configs_are_qwen35_only(self) -> None:
         config_root = Path(__file__).resolve().parents[1] / "configs" / "bives_cxr"
         configs = sorted(config_root.glob("*.yaml"))
@@ -32,6 +73,7 @@ class BiVESReadinessTest(unittest.TestCase):
             model = payload["model"]
             self.assertEqual(str(model["family"]).lower(), "qwen3.5")
             self.assertIn("Qwen3.5-", str(model["path"]))
+            self.assertIn(payload["experiment"].get("mode"), {"local_debug", "local_formal"})
             self.assertGreater(float(payload["loss"].get("lambda_pair", 0.0)), 0.0)
             self.assertGreater(float(payload["loss"].get("lambda_u_pol", 0.0)), 0.0)
             self.assertEqual(payload["sampling"]["type"], "same_statement_state_group")
@@ -39,15 +81,19 @@ class BiVESReadinessTest(unittest.TestCase):
             self.assertEqual(float(payload["loss"]["lambda_min"]), 0.0)
             self.assertGreaterEqual(int(payload["bives"]["contextual_layers"]), 1)
             self.assertTrue(payload["audit"]["require_complete_statements"])
-            self.assertTrue(payload["audit"]["verify_image_sha256"])
-            self.assertTrue(payload["audit"]["require_matching_protocol"])
+            if payload["experiment"].get("mode") == "local_formal":
+                self.assertTrue(payload["audit"]["verify_image_sha256"])
+                self.assertTrue(payload["audit"]["require_matching_protocol"])
             self.assertFalse(payload["evaluation"]["run_test"])
             self.assertEqual(payload["evaluation"]["selection_metric"], "nll")
             self.assertEqual(payload["evaluation"]["control_seed"], 20260717)
             statement = model["statement_embeddings"]
-            self.assertIn("expected_sha256", statement)
-            self.assertIn("expected_vocabulary_sha256", statement)
-            self.assertEqual(statement["expected_pooling"], "input_embedding_mean")
+            if payload["experiment"].get("mode") == "local_formal":
+                self.assertIn("expected_sha256", statement)
+                self.assertIn("expected_vocabulary_sha256", statement)
+                self.assertEqual(statement["expected_pooling"], "input_embedding_mean")
+            else:
+                self.assertEqual(statement["mode"], "learned_id")
         main = yaml.safe_load((config_root / "qwen35_4b_main.yaml").read_text(encoding="utf-8"))
         self.assertIn("train_locked.jsonl", main["data"]["train_manifest"])
         self.assertIn("calibration_locked.jsonl", main["data"]["calibration_manifest"])

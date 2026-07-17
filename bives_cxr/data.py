@@ -70,6 +70,26 @@ class BiVESManifestDataset(Dataset):
             raise ValueError(f"manifest contains statement IDs absent from the training vocabulary: {sorted(unknown)[:5]}")
         self.statement_to_index = dict(statement_to_index)
 
+    def __len__(self) -> int:
+        return len(self.rows)
+
+    def __getitem__(self, index: int) -> dict[str, Any]:
+        row = self.rows[index]
+        image_path = Path(str(row["image_path"]))
+        if not image_path.is_absolute():
+            image_path = self.data_root / image_path
+        if not image_path.exists():
+            raise FileNotFoundError(image_path)
+        with Image.open(image_path) as source:
+            image = source.convert("RGB")
+        return {
+            **row,
+            "image": image,
+            "image_path": str(image_path),
+            "statement_index": self.statement_to_index[str(row["canonical_statement_id"])],
+            "state_index": STATE_NAMES.index(str(row["state"])),
+        }
+
 
 def limit_rows_to_complete_groups(
     rows: list[dict[str, Any]], max_records: int | None
@@ -95,27 +115,6 @@ def limit_rows_to_complete_groups(
     if not selected:
         raise ValueError(f"max_records={max_records} does not retain one complete group_id quartet")
     return selected
-
-    def __len__(self) -> int:
-        return len(self.rows)
-
-    def __getitem__(self, index: int) -> dict[str, Any]:
-        row = self.rows[index]
-        image_path = Path(str(row["image_path"]))
-        if not image_path.is_absolute():
-            image_path = self.data_root / image_path
-        if not image_path.exists():
-            raise FileNotFoundError(image_path)
-        with Image.open(image_path) as source:
-            image = source.convert("RGB")
-        return {
-            **row,
-            "image": image,
-            "image_path": str(image_path),
-            "statement_index": self.statement_to_index[str(row["canonical_statement_id"])],
-            "state_index": STATE_NAMES.index(str(row["state"])),
-        }
-
 
 class SameStatementStateBatchSampler(Sampler[list[int]]):
     """Yield batches composed of exact matched ``group_id`` S/C/U/I quartets."""

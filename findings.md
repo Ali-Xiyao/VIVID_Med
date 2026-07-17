@@ -342,3 +342,27 @@
 - The review must be treated as an issue report to verify against the current
   checked-out active BiVES surface; do not infer that it authorizes formal
   training or a new architecture.
+
+## 2026-07-17 Round-7 Intake
+
+- The seventh review correctly shifts the priority from server publication to
+  local engineering readiness. Its public-main report predates the sixth-round
+  release-chain fixes, but local inspection confirmed the separate P0 Dataset
+  indentation regression: `__len__` and `__getitem__` are nested after a
+  helper return instead of being class methods.
+- The current active local gap is broader than a synthetic tensor smoke:
+  Dataset item loading, a Windows-safe DataLoader gate, explicit local-debug
+  versus local-formal protocol, local cache/lock preparation, and early GPU /
+  BF16 / offline-model diagnostics.
+
+## 2026-07-17 Round-7 Repair Result
+
+- Restored `BiVESManifestDataset.__len__` and `__getitem__` to the class and
+  added a real PNG plus `DataLoader(num_workers=0)` regression.
+- Added explicit `local_debug` and `local_formal` modes. Debug is train/val
+  only, selects complete groups, caps at two steps, creates no formal lock or
+  calibration artifact, and records `formal_result: false`.
+- Added repo-root path resolution, CUDA/BF16/GPU preflight, and
+  `local_files_only=True` Qwen processor/config loads.
+- Statement cache locking now copies a tracked template into a caller-selected
+  ignored config, while the dataset-lock CLI validates the file it just wrote.

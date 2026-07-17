@@ -57,6 +57,9 @@ from bives_cxr.provenance import (
 from bives_cxr.dataset_lock import validate_dataset_lock
 
 
+REPO_ROOT = Path(__file__).resolve().parents[1]
+
+
 class BiVESExperiment(nn.Module):
     """Qwen3.5 patch encoder plus canonical statement table and BiVES head."""
 
@@ -239,7 +242,41 @@ def parse_args() -> argparse.Namespace:
 
 def load_config(path: Path) -> dict[str, Any]:
     with path.open("r", encoding="utf-8") as handle:
-        return yaml.safe_load(handle)
+        config = yaml.safe_load(handle)
+    # Configs are portable between local checkout and server; relative paths are repo-relative.
+    for section, keys in {
+        "data": ("data_root", "train_manifest", "val_manifest", "calibration_manifest", "test_manifest", "dataset_lock"),
+        "model": ("path",),
+        "training": ("output_dir",),
+    }.items():
+        for key in keys:
+            value = config.get(section, {}).get(key)
+            if value and not Path(str(value)).is_absolute():
+                config[section][key] = str((REPO_ROOT / value).resolve())
+    statement = config.get("model", {}).get("statement_embeddings", {})
+    if statement.get("path") and not Path(str(statement["path"])).is_absolute():
+        statement["path"] = str((REPO_ROOT / statement["path"]).resolve())
+    return config
+
+
+def runtime_preflight(device: torch.device, dtype: str) -> dict[str, Any]:
+    """Fail before manifest/model work when local accelerator requirements are absent."""
+    report: dict[str, Any] = {"torch_version": torch.__version__, "device": str(device), "dtype": dtype}
+    if device.type == "cuda":
+        if not torch.cuda.is_available():
+            raise RuntimeError("CUDA device was requested but torch.cuda.is_available() is false")
+        index = device.index or 0
+        if index >= torch.cuda.device_count():
+            raise RuntimeError(f"requested CUDA device {index} but only {torch.cuda.device_count()} device(s) exist")
+        if dtype == "bf16" and not torch.cuda.is_bf16_supported(index):
+            raise RuntimeError(f"CUDA device {index} does not support bfloat16")
+        free, total = torch.cuda.mem_get_info(index)
+        report.update({"cuda_version": torch.version.cuda, "gpu_name": torch.cuda.get_device_name(index), "gpu_free_bytes": free, "gpu_total_bytes": total})
+    return report
+
+
+def write_rows(path: Path, rows: list[dict[str, Any]]) -> None:
+    path.write_text("".join(json.dumps(row, ensure_ascii=False) + "\n" for row in rows), encoding="utf-8")
 
 
 def set_seed(seed: int) -> None:
@@ -555,6 +592,19 @@ def main() -> None:
     config = load_config(args.config)
     if str(config["model"]["family"]).lower() != "qwen3.5":
         raise ValueError("active BiVES-CXR configs are Qwen3.5-only")
+    experiment_mode = str(config.get("experiment", {}).get("mode", "local_formal"))
+    if experiment_mode not in {"local_debug", "local_formal"}:
+        raise ValueError("experiment.mode must be local_debug or local_formal")
+    if experiment_mode == "local_debug":
+        # Explicitly non-formal: two small matched quartets, train/val only, no lock/release artifacts.
+        config["data"]["max_train_samples"] = min(int(config["data"].get("max_train_samples", 8)), 8)
+        config["data"]["max_val_samples"] = min(int(config["data"].get("max_val_samples", 4)), 4)
+        config["data"]["num_workers"] = 0
+        config["training"]["max_steps"] = min(int(config["training"].get("max_steps", 2)), 2)
+        config["training"]["eval_interval"] = 1
+        config.setdefault("sampling", {})["groups_per_batch"] = 1
+        config.setdefault("evaluation", {})["run_calibration"] = False
+        config["evaluation"]["run_test"] = False
     if args.debug:
         config["data"]["max_train_samples"] = min(int(config["data"].get("max_train_samples") or 8), 8)
         config["data"]["max_val_samples"] = min(int(config["data"].get("max_val_samples") or 4), 4)
@@ -574,6 +624,7 @@ def main() -> None:
 
     set_seed(int(config.get("seed", 17)))
     device = torch.device(str(config.get("device", "cuda:0" if torch.cuda.is_available() else "cpu")))
+    preflight = runtime_preflight(device, str(config["model"].get("dtype", "bf16")))
     output_dir = Path(config["training"]["output_dir"])
     if (output_dir / "metrics_final.json").exists():
         raise SystemExit(f"{output_dir} already contains metrics_final.json")
@@ -581,6 +632,23 @@ def main() -> None:
     (output_dir / "config_resolved.yaml").write_text(
         resolved_config_text(config), encoding="utf-8"
     )
+    save_json(output_dir / "runtime_preflight.json", preflight)
+
+    train_rows = read_manifest(config["data"]["train_manifest"])
+    val_rows = read_manifest(config["data"]["val_manifest"])
+    if experiment_mode == "local_debug" or args.debug:
+        train_rows = limit_rows_to_complete_groups(train_rows, config["data"].get("max_train_samples"))
+        val_rows = limit_rows_to_complete_groups(val_rows, config["data"].get("max_val_samples"))
+    if experiment_mode == "local_debug":
+        debug_manifest_dir = output_dir / "selected_manifests"
+        debug_manifest_dir.mkdir(exist_ok=True)
+        train_selected = debug_manifest_dir / "train.jsonl"
+        val_selected = debug_manifest_dir / "val.jsonl"
+        write_rows(train_selected, train_rows)
+        write_rows(val_selected, val_rows)
+        config["data"]["train_manifest"] = str(train_selected)
+        config["data"]["val_manifest"] = str(val_selected)
+        (output_dir / "config_resolved.yaml").write_text(resolved_config_text(config), encoding="utf-8")
 
     manifest_paths = {
         split: config["data"][key]
@@ -613,18 +681,20 @@ def main() -> None:
             f"see {output_dir / 'manifest_readiness_audit.json'}"
         )
 
-    formal_manifest_paths = {
-        split: config["data"][key]
-        for split, key in (
-            ("train", "train_manifest"), ("val", "val_manifest"),
-            ("calibration", "calibration_manifest"), ("test", "test_manifest"),
-        )
-    }
-    dataset_lock = validate_dataset_lock(
-        config["data"]["dataset_lock"],
-        formal_manifest_paths,
-        data_root=config["data"]["data_root"],
-        audit_options={
+    dataset_lock = None
+    if experiment_mode == "local_formal":
+        formal_manifest_paths = {
+            split: config["data"][key]
+            for split, key in (
+                ("train", "train_manifest"), ("val", "val_manifest"),
+                ("calibration", "calibration_manifest"), ("test", "test_manifest"),
+            )
+        }
+        dataset_lock = validate_dataset_lock(
+            config["data"]["dataset_lock"],
+            formal_manifest_paths,
+            data_root=config["data"]["data_root"],
+            audit_options={
             "check_images": bool(audit_config.get("check_images", True)),
             "require_complete_statements": bool(audit_config.get("require_complete_statements", True)),
             "check_decodable": bool(audit_config.get("check_decodable", True)),
@@ -632,14 +702,9 @@ def main() -> None:
             "require_provenance": bool(audit_config.get("require_provenance", True)),
             "verify_image_sha256": bool(audit_config.get("verify_image_sha256", True)),
             "require_matching_protocol": bool(audit_config.get("require_matching_protocol", True)),
-        },
-    )
+            },
+        )
 
-    train_rows = read_manifest(config["data"]["train_manifest"])
-    val_rows = read_manifest(config["data"]["val_manifest"])
-    if args.debug:
-        train_rows = limit_rows_to_complete_groups(train_rows, config["data"].get("max_train_samples"))
-        val_rows = limit_rows_to_complete_groups(val_rows, config["data"].get("max_val_samples"))
     train_dataset = BiVESManifestDataset(config["data"]["train_manifest"], config["data"]["data_root"], rows=train_rows)
     val_dataset = BiVESManifestDataset(
         config["data"]["val_manifest"],
@@ -683,15 +748,13 @@ def main() -> None:
     else:
         raise ValueError(f"unsupported statement embedding mode: {statement_embedding_mode}")
 
-    source_snapshot = build_source_snapshot(require_clean=True)
-    run_lock = build_run_lock(
-        config,
-        git_commit=git_commit(),
-        source_snapshot=source_snapshot,
-        dataset_lock=dataset_lock,
-    )
+    if experiment_mode == "local_formal":
+        source_snapshot = build_source_snapshot(require_clean=True)
+        run_lock = build_run_lock(config, git_commit=git_commit(), source_snapshot=source_snapshot, dataset_lock=dataset_lock)
+    else:
+        run_lock = {"format_version": 0, "kind": "local_debug", "formal_result": False, "config_sha256": canonical_json_sha256(config)}
     run_lock_sha256 = canonical_json_sha256(run_lock)
-    save_json(output_dir / "run_lock.json", run_lock)
+    save_json(output_dir / ("run_lock.json" if experiment_mode == "local_formal" else "local_debug_run.json"), run_lock)
 
     visual_model, processor, qwen_config = load_qwen35_visual_and_processor(
         config["model"]["path"],
@@ -1145,6 +1208,8 @@ def main() -> None:
         save_json(output_dir / "calibration_artifact.json", calibration_artifact)
 
     final_metrics = {
+        "formal_result": experiment_mode == "local_formal",
+        "experiment_mode": experiment_mode,
         "step": step,
         "elapsed_seconds": time.time() - started,
         "model_family": "Qwen3.5",

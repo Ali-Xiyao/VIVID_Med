@@ -125,8 +125,9 @@ def load_qwen35_visual_and_processor(
     dtype_map = {"bf16": torch.bfloat16, "fp16": torch.float16, "fp32": torch.float32}
     if dtype not in dtype_map:
         raise ValueError(f"unsupported dtype: {dtype}")
-    processor = AutoProcessor.from_pretrained(model_path)
-    parent_config = AutoConfig.from_pretrained(model_path)
+    # Active experiments are intentionally offline/local-cache only.
+    processor = AutoProcessor.from_pretrained(model_path, local_files_only=True)
+    parent_config = AutoConfig.from_pretrained(model_path, local_files_only=True)
     if attention_implementation not in {"eager", "sdpa"}:
         raise ValueError(
             f"unsupported Qwen3.5 visual attention implementation: {attention_implementation}"

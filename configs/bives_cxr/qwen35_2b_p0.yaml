@@ -2,6 +2,7 @@ experiment:
   id: bives_cxr_qwen35_2b_p0
   route: BiVES-CXR
   phase: P0
+  mode: local_formal
 
 data:
   data_root: data

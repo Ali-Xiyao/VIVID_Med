@@ -32,13 +32,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--pooling", choices=("input_embedding_mean",), default="input_embedding_mean")
     parser.add_argument("--normalize", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--dtype", choices=("float32", "float16", "bfloat16"), default="float32")
-    parser.add_argument(
-        "--lock-config",
-        type=Path,
-        action="append",
-        default=[],
-        help="Write the generated cache SHA/vocabulary/pooling into a BiVES YAML config.",
-    )
+    parser.add_argument("--config-template", type=Path, help="Tracked config template to copy.")
+    parser.add_argument("--output-config", type=Path, help="Ignored local locked config to write.")
     return parser.parse_args()
 
 
@@ -48,6 +43,20 @@ def file_sha256(path: Path) -> str:
         for chunk in iter(lambda: handle.read(8 << 20), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def write_locked_config(template: Path, output: Path, cache: Path, payload: dict[str, Any], cache_sha256: str, pooling: str) -> None:
+    """Write a local lock without mutating a tracked experiment template."""
+    config = yaml.safe_load(template.read_text(encoding="utf-8"))
+    statement = config["model"]["statement_embeddings"]
+    if str(statement.get("mode")) != "frozen_cached":
+        raise ValueError(f"{template} does not use frozen_cached statements")
+    statement["path"] = str(cache)
+    statement["expected_sha256"] = cache_sha256
+    statement["expected_vocabulary_sha256"] = payload["ontology"]["vocabulary_sha256"]
+    statement["expected_pooling"] = pooling
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(yaml.safe_dump(config, sort_keys=False, allow_unicode=True), encoding="utf-8")
 
 
 def load_input_embedding_weight(model_path: Path) -> tuple[torch.Tensor, str]:
@@ -84,6 +93,8 @@ def load_input_embedding_weight(model_path: Path) -> tuple[torch.Tensor, str]:
 
 def main() -> None:
     args = parse_args()
+    if bool(args.config_template) != bool(args.output_config):
+        raise ValueError("--config-template and --output-config must be supplied together")
     validate_qwen35_model_path(args.model_path)
     all_rows: list[dict[str, Any]] = []
     for manifest in args.manifest:
@@ -142,19 +153,8 @@ def main() -> None:
     args.output.parent.mkdir(parents=True, exist_ok=True)
     torch.save(payload, args.output)
     cache_sha256 = file_sha256(args.output)
-    for config_path in args.lock_config:
-        config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
-        statement = config["model"]["statement_embeddings"]
-        if str(statement.get("mode")) != "frozen_cached":
-            raise ValueError(f"{config_path} does not use frozen_cached statements")
-        statement["path"] = str(args.output)
-        statement["expected_sha256"] = cache_sha256
-        statement["expected_vocabulary_sha256"] = payload["ontology"]["vocabulary_sha256"]
-        statement["expected_pooling"] = args.pooling
-        config_path.write_text(
-            yaml.safe_dump(config, sort_keys=False, allow_unicode=True),
-            encoding="utf-8",
-        )
+    if args.config_template:
+        write_locked_config(args.config_template, args.output_config, args.output, payload, cache_sha256, args.pooling)
     print(
         json.dumps(
             {
@@ -163,6 +163,7 @@ def main() -> None:
                 "embedding_dim": payload["embedding_dim"],
                 "cache_sha256": cache_sha256,
                 "vocabulary_sha256": payload["ontology"]["vocabulary_sha256"],
+                "output_config": str(args.output_config) if args.output_config else None,
             },
             ensure_ascii=False,
         )

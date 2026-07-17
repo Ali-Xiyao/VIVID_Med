@@ -68,9 +68,26 @@ The bounded integration gate compares the selective vision-only loader against
 the official full Qwen3.5 visual output, releases the full model, then runs two
 synthetic S/C/U/I BiVES optimization steps.
 
-## Server training
+## Local development and formal training
 
-The checked-in configs use the established server model cache:
+For a bounded local engineering run, first copy the tracked template to the
+ignored local-config area and point it at local manifest paths. This run is
+explicitly marked `formal_result: false`; it selects at most two train steps,
+uses `num_workers: 0`, reads local Qwen3.5-2B weights only, and never creates a
+dataset/run lock or calibration/release artifact.
+
+```bash
+mkdir configs_local
+copy configs\bives_cxr\qwen35_2b_local_debug.template.yaml configs_local\qwen35_2b_local_debug.yaml
+python scripts/train_bives_cxr.py --config configs_local/qwen35_2b_local_debug.yaml
+```
+
+The default local debug config requests CUDA BF16 and fails before manifest or
+model loading if the selected GPU is unavailable. Its metadata is written to
+`local_runs/`, which is ignored by Git.
+
+The checked-in `local_formal` configs are release-preparation templates, not a
+shortcut around locks:
 
 ```bash
 python scripts/train_bives_cxr.py \
@@ -119,8 +136,10 @@ outputs/          Generated experiment artifacts; ignored by Git
 - Generated outputs and checkpoints remain ignored.
 - Historical outputs are preserved as pilot/provenance evidence; they are not
   BiVES-CXR results.
-- Formal local training is not part of this consolidation. The new code is
-  prepared for server execution.
+- Local debug outputs are engineering evidence only and are never formal
+  results. `local_formal` remains gated by all four locked manifests, a
+  revalidated dataset lock, frozen statement cache, clean source snapshot, and
+  the final evaluator.
 - Active keep/drop/control training is feature-space closure. Pixel-causal
   grounding claims remain locked until pixel keep/drop/equal-area controls are
   rerun through the complete vision tower.
