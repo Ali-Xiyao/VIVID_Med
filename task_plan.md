@@ -803,3 +803,28 @@ diff check, and active old-model-path scan also remain green.
 | Packed multi-image Qwen3.5 eager attention produced batch-dependent patch tokens and scores; one reconstructed sample differed by `0.0213` in support probability and one exact-K patch. | E8 expert/intervention validity | Located the upstream non-Flash rejoin on the head dimension, added a repository adapter guard that calls the official vision tower once per image, and proved on the real failing batch that patch/token/score/gate differences are exactly zero. Archived the packed expert/intervention outputs as invalid and restarted expert inference from zero. |
 | A first E10 evidence inventory recursively listed hundreds of mask files and then requested nonexistent `metrics.json`. | E10 read-only diagnosis | No artifact was modified. Restrict subsequent reads to `metrics_final.json`, `intervention_rows.jsonl`, and explicit mask samples; do not use a broad recursive listing. |
 | The first E10 planning writeback patch contained an empty `findings.md` hunk and was rejected by `apply_patch`. | E10 bookkeeping | No file changed. Split the writeback into a valid task-plan patch followed by anchored findings/progress append operations. |
+
+# 2026-07-18 Candidate Selector/Intervention Rescue Authority
+
+## Scope
+
+Prepare a claim-driven, local-only candidate authority after the failed E8/E10
+gate. This phase is planning and read-only data feasibility only. It does not
+authorize a model load, training, a VinDr-test rerun, CheXlocalize download,
+method mutation, extra seed, Qwen3.5-4B/9B, or server work.
+
+| Phase | Status | Gate |
+| --- | --- | --- |
+| R0 freeze prior evidence | complete | E8 remains failed; E10 is descriptive and VinDr test is prohibited as a tuning surface. |
+| R1 local development-data feasibility | complete_image_disjoint_only | Local VinDr train offers 121 consolidation and 634 pleural-effusion 2-of-3-reader positives with complete boxes; 0-of-3 images provide negatives and 1-of-3 disagreements are excluded. All 15,000 DICOM headers omit PatientID/StudyUID/SeriesUID, so only image-disjoint development is supportable and no patient-level claim is allowed. |
+| R2 claim and anti-claim freeze | complete | Primary claim: target regions must beat topology-matched controls under distribution-preserving operators. Supporting claim: sparse localization must be consistent across development strata. Anti-claim: gains are generic deletion-area/topology sensitivity or model scale. Protocol repair precedes any model repair. |
+| R3 compact experiment blocks | complete | `refine-logs/EXPERIMENT_PLAN.md` freezes five sequential blocks: development lock, topology control, operator robustness, selector audit/conditional single rescue, and one-time confirmation plus independent final boundary. Each block changes one mechanism and has an explicit stop rule. |
+| R4 tracker and artifact manifest | complete | Timestamped/fixed plan and tracker files are byte-identical and registered in `refine-logs/MANIFEST.md` with SHA-256. Every run row is blocked pending review or an earlier dependency. |
+| R5 review gate | pending_user_review | No execution begins until the candidate authority is reviewed and explicitly accepted. |
+
+## Rescue-planning errors
+
+| Error | Attempt | Resolution |
+| --- | --- | --- |
+| `experiment-plan` referenced three `skills/shared-references/output-*.md` files that are absent from the installed skill roots. | First output-protocol read | No project file changed. Follow the protocol stated in the skill body: timestamped artifact, fixed-name copy, and `refine-logs/MANIFEST.md`; record hashes after writing. |
+| A sequential header-only scan of all 15,000 VinDr train DICOMs exceeded 184 seconds before emitting final grouping statistics. | R1 patient/study grouping audit | The process was terminated by timeout with no artifact. Do not repeat sequentially; use a bounded concurrent header reader with progress output, and fail R1 closed if it cannot establish a grouping key. |

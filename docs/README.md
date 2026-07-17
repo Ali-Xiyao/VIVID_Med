@@ -54,6 +54,7 @@ BiVES-CXR is the only active paper and code mainline.
 | Locked VinDr B0-vs-B2 expert polarity evaluation | `../scripts/evaluate_bives_vindr_sc.py` |
 | Locked VinDr target/control/evidence-only evaluation | `../scripts/evaluate_bives_vindr_interventions.py`, `../bives_cxr/pixel_interventions.py` |
 | Post-stop read-only intervention failure taxonomy | `../scripts/analyze_bives_vindr_intervention_failures.py`, `bives_cxr_post_stop_failure_taxonomy.md` |
+| Draft selector/intervention rescue authority | `../refine-logs/EXPERIMENT_PLAN.md`, `../refine-logs/EXPERIMENT_TRACKER.md`, `../refine-logs/MANIFEST.md` |
 | P0 data-source and audit boundary | `bives_cxr_p0_data_readiness.md` |
 
 ## Active model boundary
@@ -172,6 +173,13 @@ It attributes the failed causal gate to inconsistent selector localization
 plus broad sensitivity to large arbitrary pixel deletions. Because that
 diagnosis inspected VinDr test outcomes, it cannot be used to tune and retest
 on the same evaluation surface.
+
+A candidate protocol-first rescue is now documented under `refine-logs/`.
+Its status is `DRAFT_REVIEW_REQUIRED`: all tracker rows remain blocked and no
+new run is authorized. The proposal uses VinDr train only as an image-disjoint
+development surface, permanently excludes VinDr test from rescue selection,
+and keeps an independent patient-grouped final evaluation as an unresolved
+paper gate.
 
 ## Current mechanism-gate status
 

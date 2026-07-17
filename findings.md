@@ -851,3 +851,59 @@
   diagnostic surface for this frozen failure. Any future method rescue must use
   a separate development set and an independent final evaluation; changing the
   method from these findings and retesting on VinDr would be test-set tuning.
+
+## 2026-07-18 candidate rescue planning
+
+- The next legitimate action is a candidate authority, not an immediate run.
+  Its primary claim must be that sparse evidence is consistently localized and
+  intervention-specific under distribution-preserving controls. The anti-claim
+  is that gains come from generic sensitivity to deletion area or model scale.
+- VinDr test is permanently excluded from rescue selection. A local non-test
+  development surface must be proven before any operator or selector choice;
+  final evidence additionally requires a new independent evaluation surface.
+- The candidate plan must keep Qwen3.5-2B fixed first, change one variable at a
+  time, and keep decoder/loss/K/model-scale changes behind earlier mechanism
+  gates.
+- The current evaluation control is topologically mismatched: the expert target
+  is a contiguous union-of-boxes mask, while
+  `deterministic_disjoint_control_mask()` samples the same number of pixels
+  independently across all non-target content. Both are then zero-filled.
+  Equal area therefore does not imply matched intervention severity; scattered
+  black pixels can disrupt the entire image and explain the area-sensitive
+  control effect observed in E10.
+- Rescue order is consequently protocol-first. Hold the frozen Qwen3.5-2B B2
+  model fixed, replace the scattered control with a deterministic contiguous
+  topology/location-matched control, and then test a distribution-preserving
+  operator. Dense-to-sparse preservation is conditional on that protocol gate;
+  changing the model first would confound evaluation repair with learning.
+- Local read-only inventory finds a complete VinDr-CXR package with separate
+  `train/`, `test/`, and `annotations/` trees under the public-dataset root.
+  CheXlocalize remains absent. VinDr train annotations are therefore the only
+  immediately available expert-region candidate for rescue development;
+  eligibility still depends on reader structure, finding coverage, and split
+  keys, while VinDr test remains frozen.
+- VinDr train contains 15,000 images and exactly three radiologist label rows
+  per image (`45,000` image-label rows). Region annotations contain `69,052`
+  rows from 17 readers. Consolidation has 556 boxes over 353 images from 9
+  readers; pleural effusion has 2,483 boxes over 1,038 images from 10 readers.
+  This is sufficient for a bounded development audit, subject to proving a
+  non-leaking patient/study grouping key from DICOM headers.
+- A concurrent header-only audit read all 15,000 train DICOMs with zero error.
+  PatientID, StudyInstanceUID, and SeriesInstanceUID are missing from every
+  file, so patient-disjoint development cannot be proven. The rescue plan may
+  use a locked image-disjoint development surface only and must prohibit any
+  patient-level metric or claim.
+- Clean 2-of-3-reader support consensus yields 121 consolidation and 634
+  pleural-effusion images, all with at least one matching expert box. The
+  corresponding 0-of-3 contradict pools contain 14,647 and 13,962 images;
+  1-of-3 disagreement cases (232/404) must be excluded from S/C development.
+- The candidate authority is now frozen as a reviewable plan rather than an
+  implicit next run. It has five sequential blocks and eleven tracker rows;
+  every row is blocked pending review or an earlier dependency. The first
+  model-scored comparison changes only control topology, followed by two
+  distribution-preserving operator checks. A single dense-to-sparse
+  preservation rescue is conditional and cannot run unless protocol repair
+  passes while selector consistency still fails.
+- Timestamped and fixed plan/tracker pairs are byte-identical. Their SHA-256
+  values are `1c0edf56...375017` and `fd9e2325...2531e7`; the full values and
+  execution boundary are registered in `refine-logs/MANIFEST.md`.
