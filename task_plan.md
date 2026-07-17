@@ -448,3 +448,20 @@ dirtying tracked YAML, and add fail-fast local runtime diagnostics.
 | Local preparation workflow | complete | Cache builder writes a caller-selected local config; dataset-lock CLI revalidates the generated four-split lock. |
 | Local runtime preflight | complete | Repo-root path resolution, Windows-safe workers, CUDA/BF16 diagnostics, and offline Qwen loading fail before costly work. |
 | Regression and Git handoff | in_progress | 43 tests, synthetic smoke, py_compile, and diff check pass; commit/push remains. |
+
+# 2026-07-17 Round-8 Local Mechanism Gate
+
+## Objective
+
+Close the remaining local-run identity and ontology defects, then run the
+smallest non-formal Qwen3.5 local mechanism gate. The accepted BiVES network
+remains frozen; formal locks, calibration, and test evaluation remain out of
+scope.
+
+| Gate | Status | Acceptance criterion |
+| --- | --- | --- |
+| Debug identity + ontology | complete | `local_formal --debug` is rejected; debug/overfit select validation quartets from the selected train ontology and enforce patient disjointness. |
+| Device + provenance correctness | complete | BF16 is checked under the requested CUDA device context; Git lookup is rooted at the repository. |
+| Local overfit mechanism gate | complete | Added one-quartet non-formal overfit template, actual-image transformation helper, and pre-optimizer `P_valid >= 2K` report. |
+| Actual local run | complete | `cuda:0` RTX 3090 completed 50/50 steps on the generated non-clinical mechanism input; result is explicitly non-formal. |
+| Regression and Git handoff | in_progress | Run final tests/smoke, then commit/push repair and local mechanism-run record. |

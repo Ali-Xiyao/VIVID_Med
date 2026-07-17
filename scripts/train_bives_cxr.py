@@ -268,8 +268,13 @@ def runtime_preflight(device: torch.device, dtype: str) -> dict[str, Any]:
         index = device.index or 0
         if index >= torch.cuda.device_count():
             raise RuntimeError(f"requested CUDA device {index} but only {torch.cuda.device_count()} device(s) exist")
-        if dtype == "bf16" and not torch.cuda.is_bf16_supported(index):
-            raise RuntimeError(f"CUDA device {index} does not support bfloat16")
+        if dtype == "bf16":
+            # is_bf16_supported checks the *current* CUDA device; its optional
+            # argument is not a device index.
+            with torch.cuda.device(index):
+                bf16_supported = torch.cuda.is_bf16_supported()
+            if not bf16_supported:
+                raise RuntimeError(f"CUDA device {index} does not support bfloat16")
         free, total = torch.cuda.mem_get_info(index)
         report.update({"cuda_version": torch.version.cuda, "gpu_name": torch.cuda.get_device_name(index), "gpu_free_bytes": free, "gpu_total_bytes": total})
     return report
@@ -277,6 +282,52 @@ def runtime_preflight(device: torch.device, dtype: str) -> dict[str, Any]:
 
 def write_rows(path: Path, rows: list[dict[str, Any]]) -> None:
     path.write_text("".join(json.dumps(row, ensure_ascii=False) + "\n" for row in rows), encoding="utf-8")
+
+
+def select_local_debug_rows(
+    train_rows: list[dict[str, Any]],
+    val_rows: list[dict[str, Any]],
+    max_train_samples: int | None,
+    max_val_samples: int | None,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Select complete, patient-disjoint debug quartets with a shared ontology."""
+    selected_train = limit_rows_to_complete_groups(train_rows, max_train_samples)
+    train_statement_ids = {str(row["canonical_statement_id"]) for row in selected_train}
+    eligible_val = [
+        row for row in val_rows
+        if str(row["canonical_statement_id"]) in train_statement_ids
+    ]
+    if not eligible_val:
+        raise ValueError("local debug train/val manifests have no shared canonical_statement_id")
+    selected_val = limit_rows_to_complete_groups(eligible_val, max_val_samples)
+    val_statement_ids = {str(row["canonical_statement_id"]) for row in selected_val}
+    if not val_statement_ids <= train_statement_ids:
+        raise RuntimeError("local debug validation ontology must be a subset of train ontology")
+    train_patients = {str(row["patient_id"]) for row in selected_train}
+    val_patients = {str(row["patient_id"]) for row in selected_val}
+    overlap = train_patients & val_patients
+    if overlap:
+        raise ValueError(f"local debug train/val patient leakage: {sorted(overlap)[:5]}")
+    return selected_train, selected_val
+
+
+def control_feasibility_report(batch: dict[str, Any], topk: int) -> dict[str, Any]:
+    valid_counts = batch["content_valid_mask"].sum(dim=-1).tolist()
+    samples = []
+    for index, count in enumerate(valid_counts):
+        grid = batch["image_grid_thw"][index]
+        samples.append({
+            "sample_id": str(batch["sample_ids"][index]),
+            "grid_h": int(grid[1]),
+            "grid_w": int(grid[2]),
+            "valid_content_patches": int(count),
+            "topk": int(topk),
+            "control_feasible": int(count) >= 2 * int(topk),
+        })
+    invalid = [sample for sample in samples if not sample["control_feasible"]]
+    if invalid:
+        raise ValueError(f"equal-area random-disjoint controls require at least 2K valid patches: {invalid}")
+    return {"topk": int(topk), "samples": samples}
 
 
 def set_seed(seed: int) -> None:
@@ -364,7 +415,7 @@ def file_sha256(path: str | Path) -> str:
 
 def git_commit() -> str:
     result = subprocess.run(
-        ["git", "rev-parse", "HEAD"],
+        ["git", "-C", str(REPO_ROOT), "rev-parse", "HEAD"],
         capture_output=True,
         text=True,
         check=False,
@@ -593,14 +644,22 @@ def main() -> None:
     if str(config["model"]["family"]).lower() != "qwen3.5":
         raise ValueError("active BiVES-CXR configs are Qwen3.5-only")
     experiment_mode = str(config.get("experiment", {}).get("mode", "local_formal"))
-    if experiment_mode not in {"local_debug", "local_formal"}:
-        raise ValueError("experiment.mode must be local_debug or local_formal")
-    if experiment_mode == "local_debug":
+    if experiment_mode not in {"local_debug", "local_overfit", "local_formal"}:
+        raise ValueError("experiment.mode must be local_debug, local_overfit, or local_formal")
+    if args.debug and experiment_mode != "local_debug":
+        raise ValueError(
+            "--debug is only valid with local_debug; "
+            "use qwen35_2b_local_debug.template.yaml instead"
+        )
+    if experiment_mode in {"local_debug", "local_overfit"}:
         # Explicitly non-formal: two small matched quartets, train/val only, no lock/release artifacts.
         config["data"]["max_train_samples"] = min(int(config["data"].get("max_train_samples", 8)), 8)
         config["data"]["max_val_samples"] = min(int(config["data"].get("max_val_samples", 4)), 4)
         config["data"]["num_workers"] = 0
-        config["training"]["max_steps"] = min(int(config["training"].get("max_steps", 2)), 2)
+        max_debug_steps = 2 if experiment_mode == "local_debug" else 100
+        config["training"]["max_steps"] = min(int(config["training"].get("max_steps", max_debug_steps)), max_debug_steps)
+        if experiment_mode == "local_overfit" and int(config["training"]["max_steps"]) < 1:
+            raise ValueError("local_overfit requires at least one optimization step")
         config["training"]["eval_interval"] = 1
         config.setdefault("sampling", {})["groups_per_batch"] = 1
         config.setdefault("evaluation", {})["run_calibration"] = False
@@ -636,10 +695,14 @@ def main() -> None:
 
     train_rows = read_manifest(config["data"]["train_manifest"])
     val_rows = read_manifest(config["data"]["val_manifest"])
-    if experiment_mode == "local_debug" or args.debug:
-        train_rows = limit_rows_to_complete_groups(train_rows, config["data"].get("max_train_samples"))
-        val_rows = limit_rows_to_complete_groups(val_rows, config["data"].get("max_val_samples"))
-    if experiment_mode == "local_debug":
+    if experiment_mode in {"local_debug", "local_overfit"}:
+        train_rows, val_rows = select_local_debug_rows(
+            train_rows,
+            val_rows,
+            config["data"].get("max_train_samples"),
+            config["data"].get("max_val_samples"),
+        )
+    if experiment_mode in {"local_debug", "local_overfit"}:
         debug_manifest_dir = output_dir / "selected_manifests"
         debug_manifest_dir.mkdir(exist_ok=True)
         train_selected = debug_manifest_dir / "train.jsonl"
@@ -752,7 +815,7 @@ def main() -> None:
         source_snapshot = build_source_snapshot(require_clean=True)
         run_lock = build_run_lock(config, git_commit=git_commit(), source_snapshot=source_snapshot, dataset_lock=dataset_lock)
     else:
-        run_lock = {"format_version": 0, "kind": "local_debug", "formal_result": False, "config_sha256": canonical_json_sha256(config)}
+        run_lock = {"format_version": 0, "kind": experiment_mode, "formal_result": False, "config_sha256": canonical_json_sha256(config)}
     run_lock_sha256 = canonical_json_sha256(run_lock)
     save_json(output_dir / ("run_lock.json" if experiment_mode == "local_formal" else "local_debug_run.json"), run_lock)
 
@@ -829,6 +892,11 @@ def main() -> None:
         batch_sampler=train_batch_sampler,
         num_workers=int(config["data"].get("num_workers", 0)),
         collate_fn=grouped_collator,
+    )
+    feasibility_batch = next(iter(train_loader))
+    save_json(
+        output_dir / "control_feasibility.json",
+        control_feasibility_report(feasibility_batch, head_config.topk),
     )
     evaluation_batch_size = int(evaluation_config.get("batch_size", groups_per_batch * 4))
 

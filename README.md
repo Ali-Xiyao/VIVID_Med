@@ -86,6 +86,17 @@ The default local debug config requests CUDA BF16 and fails before manifest or
 model loading if the selected GPU is unavailable. Its metadata is written to
 `local_runs/`, which is ignored by Git.
 
+For the stronger local mechanism check, prepare an explicitly non-clinical
+one-quartet overfit input and run up to 50 steps. The generated labels are
+synthetic engineering probes, not dataset annotations or results.
+
+```bash
+python scripts/prepare_local_bives_overfit.py --source-image path/to/local.png --output-dir local_runs/bives_cxr/overfit_input
+copy configs\bives_cxr\qwen35_2b_local_overfit.template.yaml configs_local\qwen35_2b_local_overfit.yaml
+# Set the copied config's train/val manifests to the two files above, then run:
+python scripts/train_bives_cxr.py --config configs_local/qwen35_2b_local_overfit.yaml
+```
+
 The checked-in `local_formal` configs are release-preparation templates, not a
 shortcut around locks:
 

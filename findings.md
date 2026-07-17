@@ -366,3 +366,19 @@
   `local_files_only=True` Qwen processor/config loads.
 - Statement cache locking now copies a tracked template into a caller-selected
   ignored config, while the dataset-lock CLI validates the file it just wrote.
+
+## 2026-07-17 Round-8 Local Mechanism Gate
+
+- `--debug` is now refused for `local_formal`; only `local_debug` may use it.
+  `local_debug`/`local_overfit` select validation rows only from the selected
+  train ontology and reject patient overlap.
+- BF16 validation now enters the requested CUDA device context before calling
+  PyTorch's current-device API. `git_commit()` executes with `git -C` against
+  the repository root.
+- The first non-formal `local_overfit` run completed on CUDA 0 (RTX 3090):
+  4 train rows, 4 patient-disjoint validation rows, one shared synthetic
+  statement, 50/50 steps, 43.27 seconds. Its control feasibility report found
+  644 valid content patches per row for `K=16`, satisfying `P_valid >= 2K`.
+  The input uses transformed copies of one local CheXpert image with synthetic
+  labels only; `metrics_final.json` records `formal_result: false`, so this is
+  engineering evidence and not a medical or formal-result claim.

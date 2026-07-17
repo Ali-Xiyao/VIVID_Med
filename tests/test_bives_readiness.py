@@ -14,7 +14,12 @@ from torch.utils.data import DataLoader
 from bives_cxr.audit import audit_manifests
 from bives_cxr.backbones import validate_qwen35_model_path
 from bives_cxr.data import BiVESManifestDataset, SameStatementStateBatchSampler
-from scripts.train_bives_cxr import assert_full_sample_coverage, load_config, runtime_preflight
+from scripts.train_bives_cxr import (
+    assert_full_sample_coverage,
+    load_config,
+    runtime_preflight,
+    select_local_debug_rows,
+)
 
 
 def write_jsonl(path: Path, rows: list[dict[str, str]]) -> None:
@@ -64,6 +69,25 @@ class BiVESReadinessTest(unittest.TestCase):
         report = runtime_preflight(torch.device("cpu"), "fp32")
         self.assertEqual(report["device"], "cpu")
 
+    def test_local_selection_keeps_validation_within_train_ontology(self) -> None:
+        def quartet(statement: str, prefix: str) -> list[dict[str, str]]:
+            return [
+                {
+                    "sample_id": f"{prefix}-{state}", "patient_id": f"{prefix}-{state}",
+                    "image_path": "unused.png", "group_id": prefix,
+                    "canonical_statement_id": statement, "statement_text": statement, "state": state,
+                }
+                for state in ("support", "contradict", "uncertain", "insufficient")
+            ]
+        selected_train, selected_val = select_local_debug_rows(
+            quartet("statement-a", "train-a"),
+            quartet("statement-b", "val-b") + quartet("statement-a", "val-a"),
+            4,
+            4,
+        )
+        self.assertEqual({row["canonical_statement_id"] for row in selected_train}, {"statement-a"})
+        self.assertEqual({row["canonical_statement_id"] for row in selected_val}, {"statement-a"})
+
     def test_active_configs_are_qwen35_only(self) -> None:
         config_root = Path(__file__).resolve().parents[1] / "configs" / "bives_cxr"
         configs = sorted(config_root.glob("*.yaml"))
@@ -73,7 +97,7 @@ class BiVESReadinessTest(unittest.TestCase):
             model = payload["model"]
             self.assertEqual(str(model["family"]).lower(), "qwen3.5")
             self.assertIn("Qwen3.5-", str(model["path"]))
-            self.assertIn(payload["experiment"].get("mode"), {"local_debug", "local_formal"})
+            self.assertIn(payload["experiment"].get("mode"), {"local_debug", "local_overfit", "local_formal"})
             self.assertGreater(float(payload["loss"].get("lambda_pair", 0.0)), 0.0)
             self.assertGreater(float(payload["loss"].get("lambda_u_pol", 0.0)), 0.0)
             self.assertEqual(payload["sampling"]["type"], "same_statement_state_group")
