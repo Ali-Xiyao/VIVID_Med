@@ -7,10 +7,16 @@ import unittest
 import numpy as np
 import torch
 
-from bives_cxr.losses import BiVESLoss, BiVESLossConfig
+from bives_cxr.losses import (
+    BiVESLoss,
+    BiVESLossConfig,
+    requires_intervention_branches,
+)
 from bives_cxr.model import BiVESCXR, BiVESModelConfig
 from bives_cxr.optimization_audit import (
+    aggregate_optimization_audits,
     fixed_batch_optimization_audit,
+    summarize_clipping_history,
     summarize_prediction_evidence,
     weighted_loss_components,
 )
@@ -18,6 +24,20 @@ from scripts.diagnose_bives_proxy_sc import logistic_probe_metrics
 
 
 class OptimizationAuditTests(unittest.TestCase):
+    def test_intervention_requirement_follows_effective_ies_weight(self) -> None:
+        self.assertFalse(
+            requires_intervention_branches(BiVESLossConfig(lambda_ies=0.0))
+        )
+        self.assertFalse(
+            requires_intervention_branches(
+                BiVESLossConfig(lambda_ies=1.0),
+                auxiliary_weight=0.0,
+            )
+        )
+        self.assertTrue(
+            requires_intervention_branches(BiVESLossConfig(lambda_ies=0.5))
+        )
+
     def test_fixed_batch_audit_records_gradients_and_correct_state_direction(self) -> None:
         torch.manual_seed(9)
         model = BiVESCXR(
@@ -117,6 +137,55 @@ class OptimizationAuditTests(unittest.TestCase):
         self.assertEqual(group["count"], 2)
         self.assertEqual(group["mean_evidence_pos"], 4.0)
         self.assertEqual(group["mean_signed_evidence"], 3.0)
+
+    def test_audit_aggregation_preserves_all_quartets(self) -> None:
+        audit = {
+            "gradient_norms": {"state": {"all": 2.0, "fusion": 1.0}},
+            "state_vs_auxiliary_gradient_cosines": {"tv": 0.25},
+            "state_nll_signed_evidence_direction": {
+                state: {
+                    "count": 1,
+                    "mean_gradient_wrt_signed_evidence": float(index),
+                }
+                for index, state in enumerate(("support", "contradict", "uncertain", "insufficient"))
+            },
+            "samples": [{"sample_id": "a"}],
+        }
+        second = {
+            **audit,
+            "gradient_norms": {"state": {"all": 4.0, "fusion": 3.0}},
+            "samples": [{"sample_id": "b"}],
+        }
+        payload = aggregate_optimization_audits([audit, second])
+        self.assertEqual(payload["audit_scope"], "all_train_quartets")
+        self.assertEqual(payload["quartet_count"], 2)
+        self.assertEqual(payload["sample_count"], 2)
+        self.assertEqual(
+            payload["gradient_norm_summary"]["state"]["all"]["mean"],
+            3.0,
+        )
+
+    def test_clipping_summary_records_frequency_and_preclip_norms(self) -> None:
+        summary = summarize_clipping_history(
+            [
+                {
+                    "preclip_total_norm": 0.5,
+                    "preclip_group_norms": {"all": 0.5, "fusion": 0.4},
+                    "clip_coefficient": 1.0,
+                    "clipped": False,
+                },
+                {
+                    "preclip_total_norm": 2.0,
+                    "preclip_group_norms": {"all": 2.0, "fusion": 1.5},
+                    "clip_coefficient": 0.5,
+                    "clipped": True,
+                },
+            ]
+        )
+        self.assertEqual(summary["optimizer_steps"], 2)
+        self.assertEqual(summary["clipped_steps"], 1)
+        self.assertEqual(summary["clipped_fraction"], 0.5)
+        self.assertEqual(summary["preclip_total_norm"]["maximum"], 2.0)
 
 
 class LogisticProbeTests(unittest.TestCase):

@@ -22,6 +22,15 @@ class BiVESLossConfig:
     eps: float = 1e-8
 
 
+def requires_intervention_branches(
+    config: BiVESLossConfig,
+    auxiliary_weight: float = 1.0,
+) -> bool:
+    """Return whether keep/drop/control forwards can affect the objective."""
+
+    return float(auxiliary_weight) != 0.0 and float(config.lambda_ies) != 0.0
+
+
 def nll_from_probs(probabilities: torch.Tensor, targets: torch.Tensor, eps: float = 1e-8) -> torch.Tensor:
     selected = probabilities.gather(-1, targets.long().unsqueeze(-1)).squeeze(-1)
     return -torch.log(selected.clamp_min(eps))

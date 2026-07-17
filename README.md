@@ -102,9 +102,13 @@ remain closed. See
 
 The separate public-data intake is documented in
 [`docs/bives_cxr_public_expert_sc_intake.md`](docs/bives_cxr_public_expert_sc_intake.md).
-VinDr test consensus is ready for pleural-effusion and consolidation S/C data
-preparation, but this does not reopen the failed model gate or authorize an
-expert evaluation run with the current checkpoint.
+The bounded Qwen3.5-2B expert S/C and full-tower pixel-intervention run is now
+closed. B2 improves expert AUROC for both findings but falls below B0 on
+consolidation AUPRC. Its selected patches overlap expert boxes more than a
+random mask, yet target deletion is not stronger than the equal-area disjoint
+control; pleural-effusion TCIG is significantly negative. The declared stop
+rule therefore keeps more seeds and 4B/9B closed. See
+[`docs/bives_cxr_expert_polarity_intervention_verdict.md`](docs/bives_cxr_expert_polarity_intervention_verdict.md).
 
 For a bounded local engineering run, first copy the tracked template to the
 ignored local-config area and point it at local manifest paths. This run is
@@ -137,9 +141,7 @@ The checked-in `local_formal` configs are release-preparation templates, not a
 shortcut around locks:
 
 ```bash
-python scripts/train_bives_cxr.py \
-  --config configs/bives_cxr/qwen35_2b_p0.yaml \
-  --debug
+# Formal P0 uses qwen35_2b_p0.yaml without --debug, only after its locks pass.
 ```
 
 Before formal training, build and audit the BiVES manifest and frozen statement

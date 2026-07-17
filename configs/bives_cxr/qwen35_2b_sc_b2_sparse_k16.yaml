@@ -1,0 +1,32 @@
+experiment:
+  id: bives_cxr_qwen35_2b_sc_b2_sparse_k16
+  route: BiVES-CXR
+  phase: expert_sc_p0
+  mode: local_diagnostic
+model:
+  family: Qwen3.5
+  scale: 2B
+  path: H:/Xiyao_Wang/001_models/Qwen3.5-2B
+  freeze_backbone: true
+  input_mode: frozen_audited_patch_token_cache
+variant: B2_sparse_exact_k
+cache_dir: local_runs/bives_cxr/qwen35_2b_weak_sc_cache
+output_dir: local_runs/bives_cxr/qwen35_2b_sc_b2_sparse_k16_seed17
+device: cuda:0
+seed: 17
+batch_size: 8
+max_steps: 500
+eval_interval: 25
+learning_rate: 0.001
+weight_decay: 0.01
+max_grad_norm: 1.0
+statement_dim: 128
+fusion_dim: 256
+evidence_max: 8.0
+tau_p: 1.0
+contextual_layers: 1
+contextual_heads: 4
+contextual_dropout: 0.0
+topk: 16
+gate_temperature: 0.5
+target_specificity: 0.9

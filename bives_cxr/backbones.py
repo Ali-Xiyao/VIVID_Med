@@ -79,12 +79,32 @@ class Qwen35VisionAdapter(nn.Module):
     def forward(self, pixel_values: torch.Tensor, image_grid_thw: torch.Tensor) -> PatchBatch:
         if bool((image_grid_thw[:, 0] != 1).any()):
             raise ValueError("BiVES-CXR currently supports one static CXR frame per sample (T=1)")
-        visual_output = self.visual(pixel_values, grid_thw=image_grid_thw, return_dict=True)
-        hidden = getattr(visual_output, "last_hidden_state", visual_output)
-        if hidden.ndim != 2:
-            raise ValueError(f"unexpected visual output shape: {tuple(hidden.shape)}")
-
         counts = image_grid_thw.prod(dim=1).long().tolist()
+        if sum(counts) != int(pixel_values.shape[0]):
+            raise ValueError(
+                "Qwen3.5 packed-pixel mismatch: "
+                f"expected {sum(counts)} from grid, got {pixel_values.shape[0]}"
+            )
+        # Transformers' non-Flash Qwen3.5 vision attention currently rejoins
+        # separately attended packed images on the head dimension. The later
+        # reshape then mixes tokens between images. Calling the official tower
+        # once per image preserves its singleton semantics and makes the batch
+        # extraction API an IO/preprocessing batch only.
+        pixel_chunks = torch.split(pixel_values, counts, dim=0)
+        hidden_chunks = []
+        for pixel_chunk, grid in zip(pixel_chunks, image_grid_thw, strict=True):
+            visual_output = self.visual(
+                pixel_chunk,
+                grid_thw=grid.unsqueeze(0),
+                return_dict=True,
+            )
+            image_hidden = getattr(visual_output, "last_hidden_state", visual_output)
+            if image_hidden.ndim != 2:
+                raise ValueError(
+                    f"unexpected visual output shape: {tuple(image_hidden.shape)}"
+                )
+            hidden_chunks.append(image_hidden)
+        hidden = torch.cat(hidden_chunks, dim=0)
         if sum(counts) != int(hidden.shape[0]):
             raise ValueError(
                 f"Qwen3.5 spatial-token mismatch: expected {sum(counts)} from grid, got {hidden.shape[0]}"

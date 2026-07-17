@@ -9,6 +9,7 @@ BiVES-CXR is the only active paper and code mainline.
 | Final research proposal | `../BiVES_CXR_MIA_TMI_ready_proposal.md` |
 | Support-polarity root cause and decoder repair | `../BiVES_support_polarity_root_cause_and_repair.md` |
 | Current no-clinical-review direction | `../BiVES_next_direction_without_local_clinical_review_2026-07-17.md` |
+| Expert polarity + intervention execution plan | `../BiVES_995fb81_code_review_and_next_plan.md` |
 | Frozen Proxy-P0-A diagnostic record | `bives_cxr_proxy_p0_a_freeze.md` |
 | Repository overview | `../README.md` |
 | Implementation contract | `bives_cxr_implementation.md` |
@@ -45,6 +46,13 @@ BiVES-CXR is the only active paper and code mainline.
 | CPU tests | `../tests/test_bives_core.py`, `../tests/test_bives_readiness.py` |
 | VinDr archive/integrity utilities | `../scripts/extract_vindr_cxr.py`, `../scripts/audit_vindr_cxr_integrity.py` |
 | VinDr expert S/C intake | `../scripts/prepare_bives_vindr_expert_sc.py`, `bives_cxr_public_expert_sc_intake.md` |
+| Deterministic CXR DICOM loader | `../bives_cxr/dicom.py` |
+| Independent expert S/C dataset and evaluator | `../bives_cxr/expert_sc.py`, `../scripts/evaluate_bives_expert_sc.py` |
+| Explicit weak MIMIC S/C builder | `../scripts/prepare_bives_weak_sc.py` |
+| Frozen Qwen3.5 token cache | `../scripts/cache_qwen35_patch_tokens.py` |
+| Cached-token B0/B1/B2 polarity route | `../scripts/run_bives_sc_b0_pooled.py`, `../scripts/train_bives_sc_cached.py` |
+| Locked VinDr B0-vs-B2 expert polarity evaluation | `../scripts/evaluate_bives_vindr_sc.py` |
+| Locked VinDr target/control/evidence-only evaluation | `../scripts/evaluate_bives_vindr_interventions.py`, `../bives_cxr/pixel_interventions.py` |
 | P0 data-source and audit boundary | `bives_cxr_p0_data_readiness.md` |
 
 ## Active model boundary
@@ -140,8 +148,23 @@ logistic probe on cached Qwen3.5-2B visual features obtains global S/C AUROC
 The subsequent 400-step state-only run learned correct absolute S/C polarity
 but reached only `0.7917` train accuracy, failing the preregistered `1.0`
 train-fit gate. The matched full-objective arm was not run. The weak-label
-four-state route is stopped; only a separately bounded public expert S/C data
-and evaluation route may proceed.
+four-state route is stopped. The active bounded route is expert S/C polarity
+plus pixel-level interventional evidence sufficiency. It uses balanced,
+patient-disjoint explicit MIMIC S/C only for weak training and keeps VinDr
+consensus test labels external to model, threshold, loss, and K selection.
+B0/B1/B2 remain Qwen3.5-2B-only until the expert polarity and intervention
+gates pass. The frozen-token gate is now complete for seed 17: B0 validation
+macro AUROC/AUPRC is `0.7857/0.7992`, B1 dense is `0.7713/0.7910`, and B2
+exact-K=16 is `0.8423/0.8240` at selected step 450. B2 is therefore the only
+locked candidate that entered the external read-only gate. The corrected
+per-image-isolated VinDr evaluation is now complete. B2 improves AUROC for both
+findings and improves pleural-effusion AUPRC, but consolidation AUPRC is
+`0.2338` versus B0 `0.2628`. Pixel intervention also fails: consolidation TCIG
+is `0.0043` with CI crossing zero, while pleural-effusion TCIG is `-0.0390`
+with a wholly negative CI. Top-K box overlap is better than random, but it does
+not establish causal evidence sufficiency. The route stops at seed 17; no more
+seeds or 4B/9B runs are authorized. See
+[`bives_cxr_expert_polarity_intervention_verdict.md`](bives_cxr_expert_polarity_intervention_verdict.md).
 
 ## Current mechanism-gate status
 

@@ -142,6 +142,16 @@ class BiVESReadinessTest(unittest.TestCase):
                     "local_formal",
                 },
             )
+            cache_only = model.get("input_mode") == "frozen_audited_patch_token_cache"
+            if cache_only:
+                self.assertEqual(payload["experiment"].get("mode"), "local_diagnostic")
+                self.assertEqual(str(model.get("scale")), "2B")
+                self.assertTrue(bool(model.get("freeze_backbone")))
+                self.assertIn(payload.get("variant"), {"B1_dense", "B2_sparse_exact_k"})
+                self.assertTrue(str(payload.get("cache_dir", "")).startswith("local_runs/"))
+                self.assertTrue(str(payload.get("output_dir", "")).startswith("local_runs/"))
+                self.assertEqual(str(payload.get("device")), "cuda:0")
+                continue
             state_only = payload["experiment"].get("diagnostic_arm") == "state_only"
             if state_only:
                 for key in (

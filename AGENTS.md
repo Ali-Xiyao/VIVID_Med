@@ -24,6 +24,10 @@ belong under `legacy/`.
 - `scripts/smoke_qwen35_vision.py`: read-only real-weight vision-only smoke.
 - `scripts/smoke_qwen35_bives_integration.py`: bounded local-CUDA official-vs-selective visual alignment plus two-step synthetic S/C/U/I gate.
 - `scripts/audit_bives_manifest.py`: manifest and split readiness audit.
+- `scripts/evaluate_bives_vindr_sc.py`: locked, selection-free B0-vs-B2 expert
+  polarity evaluation on VinDr consensus test.
+- `scripts/evaluate_bives_vindr_interventions.py`: positive-box target/control,
+  evidence-only, and localization evaluation with full Qwen vision reruns.
 - `scripts/{prepare,extract,audit}_vindr_cxr*.py`: current external-data tools.
 - `scripts/prepare_bives_vindr_expert_sc.py`: fail-closed VinDr test-consensus
   S/C intake; it does not create U/I labels or authorize model evaluation.
@@ -47,9 +51,7 @@ python -m unittest discover -s tests -p "test_bives_*.py" -v
 python scripts/audit_bives_manifest.py \
   --train data/bives_cxr/manifests/train_locked.jsonl \
   --val data/bives_cxr/manifests/val_locked.jsonl
-python scripts/train_bives_cxr.py \
-  --config configs/bives_cxr/qwen35_2b_p0.yaml \
-  --debug
+# Formal P0 uses qwen35_2b_p0.yaml without --debug, only after its locks pass.
 ```
 
 All active validation, model loading, training, calibration, and final

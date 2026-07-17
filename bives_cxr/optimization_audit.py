@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+import statistics
 from collections import defaultdict
 from typing import Any, Iterable
 
@@ -209,6 +210,136 @@ def fixed_batch_optimization_audit(
         "state_vs_auxiliary_gradient_cosines": gradient_cosines,
         "state_nll_signed_evidence_direction": state_direction,
         "samples": rows,
+    }
+
+
+def aggregate_optimization_audits(
+    audits: Iterable[dict[str, Any]],
+) -> dict[str, Any]:
+    """Aggregate deterministic per-quartet audits without hiding any quartet."""
+
+    materialized = list(audits)
+    if not materialized:
+        raise ValueError("at least one quartet audit is required")
+
+    def summarize(values: list[float]) -> dict[str, float | int]:
+        return {
+            "count": len(values),
+            "mean": float(statistics.fmean(values)),
+            "median": float(statistics.median(values)),
+            "maximum": float(max(values)),
+            "minimum": float(min(values)),
+        }
+
+    norm_values: dict[str, dict[str, list[float]]] = defaultdict(
+        lambda: defaultdict(list)
+    )
+    cosine_values: dict[str, list[float]] = defaultdict(list)
+    state_direction_values: dict[str, list[tuple[int, float]]] = defaultdict(list)
+    samples: list[dict[str, Any]] = []
+    for audit in materialized:
+        for component, groups in audit["gradient_norms"].items():
+            for group, value in groups.items():
+                norm_values[component][group].append(float(value))
+        for component, value in audit["state_vs_auxiliary_gradient_cosines"].items():
+            if value is not None:
+                cosine_values[component].append(float(value))
+        for state, row in audit["state_nll_signed_evidence_direction"].items():
+            state_direction_values[state].append(
+                (int(row["count"]), float(row["mean_gradient_wrt_signed_evidence"]))
+            )
+        samples.extend(audit["samples"])
+
+    direction_summary: dict[str, dict[str, float | int]] = {}
+    for state in STATE_NAMES:
+        rows = state_direction_values.get(state, [])
+        count = sum(row_count for row_count, _ in rows)
+        weighted = sum(row_count * value for row_count, value in rows)
+        direction_summary[state] = {
+            "count": count,
+            "mean_gradient_wrt_signed_evidence": (
+                float(weighted / count) if count else float("nan")
+            ),
+        }
+
+    return {
+        "audit_scope": "all_train_quartets",
+        "quartet_count": len(materialized),
+        "sample_count": len(samples),
+        "gradient_norm_summary": {
+            component: {
+                group: summarize(values)
+                for group, values in sorted(groups.items())
+            }
+            for component, groups in sorted(norm_values.items())
+        },
+        "state_vs_auxiliary_gradient_cosine_summary": {
+            component: summarize(values)
+            for component, values in sorted(cosine_values.items())
+        },
+        "state_nll_signed_evidence_direction": direction_summary,
+        "samples": samples,
+        "quartet_audits": materialized,
+    }
+
+
+def trainable_gradient_norms(module: torch.nn.Module) -> dict[str, float]:
+    """Measure current accumulated gradients before clipping, by model group."""
+
+    squared_by_group: dict[str, float] = defaultdict(float)
+    for name, parameter in module.named_parameters():
+        if not parameter.requires_grad or parameter.grad is None:
+            continue
+        vector = parameter.grad.detach().float().reshape(-1)
+        squared_by_group[_parameter_group(name)] += float(torch.dot(vector, vector).cpu())
+    norms = {
+        group: math.sqrt(max(0.0, squared))
+        for group, squared in sorted(squared_by_group.items())
+    }
+    norms["all"] = math.sqrt(max(0.0, sum(squared_by_group.values())))
+    return norms
+
+
+def summarize_clipping_history(rows: Iterable[dict[str, Any]]) -> dict[str, Any]:
+    """Summarize observed pre-clip norms and clipping frequency."""
+
+    materialized = list(rows)
+    if not materialized:
+        return {
+            "optimizer_steps": 0,
+            "clipped_steps": 0,
+            "clipped_fraction": 0.0,
+            "preclip_total_norm": None,
+            "clip_coefficient": None,
+            "preclip_group_norms": {},
+        }
+
+    def summarize(values: list[float]) -> dict[str, float]:
+        return {
+            "mean": float(statistics.fmean(values)),
+            "median": float(statistics.median(values)),
+            "maximum": float(max(values)),
+            "minimum": float(min(values)),
+        }
+
+    group_values: dict[str, list[float]] = defaultdict(list)
+    for row in materialized:
+        for group, value in row["preclip_group_norms"].items():
+            group_values[group].append(float(value))
+    clipped_steps = sum(bool(row["clipped"]) for row in materialized)
+    return {
+        "optimizer_steps": len(materialized),
+        "clipped_steps": clipped_steps,
+        "clipped_fraction": float(clipped_steps / len(materialized)),
+        "preclip_total_norm": summarize(
+            [float(row["preclip_total_norm"]) for row in materialized]
+        ),
+        "clip_coefficient": summarize(
+            [float(row["clip_coefficient"]) for row in materialized]
+        ),
+        "preclip_group_norms": {
+            group: summarize(values) for group, values in sorted(group_values.items())
+        },
     }
 
 

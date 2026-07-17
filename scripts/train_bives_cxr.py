@@ -38,7 +38,11 @@ from bives_cxr.data import (
     statement_text_by_id,
 )
 from bives_cxr.decoder import DECODER_PARAMETER_NAMES
-from bives_cxr.losses import BiVESLoss, BiVESLossConfig
+from bives_cxr.losses import (
+    BiVESLoss,
+    BiVESLossConfig,
+    requires_intervention_branches,
+)
 from bives_cxr.metrics import (
     classification_metrics,
     finalize_intervention_metrics,
@@ -47,8 +51,11 @@ from bives_cxr.metrics import (
 )
 from bives_cxr.model import BiVESCXR, BiVESModelConfig
 from bives_cxr.optimization_audit import (
+    aggregate_optimization_audits,
     fixed_batch_optimization_audit,
     summarize_prediction_evidence,
+    summarize_clipping_history,
+    trainable_gradient_norms,
 )
 from bives_cxr.interventions import CONTROL_PROTOCOL_VERSION, bives_control_seed
 from bives_cxr.statement_cache import load_statement_embedding_matrix
@@ -59,6 +66,7 @@ from bives_cxr.provenance import (
     file_sha256 as provenance_file_sha256,
     resolved_config_text,
 )
+from bives_cxr.qwen35_preprocessing import content_mask_for_grid, letterbox_image
 from bives_cxr.dataset_lock import validate_dataset_lock
 
 
@@ -155,17 +163,7 @@ class Qwen35BiVESCollator:
         self.epoch = int(epoch)
 
     def _letterbox(self, image: Image.Image) -> tuple[Image.Image, tuple[int, int, int, int]]:
-        image = image.convert("RGB")
-        scale = min(self.image_size / image.width, self.image_size / image.height)
-        resized = image.resize(
-            (max(1, round(image.width * scale)), max(1, round(image.height * scale))),
-            Image.Resampling.BICUBIC,
-        )
-        canvas = Image.new("RGB", (self.image_size, self.image_size), (0, 0, 0))
-        left = (self.image_size - resized.width) // 2
-        top = (self.image_size - resized.height) // 2
-        canvas.paste(resized, (left, top))
-        return canvas, (left, top, left + resized.width, top + resized.height)
+        return letterbox_image(image, self.image_size)
 
     def __call__(self, batch: list[dict[str, Any]]) -> dict[str, Any]:
         texts = []
@@ -192,17 +190,7 @@ class Qwen35BiVESCollator:
         }
         masks: list[torch.Tensor] = []
         for grid, box in zip(encoded["image_grid_thw"], content_boxes):
-            height, width = int(grid[1]), int(grid[2])
-            left, top, right, bottom = box
-            x_centers = (torch.arange(width, dtype=torch.float32) + 0.5) * self.image_size / width
-            y_centers = (torch.arange(height, dtype=torch.float32) + 0.5) * self.image_size / height
-            mask = (
-                (y_centers[:, None] >= top)
-                & (y_centers[:, None] < bottom)
-                & (x_centers[None, :] >= left)
-                & (x_centers[None, :] < right)
-            ).reshape(-1)
-            masks.append(mask)
+            masks.append(content_mask_for_grid(grid, box, self.image_size))
         max_patches = max(mask.numel() for mask in masks)
         content_valid = torch.zeros((len(masks), max_patches), dtype=torch.bool)
         for index, mask in enumerate(masks):
@@ -466,6 +454,7 @@ def evaluate(
     bootstrap_seed: int = 17,
 ) -> tuple[dict[str, float], list[dict[str, Any]]]:
     experiment.eval()
+    run_interventions = requires_intervention_branches(loss_fn.config)
     loss_sum = 0.0
     samples = 0
     mechanism: dict[str, float] = {}
@@ -480,7 +469,7 @@ def evaluate(
             batch["image_grid_thw"],
             batch["statement_indices"],
             batch["content_valid_mask"],
-            run_interventions=True,
+            run_interventions=run_interventions,
             control_seeds=batch["control_seeds"],
         )
         losses = loss_fn(
@@ -495,23 +484,15 @@ def evaluate(
         all_probabilities.append(probabilities.detach().float().cpu())
         all_targets.append(batch["targets"].detach().long().cpu())
         all_patient_ids.extend(batch["patient_ids"])
-        for key, value in intervention_metric_counts(outputs, batch["targets"]).items():
-            mechanism[key] = mechanism.get(key, 0.0) + value
+        if run_interventions:
+            for key, value in intervention_metric_counts(outputs, batch["targets"]).items():
+                mechanism[key] = mechanism.get(key, 0.0) + value
         for index, sample_id in enumerate(batch["sample_ids"]):
             evidence_indices = torch.where(
                 outputs["evidence_hard_mask"][index].detach().cpu()
             )[0].tolist()
-            control_indices = [
-                torch.where(mask.detach().cpu() > 0.5)[0].tolist()
-                for mask in outputs["control_masks"][index]
-            ]
             grid_h, grid_w = grids[index]
-            control_probabilities = [
-                branch["state_probs"][index].detach().float().cpu().tolist()
-                for branch in outputs["controls"]
-            ]
-            rows.append(
-                {
+            row = {
                     "sample_id": sample_id,
                     "patient_id": batch["patient_ids"][index],
                     "group_id": batch["group_ids"][index],
@@ -521,8 +502,8 @@ def evaluate(
                     "control_protocol_version": batch["control_protocol_version"],
                     "grid_h": int(grid_h),
                     "grid_w": int(grid_w),
+                    "interventions_evaluated": run_interventions,
                     "evidence_topk_indices": evidence_indices,
-                    "control_topk_indices": control_indices,
                     "original_probs": probabilities[index].detach().float().cpu().tolist(),
                     "evidence_pos": float(
                         outputs["original"]["evidence_pos"][index].detach().float().cpu()
@@ -530,12 +511,36 @@ def evaluate(
                     "evidence_neg": float(
                         outputs["original"]["evidence_neg"][index].detach().float().cpu()
                     ),
-                    "keep_probs": outputs["keep"]["state_probs"][index].detach().float().cpu().tolist(),
-                    "drop_probs": outputs["drop"]["state_probs"][index].detach().float().cpu().tolist(),
-                    "control_probs": outputs["control"]["state_probs"][index].detach().float().cpu().tolist(),
-                    "control_branch_probs": control_probabilities,
                 }
-            )
+            if run_interventions:
+                row.update(
+                    {
+                        "control_topk_indices": [
+                            torch.where(mask.detach().cpu() > 0.5)[0].tolist()
+                            for mask in outputs["control_masks"][index]
+                        ],
+                        "keep_probs": outputs["keep"]["state_probs"][index]
+                        .detach()
+                        .float()
+                        .cpu()
+                        .tolist(),
+                        "drop_probs": outputs["drop"]["state_probs"][index]
+                        .detach()
+                        .float()
+                        .cpu()
+                        .tolist(),
+                        "control_probs": outputs["control"]["state_probs"][index]
+                        .detach()
+                        .float()
+                        .cpu()
+                        .tolist(),
+                        "control_branch_probs": [
+                            branch["state_probs"][index].detach().float().cpu().tolist()
+                            for branch in outputs["controls"]
+                        ],
+                    }
+                )
+            rows.append(row)
     if samples == 0:
         raise ValueError("evaluation loader produced no samples")
     if assert_full_coverage:
@@ -550,9 +555,11 @@ def evaluate(
         "loss": float(loss_sum / samples) if samples else float("nan"),
         "evaluated_sample_count": samples,
         "unique_sample_count": len({row["sample_id"] for row in rows}),
+        "interventions_evaluated": run_interventions,
         **classification_metrics(probability_matrix, target_vector),
     }
-    result.update(finalize_intervention_metrics(mechanism))
+    if run_interventions:
+        result.update(finalize_intervention_metrics(mechanism))
     if bootstrap_replicates > 0:
         result["patient_bootstrap_95ci"] = patient_bootstrap_confidence_intervals(
             probability_matrix,
@@ -994,6 +1001,10 @@ def main() -> None:
         else None
     )
     val_grouped_loader = make_grouped_eval_loader(val_dataset, "val")
+    train_audit_loader = make_grouped_eval_loader(
+        train_dataset,
+        "optimization_audit_train",
+    )
     calibration_loader = make_primary_eval_loader(calibration_dataset, "calibration")
     loss_config = BiVESLossConfig(**config.get("loss", {}))
     if head_config.gate_mode == "soft_topk" and loss_config.lambda_min != 0:
@@ -1061,6 +1072,7 @@ def main() -> None:
         else float("-inf") if selection_mode == "max" else float("nan")
     )
     events: list[dict[str, Any]] = []
+    clipping_history: list[dict[str, Any]] = []
     resume_epoch = 0
     resume_batch_index = 0
     if args.resume is not None:
@@ -1078,6 +1090,7 @@ def main() -> None:
             )
         )
         events = list(checkpoint.get("events", []))
+        clipping_history = list(checkpoint.get("clipping_history", []))
         resume_epoch = int(checkpoint.get("epoch", 0))
         resume_batch_index = int(checkpoint.get("batch_index", 0))
         accumulated = int(checkpoint.get("accumulated_micro_steps", 0))
@@ -1122,33 +1135,47 @@ def main() -> None:
             return
         was_training = experiment.training
         experiment.eval()
-        audit_batch = move_to_device(feasibility_batch, device)
-        audit_outputs, audit_grids = experiment(
-            audit_batch["pixel_values"],
-            audit_batch["image_grid_thw"],
-            audit_batch["statement_indices"],
-            audit_batch["content_valid_mask"],
-            run_interventions=True,
-            control_seeds=audit_batch["control_seeds"],
-        )
         audit_auxiliary_weight = auxiliary_weight_for_step(max(1, audit_step))
-        audit_losses = loss_fn(
-            audit_outputs,
-            audit_batch["targets"],
-            require_uniform_grid(audit_grids),
-            audit_batch["support_pair_indices"],
-            audit_batch["contradict_pair_indices"],
-            audit_batch["uncertain_indices"],
-            auxiliary_weight=audit_auxiliary_weight,
-        )
-        payload = fixed_batch_optimization_audit(
-            experiment,
-            audit_batch,
-            audit_outputs,
-            audit_losses,
-            loss_config,
-            step=audit_step,
-            auxiliary_weight=audit_auxiliary_weight,
+        quartet_audits: list[dict[str, Any]] = []
+        for quartet_index, raw_batch in enumerate(train_audit_loader):
+            audit_batch = move_to_device(raw_batch, device)
+            audit_outputs, audit_grids = experiment(
+                audit_batch["pixel_values"],
+                audit_batch["image_grid_thw"],
+                audit_batch["statement_indices"],
+                audit_batch["content_valid_mask"],
+                run_interventions=requires_intervention_branches(
+                    loss_config,
+                    audit_auxiliary_weight,
+                ),
+                control_seeds=audit_batch["control_seeds"],
+            )
+            audit_losses = loss_fn(
+                audit_outputs,
+                audit_batch["targets"],
+                require_uniform_grid(audit_grids),
+                audit_batch["support_pair_indices"],
+                audit_batch["contradict_pair_indices"],
+                audit_batch["uncertain_indices"],
+                auxiliary_weight=audit_auxiliary_weight,
+            )
+            quartet_payload = fixed_batch_optimization_audit(
+                experiment,
+                audit_batch,
+                audit_outputs,
+                audit_losses,
+                loss_config,
+                step=audit_step,
+                auxiliary_weight=audit_auxiliary_weight,
+            )
+            quartet_payload["quartet_index"] = quartet_index
+            quartet_payload["group_ids"] = sorted(set(audit_batch["group_ids"]))
+            quartet_audits.append(quartet_payload)
+        payload = aggregate_optimization_audits(quartet_audits)
+        payload["step"] = int(audit_step)
+        payload["auxiliary_weight"] = float(audit_auxiliary_weight)
+        payload["gradient_clipping_summary"] = summarize_clipping_history(
+            clipping_history
         )
         payload["train_evidence_distribution"] = summarize_prediction_evidence(
             train_rows
@@ -1222,12 +1249,16 @@ def main() -> None:
             if epoch == resume_epoch and batch_index < resume_batch_index:
                 continue
             batch = move_to_device(batch, device)
+            auxiliary_weight = auxiliary_weight_for_step(step + 1)
             outputs, grids = experiment(
                 batch["pixel_values"],
                 batch["image_grid_thw"],
                 batch["statement_indices"],
                 batch["content_valid_mask"],
-                run_interventions=True,
+                run_interventions=requires_intervention_branches(
+                    loss_config,
+                    auxiliary_weight,
+                ),
                 control_seeds=batch["control_seeds"],
             )
             losses = loss_fn(
@@ -1237,13 +1268,33 @@ def main() -> None:
                 batch["support_pair_indices"],
                 batch["contradict_pair_indices"],
                 batch["uncertain_indices"],
-                auxiliary_weight=auxiliary_weight_for_step(step + 1),
+                auxiliary_weight=auxiliary_weight,
             )
             (losses["total"] / gradient_accumulation_steps).backward()
             accumulated_micro_steps += 1
             if accumulated_micro_steps < gradient_accumulation_steps:
                 continue
-            torch.nn.utils.clip_grad_norm_(experiment.parameters(), max_grad_norm)
+            preclip_group_norms = trainable_gradient_norms(experiment)
+            preclip_total_norm = float(
+                torch.nn.utils.clip_grad_norm_(
+                    experiment.parameters(),
+                    max_grad_norm,
+                )
+            )
+            clip_coefficient = min(
+                1.0,
+                max_grad_norm / max(preclip_total_norm, 1e-12),
+            )
+            clipping_history.append(
+                {
+                    "step": step + 1,
+                    "max_grad_norm": max_grad_norm,
+                    "preclip_total_norm": preclip_total_norm,
+                    "preclip_group_norms": preclip_group_norms,
+                    "clip_coefficient": clip_coefficient,
+                    "clipped": preclip_total_norm > max_grad_norm,
+                }
+            )
             optimizer.step()
             scheduler.step()
             optimizer.zero_grad(set_to_none=True)
@@ -1286,6 +1337,10 @@ def main() -> None:
                         key: float(value.detach().cpu()) for key, value in losses.items()
                     },
                     "grouped_mechanisms": grouped_validation,
+                    "gradient_clipping": clipping_history[-1],
+                    "gradient_clipping_summary": summarize_clipping_history(
+                        clipping_history
+                    ),
                     **validation,
                 }
                 if overfit_train_metrics is not None:
@@ -1331,6 +1386,7 @@ def main() -> None:
                     "best_selection_score": best_selection_score,
                     "best_val_loss": validation["loss"],
                     "events": events,
+                    "clipping_history": clipping_history,
                     "model_family": "Qwen3.5",
                     "model_path": str(config["model"]["path"]),
                     "statement_to_index": train_dataset.statement_to_index,
@@ -1386,6 +1442,7 @@ def main() -> None:
         "best_selection_mode": selection_mode,
         "best_selection_score": best_selection_score,
         "events": events,
+        "clipping_history": clipping_history,
         "config": config,
     }
     if not freeze_backbone:
@@ -1539,6 +1596,7 @@ def main() -> None:
         "cuda_device_name": torch.cuda.get_device_name(device) if device.type == "cuda" else None,
         "pid": os.getpid(),
         "gradient_accumulation_steps": gradient_accumulation_steps,
+        "gradient_clipping_summary": summarize_clipping_history(clipping_history),
         "control_protocol_version": CONTROL_PROTOCOL_VERSION,
         "events": events,
     }

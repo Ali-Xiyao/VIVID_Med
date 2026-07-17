@@ -9,7 +9,7 @@ from pathlib import Path
 import torch
 import torch.nn as nn
 
-from bives_cxr.backbones import PatchBatch, restore_qwen35_row_major
+from bives_cxr.backbones import PatchBatch, Qwen35VisionAdapter, restore_qwen35_row_major
 from bives_cxr.calibration import fit_decoder_parameters, probabilities_from_evidence
 from bives_cxr.gates import EvidenceGate
 from bives_cxr.decoder import EvidenceStateDecoder
@@ -371,6 +371,48 @@ class BackboneContractTests(unittest.TestCase):
         ).unsqueeze(-1)
         restored = restore_qwen35_row_major(block_major, 4, 4, 2)
         self.assertEqual(restored.squeeze(-1).tolist(), list(range(16)))
+
+    def test_qwen35_adapter_isolates_each_packed_image_forward(self) -> None:
+        class PackedSensitiveVisual(nn.Module):
+            def __init__(self) -> None:
+                super().__init__()
+                self.patch_embed = nn.Identity()
+                self.blocks = nn.ModuleList()
+                self.merger = nn.Identity()
+                self.calls: list[tuple[int, tuple[int, ...]]] = []
+
+            def forward(
+                self,
+                pixel_values: torch.Tensor,
+                *,
+                grid_thw: torch.Tensor,
+                return_dict: bool,
+            ) -> torch.Tensor:
+                self.calls.append((int(pixel_values.shape[0]), tuple(grid_thw.shape)))
+                self.assert_single_grid(grid_thw)
+                self.assert_return_dict(return_dict)
+                return pixel_values
+
+            @staticmethod
+            def assert_single_grid(grid_thw: torch.Tensor) -> None:
+                if tuple(grid_thw.shape) != (1, 3):
+                    raise AssertionError(f"expected one image grid, got {tuple(grid_thw.shape)}")
+
+            @staticmethod
+            def assert_return_dict(return_dict: bool) -> None:
+                if not return_dict:
+                    raise AssertionError("adapter must request structured visual output")
+
+        visual = PackedSensitiveVisual()
+        adapter = Qwen35VisionAdapter(visual, spatial_merge_size=1)
+        pixels = torch.arange(24, dtype=torch.float32).view(8, 3)
+        grid = torch.tensor([[1, 2, 2], [1, 2, 2]], dtype=torch.long)
+        output = adapter(pixels, grid)
+        self.assertEqual(visual.calls, [(4, (1, 3)), (4, (1, 3))])
+        self.assertTrue(torch.equal(output.tokens[0], pixels[:4]))
+        self.assertTrue(torch.equal(output.tokens[1], pixels[4:]))
+        self.assertTrue(bool(output.valid_mask.all()))
+        self.assertEqual(output.grid_hw, [(2, 2), (2, 2)])
 
     def test_bf16_backbone_tokens_are_cast_to_fp32_head(self) -> None:
         class DummyBackbone(nn.Module):

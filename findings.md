@@ -745,3 +745,77 @@
 - VinDr exposes no usable patient ID. The intake therefore marks patient-level
   CI unavailable rather than treating image IDs as patients. This blocks that
   later paper gate even though the image-level expert S/C data are ready.
+
+## 2026-07-18 expert polarity and intervention route
+
+- State-only and polarity-only objectives need no keep/drop/control branches:
+  only an effective nonzero `lambda_ies` consumes those forwards. Magnitude and
+  TV terms use the original evidence field. The trainer/evaluator now follows
+  that exact dependency instead of computing six unused branches.
+- Optimization-identifiability artifacts now traverse every deterministic
+  train quartet and preserve each quartet audit, plus aggregate mean/median/
+  min/max parameter-group gradient norms. Per-step pre-clip total/group norms,
+  clipping coefficients, and clipped-step fraction are checkpointed and
+  emitted in events/final metrics.
+- The deterministic VinDr loader applies modality LUT, available VOI/window,
+  MONOCHROME1 inversion, 0.5/99.5 percentile normalization, and fail-fast
+  constant/non-finite checks. Four synthetic contracts and 16 real sampled
+  DICOMs pass; real samples cover MONOCHROME1/2 and produce 16 unique RGB hashes.
+- Expert S/C is a separate binary polarity surface keyed by `unit_id`, not a
+  four-state manifest. External thresholds must be locked on development data;
+  VinDr evaluation reports per-finding AUROC/AUPRC/NLL/Brier and image-level
+  clustered CIs, never patient-level CIs.
+- The explicit MIMIC weak-S/C lock contains 816 train and 274 validation rows.
+  Train/validation patients are 544/171 with zero overlap. Consolidation has
+  151/151 train and 56/56 validation S/C; pleural effusion has 257/257 and
+  81/81. Parser-U, synthetic-I, conflicts, omission negatives, and report text
+  are excluded.
+- B1/B2 retain the bipolar evidence field and train only
+  `softplus(-y*delta/tau_p)`. B1 has no selector parameter and uses every valid
+  patch; B2 uses straight-through exact-K. B0 is an explicitly separate frozen
+  pooled logistic representation baseline, not the BiVES method head.
+- The frozen Qwen3.5-2B token cache completed with 1,046 unique image payloads
+  and 1,090 manifest index rows. Its full audit recomputed every item-file hash,
+  image SHA, payload identity, and lock/index binding with zero error.
+- B0 pooled reaches validation macro AUROC/AUPRC `0.7857/0.7992`. B1 dense
+  reaches `0.7713/0.7910` at selected step 300: ranking is non-random, but NLL
+  remains `0.69314`, Brier remains `0.25`, and the locked probabilities cluster
+  around `0.5`. Its recorded pre-clip norms range from `3.50e-05` to `0.4263`
+  with no clipping, so the frozen result is not explained by the clip ceiling.
+- B2 exact-K=16 selected step 450 at weak-validation macro AUROC/AUPRC
+  `0.8423/0.8240`; consolidation is `0.7666/0.7311` and pleural effusion is
+  `0.9180/0.9170`. It is the only frozen head promoted to selection-free VinDr
+  evaluation, but 8/20 evaluation points clipped and the maximum pre-clip norm
+  is `520.3`, so stability remains a limitation rather than being hidden.
+- The final VinDr integrity audit binds all 18,006 official file hashes and
+  decodes all 3,000 test DICOMs plus 8 train samples under
+  `bives_cxr_dicom_v1`, with zero missing, mismatch, or decode failure. The
+  expert evaluator therefore reuses that immutable integrity proof instead of
+  rehashing each image during GPU inference.
+- The expert evaluator is resumable by `unit_id`, loads Qwen3.5-2B once, and
+  batches visual extraction while preserving deterministic sorted sample
+  order. Progress is atomically written after every execution batch.
+- The installed Transformers Qwen3.5 non-Flash vision attention separately
+  computes packed image chunks but rejoins them on the head dimension before
+  reshape. On a reconstructed expert batch this changed a real support score
+  by `0.0213053`, changed one of 16 exact-K patches, and produced patch-token
+  maximum absolute difference `2496` relative to singleton inference. All
+  packed expert/intervention outputs are therefore invalid diagnostic evidence.
+- `Qwen35VisionAdapter` now enforces per-image official-tower calls before
+  padding/stacking. The same reconstructed 32-image batch then matched the
+  singleton patch tokens, scores, and exact-K gate exactly (`0.0` difference).
+  The corrected expert run must start from zero; batch size now controls only
+  preprocessing/checkpoint grouping, not packed visual attention.
+- Corrected expert S/C is strong but mixed. Consolidation B2/B0 AUROC is
+  `0.9197/0.8855`, while AUPRC is `0.2338/0.2628`; pleural-effusion AUROC is
+  `0.9693/0.9004` and AUPRC is `0.7062/0.5171`. The frozen all-finding
+  no-lower-than-B0 gate is false because of consolidation AUPRC.
+- Exact-area disjoint controls are infeasible for two consolidation positives
+  across the requested 0/0.1 dilation set. The final cohort freezes the other
+  205 positives before model scoring: 94 consolidation and 111 pleural
+  effusion. Geometry exclusions are explicit and identical across dilations.
+- Primary dilation-0 TCIG is `0.0043` for consolidation (95% image-cluster CI
+  `[-0.0280, 0.0342]`) and `-0.0390` for pleural effusion
+  (`[-0.0637, -0.0167]`). Top-K localization gain over random is significantly
+  positive for both findings, but target deletion does not beat control. This
+  triggers the declared stop despite the localization overlap signal.

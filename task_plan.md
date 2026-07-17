@@ -740,3 +740,59 @@ predeclared optimization diagnostics are evaluated.
   the A/B verdict.
 - No formal calibration, locked-test, or MIA/TMI-ready clinical claim.
 - All execution remains local; no SSH/server/Slurm work.
+
+# 2026-07-18 Expert Polarity + Interventional Evidence Route
+
+## Authority and scope
+
+`BiVES_995fb81_code_review_and_next_plan.md` governs the next route under the
+final `BiVES_CXR_MIA_TMI_ready_proposal.md`. Commit `995fb81` remains the frozen
+closeout of the parser-S/C/U + synthetic-I four-state route. The new primary
+axes are public expert S/C polarity and pixel-level interventional evidence
+sufficiency. U/I remain exploratory only.
+
+| Phase | Status | Gate |
+| --- | --- | --- |
+| E0 review intake and closeout pin | complete | The tracked plan and handoff index preserve `995fb81` as closeout without reopening Run B, 4B, or 9B. |
+| E1 engineering P0 fixes | complete | Invalid formal `--debug` removed; unused intervention branches skipped; all train quartets are audited; pre-clip norms/coefficient/fraction are recorded. Full suite passed 70/70 at closure. |
+| E2 VinDr standard input path | complete | Deterministic DICOM preprocessing and four synthetic contracts pass; 16 real train/test samples cover MONOCHROME1/2 with unique deterministic hashes. |
+| E3 independent Expert S/C interface | complete | Independent schema/evaluator has exact coverage, locked dev thresholds, per-finding metrics, and image-level clustered CI without quartet/U/I/patient requirements. |
+| E4 VinDr formal data preflight | complete | Final integrity audit passed: all 18,006 official hashes match, all 3,000 test DICOMs plus 8 train samples decode under `bives_cxr_dicom_v1`, and no missing/hash/decode failure was observed. No model was loaded in this phase. |
+| E5 weak S/C train/validation | complete | Locked 816 train / 274 val rows; 544/171 patients with zero overlap; both findings are S/C-balanced and only explicit cues are retained. Image existence passed; cache stage binds image SHA. |
+| E6 frozen token cache | complete | Audited cache contains 1,046 unique images and 1,090 train/validation index rows. Every item file hash, source-image SHA, payload identity, model snapshot, processor snapshot, shared 448 geometry, content mask, and grid passed the full cache audit. |
+| E7 B0/B1/B2 local 2B gate | complete_B2_promoted_to_external_gate | B0 pooled is frozen at macro AUROC/AUPRC `0.7857/0.7992`; B1 dense selected step 300 at `0.7713/0.7910`. B2 exact-K=16 selected step 450 at `0.8423/0.8240`, with both retained findings above B0/B1 in aggregate ranking; its 8/20 clipped eval points and maximum pre-clip norm `520.3` remain explicit limitations. |
+| E8 expert polarity/intervention gate | complete_failed_stop | Corrected per-image-isolated seed-17 expert inference and 205-image paired intervention are complete. B2 fails the all-finding B0 comparison because consolidation AUPRC is `0.2338 < 0.2628`. Primary TCIG crosses zero for consolidation and is significantly negative for pleural effusion; localization gain alone cannot promote the route. Stop before more seeds or 4B/9B. |
+| E9 CheXlocalize | not_started_by_E8_stop | No download/auth action was started. A new dataset or patient-level route requires a new reviewed authority rather than automatic continuation after the failed seed-17 causal gate. |
+
+Final closure validation passed on 2026-07-18: all `88/88` active BiVES
+tests, the synthetic CPU smoke, Python compilation, `git diff --check`, and an
+active `bives_cxr/` + `configs/bives_cxr/` + `scripts/` legacy-model-path scan.
+The experimental stop verdict is therefore an evidence result, not a software
+or packaging failure.
+
+## Route hard stops
+
+- Do not run the old full-objective Run B.
+- Do not run Qwen3.5-4B/9B before all 2B expert polarity and intervention gates pass.
+- Do not use VinDr test for model selection, threshold selection, loss choice, or K choice.
+- Do not call VinDr image-level clustered confidence intervals patient-level.
+- Do not add a flat binary classification head; S/C uses bipolar signed evidence.
+- Do not treat synthetic I as natural clinical insufficiency or parser U as expert uncertainty.
+- Keep all execution local and raw public data outside the repository.
+
+## Expert-route errors
+
+| Error | Attempt | Resolution |
+| --- | --- | --- |
+| A combined PowerShell inspection command failed before execution because an embedded quoted `rg` pattern left an unterminated string. | First E1 source inspection | No files were read or changed by the failed command. Split the loss, trainer, README, and clipping inspections into separate commands. |
+| `python -m unittest tests.test_bives_optimization_diagnostics -v` could not import the test module because `tests/` is not a Python package. | First E1 narrow test | Use the repository-compatible discovery form with `-s tests -p "test_bives_optimization_diagnostics.py"`. |
+| A broad `rg` probe included nonexistent `pyproject.toml`, so `rg` returned exit 2 after the pydicom checks had already passed. | E2 dependency inspection | Re-ran only against existing repository paths; no implementation decision used the failed `rg` result. |
+| Sorting parser inventory tuples containing both `None` and strings raised `TypeError`. | First E5 inventory summary | Normalize optional tuple fields to strings before sorting; candidate counts were recomputed successfully. |
+| The first real weak-S/C build exceeded 120 seconds while hashing selected JPGs concurrently with the full VinDr disk audit. | E5 materialization | The process was terminated without artifacts. Rebuilt with image existence checks and `verify_images=false`; E6 is the single stage responsible for computing/binding every image SHA. |
+| A cache progress monitor read the JSON while the writer was replacing its contents and briefly observed an incomplete document. | E6 progress monitoring | The cache payloads were unaffected. Progress writes now use an atomic temporary-file replace, and the completed cache passed a full item/index/hash audit. |
+| The first compound B2 background-launch command was rejected by the local command safety policy before execution. | E7 B2 launch | Reissued a minimal launch command without cleanup operations; B2 started as local PID `42296` on GPU0. |
+| The first full E1-E7 regression reached 82 passing tests but the active-config guard raised `KeyError: model` on the new cache-only B1/B2 YAMLs. | E7 regression | Added explicit Qwen3.5-2B model provenance and local-diagnostic experiment metadata to both cache-only configs; the trainer continues to consume the already-frozen audited cache. |
+| The first expert S/C launch failed on its first sample because the evaluator referenced nonexistent `DicomPreprocessRecord.output_sha256`. | E8 expert inference | No prediction/progress artifact was written and GPU0 was released. Corrected the provenance field to the defined `rgb_sha256`, recompiled, and restarted from zero. |
+| Two attempts to restart the VinDr decode audit with worker arguments failed before execution because `Start-Process` split the public-dataset path at spaces. | E4 parallel decode resume | No audit record was changed by either failed launch. Relaunched with a correctly quoted argument string; the resumed four-worker audit completed and the final audit passed. |
+| The first batched expert evaluator saved only when the cumulative count happened to be divisible by 10, so batch size 32 produced sparse 160-unit checkpoints. | E8 expert inference resume | Preserved the valid 410-unit checkpoint, stopped only the owned watcher/child, changed progress to atomic save after every batch, and resumed from 410 with the same result identity. |
+| Packed multi-image Qwen3.5 eager attention produced batch-dependent patch tokens and scores; one reconstructed sample differed by `0.0213` in support probability and one exact-K patch. | E8 expert/intervention validity | Located the upstream non-Flash rejoin on the head dimension, added a repository adapter guard that calls the official vision tower once per image, and proved on the real failing batch that patch/token/score/gate differences are exactly zero. Archived the packed expert/intervention outputs as invalid and restarted expert inference from zero. |
