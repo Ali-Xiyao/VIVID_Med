@@ -309,6 +309,35 @@
 - Calibration artifacts now bind the calibration manifest, control protocol/seed, uncalibrated checkpoint temperatures, prediction SHA, pre/post NLL, algorithm version, and a canonical artifact SHA. Temperatures must be finite and within `[1e-4, 1e4]`.
 - Active formal configs now declare dataset-lock locations and an independent bootstrap seed (`20260718`). Their P0 sample caps were removed; debug uses pre-vocabulary complete-quartet selection only.
 
+## 2026-07-17 Round-6 Intake
+
+- The sixth review freezes the accepted BiVES network and identifies three
+  release-blocking protocol defects only: an undefined `config` in the final
+  evaluator's dataset-lock branch, source-only snapshots that permit unlisted
+  executable files, and calibration artifacts whose NLL claims are not
+  recomputed from the locked prediction evidence.
+- The user explicitly changed the immediate execution target to local. Active
+  Qwen3.5 model directories are available at `H:\\Xiyao_Wang\\001_models`
+  for 0.8B, 2B, 4B, and 9B. This does not waive the formal-data readiness
+  locks; local formal training must still fail before model loading when
+  locked manifests/cache artifacts are absent.
+
+## 2026-07-17 Round-6 Repair Outcome
+
+- `evaluate_bives_final.py` now receives all four split manifests explicitly,
+  supports a no-model-load `--validate-release-chain-only` preflight, and no
+  longer depends on checkpoint-internal paths for dataset-lock rebuilding.
+- Source snapshots now enforce an exact active inventory across the BiVES
+  package, active scripts/configs/tests/docs, and root startup/configuration
+  hooks. This prevents ignored injected modules from evading a source-only
+  release lock.
+- Calibration artifacts now require a relative/absolute prediction evidence
+  file plus hash. The release validator rebuilds closed-form probabilities from
+  each evidence/target row and rejects any pre/post NLL claim that disagrees.
+- All active configs now prefer local data and the workstation's Qwen3.5 model
+  cache. This is a runtime-location change only; formal manifests, dataset
+  lock, and canonical statement cache remain mandatory gates.
+
 - User supplied a fifth review of public `main` and requested continued repair.
 - The review must be treated as an issue report to verify against the current
   checked-out active BiVES surface; do not infer that it authorizes formal

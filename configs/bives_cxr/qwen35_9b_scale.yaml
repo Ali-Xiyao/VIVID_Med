@@ -4,7 +4,7 @@ experiment:
   phase: P2-scale
 
 data:
-  data_root: /ipfs/inspurfileset/home/dqxy/dqxy11/projects/xiyaowang/021_260129VIVID/data
+  data_root: data
   train_manifest: data/bives_cxr/manifests/train_locked.jsonl
   val_manifest: data/bives_cxr/manifests/val_locked.jsonl
   calibration_manifest: data/bives_cxr/manifests/calibration_locked.jsonl
@@ -16,7 +16,7 @@ data:
 model:
   family: Qwen3.5
   scale: 9B
-  path: /ipfs/inspurfileset/home/dqxy/dqxy11/projects/xiyaowang/model/Qwen3.5-9B
+  path: H:/Xiyao_Wang/001_models/Qwen3.5-9B
   dtype: bf16
   attention_implementation: eager
   freeze_backbone: true

@@ -14,7 +14,9 @@ from typing import Any
 import torch
 import yaml
 
+from .calibration import probabilities_from_evidence
 from .interventions import CONTROL_PROTOCOL_VERSION
+from .metrics import classification_metrics
 
 
 RUN_LOCK_FORMAT_VERSION = 2
@@ -24,6 +26,18 @@ MODEL_SNAPSHOT_FILES = (
     "chat_template.json", "chat_template.jinja", "special_tokens_map.json",
     "added_tokens.json", "merges.txt", "vocab.json", "vocab.txt", "spiece.model",
 )
+PROTECTED_SOURCE_ROOTS = (
+    "bives_cxr",
+    "scripts",
+    "configs/bives_cxr",
+    "tests",
+    "docs",
+)
+ROOT_EXECUTABLE_SUFFIXES = {
+    ".py", ".pyi", ".yaml", ".yml", ".toml", ".ini", ".cfg",
+    ".sh", ".ps1", ".bat", ".cmd", ".pth",
+}
+ROOT_EXECUTABLE_NAMES = {"sitecustomize.py", "usercustomize.py"}
 
 
 def file_sha256(path: str | Path) -> str:
@@ -103,6 +117,51 @@ def base_model_snapshot(model_path: str | Path) -> dict[str, Any]:
     }
 
 
+def _protected_source_inventory(root: Path) -> set[str]:
+    """Return executable/configuration files that must be manifest-listed.
+
+    A source-only deployment cannot rely on ``git status`` to catch an ignored
+    or injected Python module.  These roots comprise every active code/config
+    surface; historical material remains outside this protected inventory.
+    """
+
+    protected: set[str] = set()
+    for relative_root in PROTECTED_SOURCE_ROOTS:
+        directory = root / relative_root
+        if not directory.exists():
+            continue
+        for path in directory.rglob("*"):
+            relative = path.relative_to(root)
+            if "__pycache__" in relative.parts or path.suffix.lower() in {".pyc", ".pyo"}:
+                continue
+            if path.is_file() or path.is_symlink():
+                protected.add(relative.as_posix())
+    for path in root.iterdir():
+        if not (path.is_file() or path.is_symlink()):
+            continue
+        if path.name in ROOT_EXECUTABLE_NAMES or path.suffix.lower() in ROOT_EXECUTABLE_SUFFIXES:
+            protected.add(path.relative_to(root).as_posix())
+    return protected
+
+
+def _validate_protected_source_inventory(root: Path, files: dict[str, str]) -> None:
+    """Reject extra, unlisted, or symlinked active files before a formal run."""
+
+    listed = {str(path).replace("\\", "/") for path in files}
+    actual = _protected_source_inventory(root)
+    extra = sorted(actual - listed)
+    if extra:
+        raise ValueError(
+            "source snapshot has unlisted active files: " + ", ".join(extra[:8])
+        )
+    symlinked = sorted(
+        rel for rel in actual if (root / rel).is_symlink()
+    )
+    if symlinked:
+        raise ValueError(
+            "source snapshot does not permit active symlinks: "
+            + ", ".join(symlinked[:8])
+        )
 def _git_tracked_source_snapshot(root: Path, *, require_clean: bool) -> dict[str, Any] | None:
     probe = subprocess.run(["git", "-C", str(root), "rev-parse", "--show-toplevel"], capture_output=True, text=True, check=False)
     if probe.returncode != 0:
@@ -121,6 +180,7 @@ def _git_tracked_source_snapshot(root: Path, *, require_clean: bool) -> dict[str
         if path.is_file():
             files[rel.replace("\\", "/")] = file_sha256(path)
     commit = subprocess.run(["git", "-C", str(repository), "rev-parse", "HEAD"], capture_output=True, text=True, check=True).stdout.strip()
+    _validate_protected_source_inventory(repository, files)
     return {"kind": "git", "git_commit": commit, "files": files, "tree_sha256": canonical_json_sha256(files)}
 
 
@@ -140,6 +200,7 @@ def build_source_snapshot(*, root: str | Path | None = None, require_clean: bool
         path = root_path / rel
         if not path.is_file() or file_sha256(path) != expected:
             raise ValueError(f"source snapshot mismatch: {rel}")
+    _validate_protected_source_inventory(root_path, files)
     if canonical_json_sha256(files) != snapshot.get("tree_sha256"):
         raise ValueError("source snapshot tree SHA256 does not match file inventory")
     return snapshot
@@ -171,6 +232,7 @@ def build_git_archive_source_snapshot(root: str | Path | None = None) -> dict[st
             if extracted is None:
                 raise ValueError(f"archive member is unreadable: {member.name}")
             files[member.name] = hashlib.sha256(extracted.read()).hexdigest()
+    _validate_protected_source_inventory(repository, files)
     return {"kind": "source_archive", "git_commit": commit, "files": files, "tree_sha256": canonical_json_sha256(files)}
 
 
@@ -287,6 +349,7 @@ def validate_calibrated_release_chain(
     calibration_artifact_path: str | Path | None = None,
     dataset_lock_path: str | Path | None = None,
     data_root: str | Path | None = None,
+    dataset_manifests: dict[str, str | Path] | None = None,
 ) -> dict[str, Any]:
     run_lock = validate_checkpoint_run_lock(
         checkpoint,
@@ -368,13 +431,97 @@ def validate_calibrated_release_chain(
             raise ValueError(f"calibration artifact has invalid {field}")
     if float(calibration["calibration_post_nll"]) > float(calibration["calibration_pre_nll"]) + 1e-8:
         raise ValueError("calibration NLL regressed")
-    prediction_path = calibration.get("calibration_predictions_path")
-    if prediction_path and file_sha256(prediction_path) != calibration.get("calibration_predictions_sha256"):
+    prediction_ref = calibration.get("calibration_predictions_file")
+    if not isinstance(prediction_ref, str) or not prediction_ref.strip():
+        raise ValueError("calibration artifact is missing calibration_predictions_file")
+    prediction_path = Path(prediction_ref)
+    if not prediction_path.is_absolute() and calibration_artifact_path is not None:
+        prediction_path = Path(calibration_artifact_path).resolve().parent / prediction_path
+    if not prediction_path.is_file():
+        raise FileNotFoundError(f"calibration predictions are missing: {prediction_path}")
+    if file_sha256(prediction_path) != calibration.get("calibration_predictions_sha256"):
         raise ValueError("calibration prediction SHA256 does not match")
+    recomputed_pre_nll = _calibration_prediction_nll(
+        prediction_path,
+        calibration["uncalibrated_temperatures"],
+    )
+    recomputed_post_nll = _calibration_prediction_nll(
+        prediction_path,
+        calibration["calibrated_temperatures"],
+    )
+    for field, actual in (
+        ("calibration_pre_nll", recomputed_pre_nll),
+        ("calibration_post_nll", recomputed_post_nll),
+    ):
+        if not math.isclose(
+            float(calibration[field]), actual, rel_tol=0.0, abs_tol=2e-6
+        ):
+            raise ValueError(
+                f"{field} does not match locked calibration prediction evidence"
+            )
     if dataset_lock_path is not None:
         from .dataset_lock import validate_dataset_lock
-        manifests = {split: config["data"][f"{split}_manifest"] for split in ("train", "val", "calibration", "test")}
-        lock = validate_dataset_lock(dataset_lock_path, manifests, data_root=data_root or config["data"]["data_root"])
+        required_splits = ("train", "val", "calibration", "test")
+        if not isinstance(dataset_manifests, dict):
+            raise ValueError("dataset lock validation requires explicit four-split manifests")
+        missing = [split for split in required_splits if split not in dataset_manifests]
+        if missing:
+            raise ValueError(
+                "dataset lock validation is missing manifests: " + ", ".join(missing)
+            )
+        if data_root is None:
+            raise ValueError("dataset lock validation requires an explicit data_root")
+        manifests = {split: dataset_manifests[split] for split in required_splits}
+        lock = validate_dataset_lock(dataset_lock_path, manifests, data_root=data_root)
         if canonical_json_sha256(lock) != run_lock.get("dataset_lock_sha256"):
             raise ValueError("dataset lock does not match run_lock")
     return run_lock
+
+
+def _calibration_prediction_nll(
+    prediction_path: str | Path,
+    temperatures: dict[str, Any],
+) -> float:
+    """Rebuild decoder probabilities from immutable calibration evidence rows."""
+
+    evidence_pos: list[float] = []
+    evidence_neg: list[float] = []
+    targets: list[int] = []
+    with Path(prediction_path).open("r", encoding="utf-8") as handle:
+        for line_number, line in enumerate(handle, start=1):
+            if not line.strip():
+                continue
+            row = json.loads(line)
+            try:
+                positive = float(row["evidence_pos"])
+                negative = float(row["evidence_neg"])
+                target = int(row["target"])
+            except (KeyError, TypeError, ValueError) as exc:
+                raise ValueError(
+                    f"invalid calibration prediction row {line_number}"
+                ) from exc
+            if not math.isfinite(positive) or not math.isfinite(negative):
+                raise ValueError(
+                    f"calibration prediction row {line_number} has non-finite evidence"
+                )
+            if target not in (0, 1, 2, 3):
+                raise ValueError(
+                    f"calibration prediction row {line_number} has invalid target"
+                )
+            evidence_pos.append(positive)
+            evidence_neg.append(negative)
+            targets.append(target)
+    if not targets:
+        raise ValueError("calibration predictions contain no rows")
+    probabilities = probabilities_from_evidence(
+        torch.tensor(evidence_pos, dtype=torch.float32),
+        torch.tensor(evidence_neg, dtype=torch.float32),
+        torch.tensor(float(temperatures["tau_a"]), dtype=torch.float32),
+        torch.tensor(float(temperatures["tau_d"]), dtype=torch.float32),
+        torch.tensor(float(temperatures["tau_p"]), dtype=torch.float32),
+    )
+    return float(
+        classification_metrics(
+            probabilities.detach().cpu(), torch.tensor(targets, dtype=torch.long)
+        )["nll"]
+    )

@@ -41,11 +41,22 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--checkpoint", type=Path, required=True)
     parser.add_argument("--calibration-artifact", type=Path, required=True)
+    parser.add_argument("--train-manifest", type=Path, required=True)
+    parser.add_argument("--val-manifest", type=Path, required=True)
+    parser.add_argument("--calibration-manifest", type=Path, required=True)
     parser.add_argument("--test-manifest", type=Path, required=True)
     parser.add_argument("--statement-cache", type=Path, required=True)
     parser.add_argument("--dataset-lock", type=Path, required=True)
     parser.add_argument("--data-root", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
+    parser.add_argument(
+        "--validate-release-chain-only",
+        action="store_true",
+        help=(
+            "Validate the complete immutable release chain without loading a model "
+            "or producing locked-test predictions."
+        ),
+    )
     parser.add_argument(
         "--run-locked-test",
         "--release-locked-test",
@@ -58,14 +69,15 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
-    if not args.run_locked_test:
+    if not args.run_locked_test and not args.validate_release_chain_only:
         raise SystemExit("--run-locked-test is required")
-    if args.output_dir.exists() and any(args.output_dir.iterdir()):
+    if (
+        not args.validate_release_chain_only
+        and args.output_dir.exists()
+        and any(args.output_dir.iterdir())
+    ):
         raise SystemExit(f"locked-test output directory is not empty: {args.output_dir}")
     checkpoint = torch.load(args.checkpoint, map_location="cpu", weights_only=False)
-    config = checkpoint["config"]
-    if str(config["model"]["family"]).lower() != "qwen3.5":
-        raise ValueError("locked evaluator is Qwen3.5-only")
     calibration = json.loads(args.calibration_artifact.read_text(encoding="utf-8"))
     if not calibration.get("calibrated_temperatures"):
         raise ValueError("calibration artifact has no calibrated temperatures")
@@ -80,7 +92,30 @@ def main() -> None:
         calibration_artifact_path=args.calibration_artifact,
         dataset_lock_path=args.dataset_lock,
         data_root=args.data_root,
+        dataset_manifests={
+            "train": args.train_manifest,
+            "val": args.val_manifest,
+            "calibration": args.calibration_manifest,
+            "test": args.test_manifest,
+        },
     )
+    config = checkpoint.get("config")
+    if not isinstance(config, dict):
+        raise ValueError("checkpoint is missing resolved config")
+    if str(config["model"]["family"]).lower() != "qwen3.5":
+        raise ValueError("locked evaluator is Qwen3.5-only")
+    if args.validate_release_chain_only:
+        print(
+            json.dumps(
+                {
+                    "status": "pass",
+                    "release_chain": "validated_only",
+                    "run_lock_sha256": checkpoint["run_lock_sha256"],
+                },
+                sort_keys=True,
+            )
+        )
+        return
 
     audit_config = config.get("audit", {})
     audit = audit_manifests(

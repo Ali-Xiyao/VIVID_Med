@@ -70,7 +70,23 @@ provenance-complete statement caches, deterministic intervention controls,
 an isolated locked-test release entry, synthetic CPU smoke, and proposal-level
 unit tests.
 
-Formal training has not been started by this consolidation. Before server P0:
+## Local-first execution
+
+The active YAMLs now default to this workstation: `data_root: data` and local
+Qwen3.5 paths under `H:/Xiyao_Wang/001_models/`. The intended local checks are:
+
+```powershell
+python scripts/smoke_bives_cxr.py
+python -m unittest discover -s tests -p "test_bives_*.py" -v
+python scripts/evaluate_bives_final.py --help
+```
+
+`--validate-release-chain-only` on the final-evaluator CLI validates the full
+checkpoint/calibration/cache/four-split lock chain without loading a model or
+emitting locked-test metrics. The normal evaluator still requires
+`--run-locked-test`.
+
+Formal local training has not been started. Before local P0:
 
 1. create locked train/validation/calibration/test manifests with provenance,
    hashes, complete S/C/U/I groups, and pass the strict mandatory audit;
@@ -80,5 +96,5 @@ Formal training has not been started by this consolidation. Before server P0:
    `scripts/write_bives_source_manifest.py` before source-only server sync;
 4. perform the uncertain-vs-insufficient expert pilot;
 5. verify same-statement cross-state coverage;
-6. run Qwen3.5-2B P0;
+6. run Qwen3.5-2B P0 locally;
 7. unlock Qwen3.5-4B only after the proposal go/no-go gates pass.

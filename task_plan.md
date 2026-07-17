@@ -414,3 +414,20 @@ without changing the frozen evidence architecture or launching formal training.
 
 - Matching-protocol registry, image-only visual prompt, minimum valid patch audit, pixel-space causal evidence, and external/VinDr formal execution remain P1 or later.
 - No formal training or final test evaluation may start in this repair phase: the server remains missing the audited/frozen four-split manifests and canonical Qwen3.5-2B checkpoint.
+
+# 2026-07-17 Round-6 Release-Chain Repair and Local Runtime
+
+## Objective
+
+Close the sixth-review release-chain defects without changing the frozen
+BiVES-CXR architecture, and make the active configuration surface local-first
+for the user's workstation. Formal training remains fail-fast until its locked
+manifests and statement cache are present locally.
+
+| Gate | Status | Acceptance criterion |
+| --- | --- | --- |
+| P0-1 final evaluator dataset lock | complete | The CLI now requires explicit train/val/calibration/test manifests; pass, missing config, missing split, manifest mismatch, and non-pass lock paths are integration-tested. |
+| P0-2 source inventory closure | complete | Git and source-only snapshots reject unlisted files under active protected roots and root startup/config hooks; injected module and `sitecustomize.py` tests pass. |
+| P0-3 calibration evidence closure | complete | Calibration predictions are required, hash-verified, and recompute both recorded pre/post NLL values from immutable evidence/target rows. |
+| Local-first execution | complete | Active YAMLs use local `data` and `H:/Xiyao_Wang/001_models/Qwen3.5-*` paths; local synthetic and read-only real-weight smoke pass. |
+| Regression and Git handoff | in_progress | Compile, 41/41 active tests, synthetic smoke, local path audit, active-path scan, and 0.8B vision smoke pass; commit/push remains. |

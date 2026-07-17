@@ -1132,7 +1132,7 @@ def main() -> None:
                 ),
                 "control_protocol_version": CONTROL_PROTOCOL_VERSION,
                 "evaluation_control_seed": int(evaluation_config["control_seed"]),
-                "calibration_predictions_path": str(output_dir / "calibration_pre_predictions.jsonl"),
+                "calibration_predictions_file": "calibration_pre_predictions.jsonl",
                 "calibration_predictions_sha256": file_sha256(
                     output_dir / "calibration_pre_predictions.jsonl"
                 ),
