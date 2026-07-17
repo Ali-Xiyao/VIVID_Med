@@ -543,3 +543,15 @@
   adjudicated state. This is the current external-human-input boundary.
 - No automatic process may turn these candidates into a P0 manifest, infer
   uncertain/insufficient adjudication, or launch Qwen3.5-2B P0.
+
+## 2026-07-17 P0 clinical-review pause
+
+- The user explicitly deferred the clinical blind review of uncertain versus
+  insufficient cases and the explicit positive/negative audit because that
+  qualified human input is not currently available.
+- This is a pause, not a passed or failed clinical gate. The 4,070 parser
+  candidates and 433-row blinded packet remain nonclinical preparation
+  artifacts and are retained for a future restart.
+- No weak-label substitution is authorized. Formal four-state manifests,
+  dataset lock, canonical statement cache, server synchronization, and the
+  Qwen3.5-2B P0 launch remain paused behind this non-bypassable dependency.

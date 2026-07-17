@@ -563,5 +563,16 @@ Qwen3.5 P0 job from parser candidates alone.
 | --- | --- | --- |
 | Frozen parser candidate preparation | complete_nonclinical | The first 1,000-study intake shard produced 4,070 parser candidates under rules SHA256 `3340d89e...d55bee`; every row declares `labeling_claim: none`. |
 | Blinded review packet | complete_waiting_for_human_review | A 433-row packet is ready under ignored `local_runs/bives_cxr/p0_intake/`; it omits parser state and report text. |
-| Independent review/adjudication | blocked_external_human_input | Validator fails closed: all 433 rows lack reviewer-1, reviewer-2, and adjudicator fields. |
-| Formal manifest/cache/2B P0 launch | blocked | Cannot proceed until qualified reviewers complete and adjudicate the packet, then the reviewed labels pass audit and matching construction. |
+| Independent review/adjudication | deferred_by_user | On 2026-07-17 the user explicitly deferred clinical blind review and explicit positive/negative auditing because qualified review is not currently available. The unfilled 433-row packet is retained for a later restart. |
+| Formal manifest/cache/2B P0 launch | paused_dependency | This remains paused behind the deferred, non-bypassable clinical-review gate. Parser candidates must not be substituted for reviewed labels. |
+
+### P0 pause decision
+
+- Do not request or fabricate reviewer/adjudicator decisions.
+- Do not build formal four-state manifests, a dataset lock, or the canonical
+  statement cache from the nonclinical parser candidates.
+- Do not synchronize the current BiVES source to the server or launch a
+  Qwen3.5 P0 job while this dependency is paused.
+- Preserve the ignored candidate table, blinded packet, and validator so work
+  can resume from the same auditable boundary when qualified review becomes
+  available.
