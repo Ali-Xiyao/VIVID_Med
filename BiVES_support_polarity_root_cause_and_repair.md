@@ -1,7 +1,7 @@
 # BiVES-CXR Support 极性失败：解析诊断与定向修复方案
 
-**审查对象：** `Ali-Xiyao/VIVID_Med@41a6efd`  
-**日期：** 2026-07-17  
+**审查对象：** `Ali-Xiyao/VIVID_Med@41a6efd`
+**日期：** 2026-07-17
 **结论：** 当前失败不是普通超参数问题，而是现有 closed-form decoder 的优化几何缺陷。
 
 ---

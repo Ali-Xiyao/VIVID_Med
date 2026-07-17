@@ -491,4 +491,4 @@ the calibration/provenance/config migration, and rerun exactly one unchanged
 | Calibration/release migration | complete | `tau_d` is replaced by `uncertainty_mass` in calibration, checkpoint provenance, evaluator, all active configs, and method docs; run-lock/calibration format is v3. |
 | Regression gate | complete | Compile, synthetic smoke, 48/48 tests, 1001-point monotonicity, all-half-axis gradient direction, legacy `-asinh(1)` trap, and release-chain tests pass. |
 | Controlled GPU gate | complete_failed_uncertain_generalization | The complete 100-step run selected step 50 with train/val accuracy 1.0 and fixed S/C polarity, but val uncertain `abs(rho)=0.7130` while train uncertain is `0.0046`; all other intervention checks pass. |
-| Git handoff | in_progress | Record the explicit failed-one-criterion decision, commit, and push; formal/mini-P0 stays blocked until uncertain train-to-val stability is repaired. |
+| Git handoff | complete | Repair and explicit failed-one-criterion decision are committed; regression evidence is recorded and `main` is pushed. Formal/mini-P0 stays blocked until uncertain train-to-val stability is repaired. |
