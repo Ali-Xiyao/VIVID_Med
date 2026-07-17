@@ -464,4 +464,4 @@ scope.
 | Device + provenance correctness | complete | BF16 is checked under the requested CUDA device context; Git lookup is rooted at the repository. |
 | Local overfit mechanism gate | complete | Added one-quartet non-formal overfit template, actual-image transformation helper, and pre-optimizer `P_valid >= 2K` report. |
 | Actual local run | complete | `cuda:0` RTX 3090 completed 50/50 steps on the generated non-clinical mechanism input; result is explicitly non-formal. |
-| Regression and Git handoff | in_progress | Run final tests/smoke, then commit/push repair and local mechanism-run record. |
+| Regression and Git handoff | complete | Formal-debug rejection, 44 tests, compile, synthetic smoke, and diff check pass; repair is pushed as `4f5b2da`. |
