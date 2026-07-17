@@ -238,7 +238,9 @@ Every execution record must include:
 
 ## Current verdict
 
-`ACCEPTED_C3_IN_PROGRESS`. C1 passed 98/98 active tests and synthetic smoke.
-C2 passed at 375/377 overall with every per-finding/quartile gate green and a
-byte-identical full rows replay. C3's 16-image local Qwen3.5-2B timing/replay
-gate is authorized; C4 remains blocked.
+`ACCEPTED_C4_IN_PROGRESS`. C1 passed active tests and synthetic smoke. C2
+passed at 375/377 overall with every per-finding/quartile gate green and a
+byte-identical full rows replay. C3 passed with zero score replay error, zero
+exact-K mismatch, and a conservative C4 estimate of 0.2461 local GPU hours
+against the 4-hour cap. C4 is now authorized on protocol-design only;
+`rescue_confirm`, VinDr test, training, and model scaling remain blocked.

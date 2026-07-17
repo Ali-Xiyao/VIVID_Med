@@ -842,6 +842,7 @@ method mutation, extra seed, Qwen3.5-4B/9B, or server work.
 | A combined final-provenance writeback patch used a nonmatching sentence anchor in the execution log and was rejected atomically. | Final record update | No file changed. Replaced it with a smaller patch anchored on exact manifest/geometry hash lines, then updated the execution-log hash in the manifest. |
 | `python -m unittest tests.test_bives_rescue_protocol -v` could not import the test because this repository's `tests/` directory is not a Python package. | C1 first narrow test invocation | Compilation had passed and no test body ran. Do not repeat module import; use the repository's `unittest discover -s tests -p "test_bives_rescue_protocol.py" -v` convention. |
 | The first C2 process probe saw a PID file but no `Get-Process` row or log output and was initially interpreted as an immediate exit; a second foreground launch then failed before execution because the first process held the log files. | C2 full-audit launch monitoring | CIM inspection proved the original PID `39836` and eight workers were active; stdout then advanced to 20/377 with empty stderr. The second command never opened an audit process. Keep and monitor only PID `39836`; do not relaunch. |
+| The first C3 warmup stopped before emitting any score because deterministic cuBLAS matmul requires `CUBLAS_WORKSPACE_CONFIG` to be set before CUDA initialization. | C3 first local timing/replay launch | No C3 row or lock artifact was produced. Set `CUBLAS_WORKSPACE_CONFIG=:4096:8` at module import before `torch`, preserve deterministic algorithms, and rerun the unchanged 16-image gate. |
 
 # 2026-07-18 Coordinate-Zone Connected-Control Candidate
 
@@ -861,7 +862,8 @@ access, VinDr-test reuse, training, or Qwen3.5-4B/9B.
 | C0.5 review gate | complete_accepted_by_user | User replied `继续` after the draft handoff. C001 is complete-pass and C1 synthetic implementation is authorized. |
 | C1 connected-control contracts | complete_pass | New API satisfies exact-area/disjoint/single-connected/zone/replay/fail-closed contracts; 98/98 active tests and synthetic smoke passed. Old translation contracts remain green. |
 | C2 score-free geometry audit | complete_pass | 375/377 overall; every per-finding and finding-area gate passes; 0 invariant failures; full replay rows byte-identical at SHA-256 `b94b77bc...e039d9`. |
-| C3 local timing/replay | in_progress | Frozen Qwen3.5-2B B2, 16 stably ordered protocol-design images, identity/replay/cost only; C4 remains blocked. |
+| C3 local timing/replay | complete_pass | 16 unique 8+8 protocol-design images; replay max diff 0, exact-K mismatches 0, estimated C4 0.2461 h against 4 h cap. |
+| C4 connected-control mechanism gate | in_progress | Frozen Qwen3.5-2B B2 and 375 feasible protocol-design positives; local mean and masked Gaussian blur co-primary; confirmation/test remain blocked. |
 
 ## Candidate artifact hashes
 

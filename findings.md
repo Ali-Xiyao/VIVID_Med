@@ -946,3 +946,10 @@
   pleural-effusion area quartile 4 at `76/78 = 97.44%`, still above its 90%
   floor. Both exclusions remain in that quartile and retain the same
   geometry-only reason; all 375 emitted controls pass every invariant.
+- C3 clears the frozen local replay and compute gate. The prespecified 16
+  unique protocol-design images (8 per finding) reproduced all four numeric
+  score/evidence values exactly across two passes and had zero exact-K index
+  mismatch at the frozen `1e-6` tolerance. A conservative five-forward-per-row
+  C4 estimate including a 1.25 multiplier and the full C2 geometry wall time is
+  `0.2461` local GPU hours, far below the 4-hour cap. This authorizes C4 only;
+  it does not authorize confirmation, test reuse, training, or scale-up.
