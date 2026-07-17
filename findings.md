@@ -382,3 +382,26 @@
   The input uses transformed copies of one local CheXpert image with synthetic
   labels only; `metrics_final.json` records `formal_result: false`, so this is
   engineering evidence and not a medical or formal-result claim.
+
+## 2026-07-17 Round-8 Mechanism Rescue Result
+
+- The first stronger 100-step rescue was execution-green but did not pass the
+  overfit learning gate. At the selected/final step, train and validation
+  accuracy were both `0.75`; support was the only missed state. The train
+  support row had `E+=2.8493`, `E-=3.7504`, so it remained in the contradict
+  half-space despite perfect S-vs-C ranking AUROC.
+- The learned mechanisms were directionally coherent in that run:
+  pair-margin violation `0`, uncertain absolute polarity `0.0394`, train
+  evidence-removal-to-insufficient `1.0`, irrelevant-control stability `1.0`,
+  eligible target-control gap `1.3570`, and eligible control L1 effect
+  `0.000258`. This isolates the failure to absolute state/polarity realization,
+  not to a total absence of visual ranking or intervention response.
+- Two bounded rescue candidates did not improve the gate. A 30-step
+  state-only plus 30-step auxiliary ramp ended at train/val accuracy `0.50`.
+  The proposal-grid candidate `lambda_IES=0.25`, run for the intended 150
+  steps after correcting the old 100-step cap, selected step 110 at validation
+  NLL `0.9381` and ended at train accuracy `0.25` / validation accuracy `0.50`.
+- No architecture was changed and no formal result was produced. Further
+  blind hyperparameter search is stopped; formal and mini-P0 execution remain
+  blocked until a targeted mechanism repair can demonstrate all four states
+  on the one-quartet gate.

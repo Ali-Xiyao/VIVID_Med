@@ -6,7 +6,7 @@ import argparse
 import json
 from pathlib import Path
 
-from PIL import Image, ImageEnhance, ImageOps
+from PIL import Image, ImageEnhance, ImageFilter, ImageOps
 
 
 STATES = ("support", "contradict", "uncertain", "insufficient")
@@ -21,10 +21,20 @@ def parse_args() -> argparse.Namespace:
 
 def transformed(image: Image.Image, index: int) -> Image.Image:
     image = image.convert("L")
-    image = ImageEnhance.Brightness(image).enhance(0.82 + 0.06 * index)
-    image = ImageEnhance.Contrast(image).enhance(0.90 + 0.05 * index)
-    if index % 2:
-        image = ImageOps.mirror(image)
+    state_index = index % len(STATES)
+    validation_variant = index >= len(STATES)
+    if state_index == 0:
+        image = ImageOps.autocontrast(image)
+    elif state_index == 1:
+        image = ImageOps.invert(ImageOps.autocontrast(image))
+    elif state_index == 2:
+        image = ImageOps.posterize(ImageOps.autocontrast(image), 3)
+    else:
+        image = image.filter(ImageFilter.GaussianBlur(radius=8.0))
+        image = ImageEnhance.Brightness(image).enhance(0.55)
+    if validation_variant:
+        image = ImageEnhance.Contrast(image).enhance(0.92)
+        image = image.rotate(1.0, resample=Image.Resampling.BICUBIC)
     return image.convert("RGB")
 
 

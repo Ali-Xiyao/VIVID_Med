@@ -253,6 +253,25 @@ class ModelContractTests(unittest.TestCase):
         self.assertIn("pair", losses)
         self.assertIn("uncertain_polarity", losses)
 
+    def test_zero_auxiliary_weight_keeps_only_state_objective(self) -> None:
+        patches = torch.randn(4, 8, 8)
+        statements = torch.randn(4, 6)
+        valid = torch.ones(4, 8, dtype=torch.bool)
+        targets = torch.tensor([0, 1, 2, 3])
+        outputs = self.model(patches[:, :4], statements, valid[:, :4])
+        loss_fn = BiVESLoss(BiVESLossConfig(lambda_pair=0.1, lambda_u_pol=0.1))
+        losses = loss_fn(
+            outputs,
+            targets,
+            (2, 2),
+            torch.tensor([0]),
+            torch.tensor([1]),
+            torch.tensor([2]),
+            auxiliary_weight=0.0,
+        )
+        self.assertEqual(float(losses["auxiliary_weight"]), 0.0)
+        self.assertTrue(torch.allclose(losses["total"], losses["state"]))
+
     def test_contextual_interventions_are_not_algebraic_identities(self) -> None:
         torch.manual_seed(29)
         model = BiVESCXR(

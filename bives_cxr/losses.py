@@ -72,7 +72,10 @@ class BiVESLoss(nn.Module):
         support_pair_indices: torch.Tensor | None = None,
         contradict_pair_indices: torch.Tensor | None = None,
         uncertain_indices: torch.Tensor | None = None,
+        auxiliary_weight: float = 1.0,
     ) -> dict[str, torch.Tensor]:
+        if not 0.0 <= float(auxiliary_weight) <= 1.0:
+            raise ValueError("auxiliary_weight must be in [0, 1]")
         original = outputs["original"]
         assert isinstance(original, dict)
         state_per_sample = nll_from_probs(original["state_probs"], targets, self.config.eps)
@@ -116,7 +119,7 @@ class BiVESLoss(nn.Module):
                     self.config.eps,
                 ).mean()
             ies = sufficiency + self.config.lambda_nec * necessity + self.config.lambda_ctrl * control_loss
-            total = total + self.config.lambda_ies * ies
+            total = total + float(auxiliary_weight) * self.config.lambda_ies * ies
             losses.update({"sufficiency": sufficiency, "necessity": necessity, "control": control_loss, "ies": ies})
 
         insufficient = targets == 3
@@ -127,8 +130,10 @@ class BiVESLoss(nn.Module):
             / valid_mask.sum(dim=-1).clamp_min(1).to(original["gate"].dtype)
         ).mean()
         tv = total_variation(original["gate"], grid_hw, valid_mask)
-        total = total + self.config.lambda_i_mag * i_magnitude
-        total = total + self.config.lambda_min * evidence_fraction + self.config.lambda_tv * tv
+        total = total + float(auxiliary_weight) * self.config.lambda_i_mag * i_magnitude
+        total = total + float(auxiliary_weight) * (
+            self.config.lambda_min * evidence_fraction + self.config.lambda_tv * tv
+        )
         losses.update(
             {
                 "insufficient_magnitude": i_magnitude,
@@ -152,14 +157,15 @@ class BiVESLoss(nn.Module):
                 - rho[support_pair_indices.long()]
                 + rho[contradict_pair_indices.long()]
             ).mean()
-            total = total + self.config.lambda_pair * pair
+            total = total + float(auxiliary_weight) * self.config.lambda_pair * pair
             losses["pair"] = pair
         if self.config.lambda_u_pol > 0:
             if uncertain_indices is None or uncertain_indices.numel() == 0:
                 raise ValueError("lambda_u_pol > 0 requires uncertain_indices")
             uncertain_polarity = rho[uncertain_indices.long()].abs().mean()
-            total = total + self.config.lambda_u_pol * uncertain_polarity
+            total = total + float(auxiliary_weight) * self.config.lambda_u_pol * uncertain_polarity
             losses["uncertain_polarity"] = uncertain_polarity
 
+        losses["auxiliary_weight"] = state_loss.new_tensor(float(auxiliary_weight))
         losses["total"] = total
         return losses

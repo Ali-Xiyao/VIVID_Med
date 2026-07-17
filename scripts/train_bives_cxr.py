@@ -656,11 +656,12 @@ def main() -> None:
         config["data"]["max_train_samples"] = min(int(config["data"].get("max_train_samples", 8)), 8)
         config["data"]["max_val_samples"] = min(int(config["data"].get("max_val_samples", 4)), 4)
         config["data"]["num_workers"] = 0
-        max_debug_steps = 2 if experiment_mode == "local_debug" else 100
+        max_debug_steps = 2 if experiment_mode == "local_debug" else 200
         config["training"]["max_steps"] = min(int(config["training"].get("max_steps", max_debug_steps)), max_debug_steps)
         if experiment_mode == "local_overfit" and int(config["training"]["max_steps"]) < 1:
             raise ValueError("local_overfit requires at least one optimization step")
-        config["training"]["eval_interval"] = 1
+        if experiment_mode == "local_debug":
+            config["training"]["eval_interval"] = 1
         config.setdefault("sampling", {})["groups_per_batch"] = 1
         config.setdefault("evaluation", {})["run_calibration"] = False
         config["evaluation"]["run_test"] = False
@@ -948,6 +949,11 @@ def main() -> None:
 
     val_loader = make_primary_eval_loader(val_dataset, "val")
     assert val_loader is not None
+    overfit_train_loader = (
+        make_primary_eval_loader(train_dataset, "local_overfit_train_eval")
+        if experiment_mode == "local_overfit"
+        else None
+    )
     val_grouped_loader = make_grouped_eval_loader(val_dataset, "val")
     calibration_loader = make_primary_eval_loader(calibration_dataset, "calibration")
     loss_config = BiVESLossConfig(**config.get("loss", {}))
@@ -988,6 +994,18 @@ def main() -> None:
     )
     eval_interval = int(config["training"].get("eval_interval", 100))
     max_grad_norm = float(config["training"].get("max_grad_norm", 1.0))
+    auxiliary_warmup_steps = int(config["training"].get("auxiliary_warmup_steps", 0))
+    auxiliary_ramp_steps = int(config["training"].get("auxiliary_ramp_steps", 0))
+    if auxiliary_warmup_steps < 0 or auxiliary_ramp_steps < 0:
+        raise ValueError("auxiliary warm-up and ramp steps must be non-negative")
+
+    def auxiliary_weight_for_step(next_step: int) -> float:
+        if next_step <= auxiliary_warmup_steps:
+            return 0.0
+        if auxiliary_ramp_steps == 0:
+            return 1.0
+        return min(1.0, (next_step - auxiliary_warmup_steps) / auxiliary_ramp_steps)
+
     gradient_accumulation_steps = int(
         config["training"].get("gradient_accumulation_steps", 1)
     )
@@ -1054,6 +1072,7 @@ def main() -> None:
                 batch["support_pair_indices"],
                 batch["contradict_pair_indices"],
                 batch["uncertain_indices"],
+                auxiliary_weight=auxiliary_weight_for_step(step + 1),
             )
             (losses["total"] / gradient_accumulation_steps).backward()
             accumulated_micro_steps += 1
@@ -1072,6 +1091,16 @@ def main() -> None:
                 cursor_epoch = epoch
                 cursor_batch_index = batch_index + 1
             if step % eval_interval == 0 or step == max_steps:
+                overfit_train_metrics: dict[str, Any] | None = None
+                overfit_train_rows: list[dict[str, Any]] = []
+                if overfit_train_loader is not None:
+                    overfit_train_metrics, overfit_train_rows = evaluate(
+                        experiment,
+                        overfit_train_loader,
+                        primary_eval_loss_fn,
+                        device,
+                        assert_full_coverage=True,
+                    )
                 validation, validation_rows = evaluate(
                     experiment,
                     val_loader,
@@ -1088,9 +1117,14 @@ def main() -> None:
                 event = {
                     "step": step,
                     "train_loss": float(losses["total"].detach().cpu()),
+                    "train_loss_terms": {
+                        key: float(value.detach().cpu()) for key, value in losses.items()
+                    },
                     "grouped_mechanisms": grouped_validation,
                     **validation,
                 }
+                if overfit_train_metrics is not None:
+                    event["overfit_train"] = overfit_train_metrics
                 events.append(event)
                 print(json.dumps(event, ensure_ascii=False))
                 save_json(output_dir / f"metrics_step_{step}.json", event)
@@ -1099,6 +1133,12 @@ def main() -> None:
                 ) as handle:
                     for row in validation_rows:
                         handle.write(json.dumps(row, ensure_ascii=False) + "\n")
+                if overfit_train_rows:
+                    with (output_dir / f"train_predictions_step_{step}.jsonl").open(
+                        "w", encoding="utf-8"
+                    ) as handle:
+                        for row in overfit_train_rows:
+                            handle.write(json.dumps(row, ensure_ascii=False) + "\n")
                 if selection_metric not in validation:
                     raise KeyError(
                         f"selection metric {selection_metric!r} is absent from validation metrics"

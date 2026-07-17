@@ -465,3 +465,12 @@ scope.
 | Local overfit mechanism gate | complete | Added one-quartet non-formal overfit template, actual-image transformation helper, and pre-optimizer `P_valid >= 2K` report. |
 | Actual local run | complete | `cuda:0` RTX 3090 completed 50/50 steps on the generated non-clinical mechanism input; result is explicitly non-formal. |
 | Regression and Git handoff | complete | Formal-debug rejection, 44 tests, compile, synthetic smoke, and diff check pass; repair is pushed as `4f5b2da`. |
+
+## Round-8 mechanism rescue
+
+| Gate | Status | Acceptance criterion |
+| --- | --- | --- |
+| Diagnose first run | complete | Separate engineering completion from learning survival; first run peaked at val accuracy 0.50 / NLL 1.4129 at step 5 and later collapsed. |
+| Instrument train behavior | complete | Train-side primary metrics, all loss terms, auxiliary weight, and train predictions are emitted at each overfit checkpoint. |
+| Stronger synthetic probe | complete | Ran separable non-clinical S/C/U/I transforms through the real frozen Qwen3.5-2B visual path; added the proposal-aligned optional state-only/auxiliary-ramp schedule and a 200-step non-formal safety ceiling. |
+| Rescue decision | complete_failed_gate | The best bounded run reached train/val accuracy 0.75 with correct ranking/intervention directions but never learned absolute support polarity; ramped and `lambda_IES=0.25` candidates were worse. Formal/mini-P0 work stays blocked. |
