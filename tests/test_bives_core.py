@@ -10,7 +10,7 @@ import torch
 import torch.nn as nn
 
 from bives_cxr.backbones import PatchBatch, restore_qwen35_row_major
-from bives_cxr.calibration import fit_decoder_temperatures, probabilities_from_evidence
+from bives_cxr.calibration import fit_decoder_parameters, probabilities_from_evidence
 from bives_cxr.gates import EvidenceGate
 from bives_cxr.decoder import EvidenceStateDecoder
 from bives_cxr.interventions import (
@@ -38,22 +38,29 @@ from bives_cxr.statement_cache import (
     load_statement_embedding_matrix,
 )
 from scripts.train_bives_cxr import BiVESExperiment, load_checkpoint_model_state
+from legacy.bives_cxr.legacy_abs_exp_decoder import legacy_abs_exp_probabilities
 
 
 class DecoderTests(unittest.TestCase):
     def test_probabilities_match_closed_form_and_normalize(self) -> None:
-        decoder = EvidenceStateDecoder(tau_a=2.0, tau_d=3.0, tau_p=4.0)
+        decoder = EvidenceStateDecoder(tau_a=2.0, tau_p=4.0, uncertainty_mass=1.5)
         positive = torch.tensor([0.0, 8.0, 1.0, 5.0])
         negative = torch.tensor([0.0, 1.0, 8.0, 5.0])
         output = decoder(positive, negative)
         availability = 1.0 - torch.exp(-(positive + negative) / 2.0)
-        decisiveness = 1.0 - torch.exp(-torch.abs(positive - negative) / 3.0)
-        polarity = torch.sigmoid((positive - negative) / 4.0)
+        signed_logit = (positive - negative) / 8.0
+        conditional = torch.softmax(
+            torch.stack(
+                (signed_logit, -signed_logit, torch.log(torch.tensor(3.0)).expand_as(signed_logit)),
+                dim=-1,
+            ),
+            dim=-1,
+        )
         expected = torch.stack(
             (
-                availability * decisiveness * polarity,
-                availability * decisiveness * (1.0 - polarity),
-                availability * (1.0 - decisiveness),
+                availability * conditional[:, 0],
+                availability * conditional[:, 1],
+                availability * conditional[:, 2],
                 1.0 - availability,
             ),
             dim=-1,
@@ -74,6 +81,45 @@ class DecoderTests(unittest.TestCase):
         self.assertTrue(torch.allclose(probabilities[:, 0], swapped[:, 1], atol=1e-7, rtol=1e-6))
         self.assertTrue(torch.allclose(probabilities[:, 1], swapped[:, 0], atol=1e-7, rtol=1e-6))
         self.assertTrue(torch.allclose(probabilities[:, 2:], swapped[:, 2:], atol=1e-7, rtol=1e-6))
+
+    def test_support_and_contradict_are_strictly_monotone_in_signed_evidence(self) -> None:
+        decoder = EvidenceStateDecoder().double()
+        delta = torch.linspace(-6.0, 6.0, 1001, dtype=torch.float64)
+        positive = 4.0 + delta / 2.0
+        negative = 4.0 - delta / 2.0
+        probabilities = decoder(positive, negative)["state_probs"]
+        self.assertTrue(bool((torch.diff(probabilities[:, 0]) > 0).all()))
+        self.assertTrue(bool((torch.diff(probabilities[:, 1]) < 0).all()))
+        self.assertTrue(torch.allclose(probabilities[:, 2], probabilities.flip(0)[:, 2]))
+        self.assertEqual(int(probabilities[:, 2].argmax()), delta.numel() // 2)
+
+    def test_state_nll_gradients_push_polarity_in_the_correct_direction(self) -> None:
+        support_delta = torch.linspace(-6.0, -0.01, 101, dtype=torch.float64).requires_grad_()
+        support_probs = EvidenceStateDecoder().double()(
+            4.0 + support_delta / 2.0,
+            4.0 - support_delta / 2.0,
+        )["state_probs"]
+        (-support_probs[:, 0].log().sum()).backward()
+        self.assertTrue(bool((support_delta.grad < 0.0).all()))
+
+        contradict_delta = torch.linspace(0.01, 6.0, 101, dtype=torch.float64).requires_grad_()
+        contradict_probs = EvidenceStateDecoder().double()(
+            4.0 + contradict_delta / 2.0,
+            4.0 - contradict_delta / 2.0,
+        )["state_probs"]
+        (-contradict_probs[:, 1].log().sum()).backward()
+        self.assertTrue(bool((contradict_delta.grad > 0.0).all()))
+
+    def test_legacy_decoder_has_the_documented_wrong_half_axis_stationary_point(self) -> None:
+        delta_star = -torch.asinh(torch.tensor(1.0, dtype=torch.float64))
+        delta = delta_star.detach().clone().requires_grad_()
+        probabilities = legacy_abs_exp_probabilities(
+            4.0 + delta / 2.0,
+            4.0 - delta / 2.0,
+        )
+        (-probabilities[0].log()).backward()
+        self.assertLess(float(delta), 0.0)
+        self.assertAlmostEqual(float(delta.grad), 0.0, places=8)
 
     def test_uncertain_and_insufficient_are_operationally_distinct(self) -> None:
         decoder = EvidenceStateDecoder()
@@ -178,7 +224,7 @@ class ModelContractTests(unittest.TestCase):
         )
 
     def test_architecture_has_no_flat_state_head(self) -> None:
-        self.assertEqual(self.model.decoder_kind, "bipolar_closed_form")
+        self.assertEqual(self.model.decoder_kind, "monotone_bipolar_conditional")
         self.assertFalse(self.model.has_flat_state_head)
         self.assertFalse(hasattr(self.model, "state_head"))
         self.assertFalse(hasattr(self.model, "four_class_head"))
@@ -546,7 +592,7 @@ class StatementCacheTests(unittest.TestCase):
                     {"stmt-a": "left effusion present."},
                 )
 
-    def test_decoder_temperature_fit_is_positive_and_improves_nll(self) -> None:
+    def test_decoder_parameter_fit_is_positive_and_improves_nll(self) -> None:
         positive = torch.tensor([8.0, 1.0, 5.0, 0.1] * 4)
         negative = torch.tensor([1.0, 8.0, 5.0, 0.1] * 4)
         targets = torch.tensor([0, 1, 2, 3] * 4)
@@ -559,7 +605,7 @@ class StatementCacheTests(unittest.TestCase):
             ),
             targets,
         ).mean()
-        fitted = fit_decoder_temperatures(
+        fitted = fit_decoder_parameters(
             positive,
             negative,
             targets,
@@ -571,8 +617,8 @@ class StatementCacheTests(unittest.TestCase):
                 positive,
                 negative,
                 torch.tensor(fitted["tau_a"]),
-                torch.tensor(fitted["tau_d"]),
                 torch.tensor(fitted["tau_p"]),
+                torch.tensor(fitted["uncertainty_mass"]),
             ),
             targets,
         ).mean()

@@ -39,9 +39,10 @@ bives:
     topk: 16
     temperature: 0.5
   decoder:
+    type: monotone_bipolar_conditional
     tau_a: 1.0
-    tau_d: 1.0
     tau_p: 1.0
+    uncertainty_mass: 1.0
   interventions:
     replacement: zero
     num_controls: 4

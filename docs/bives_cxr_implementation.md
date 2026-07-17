@@ -21,8 +21,9 @@ state_probs          [B, 4]  # support, contradict, uncertain, insufficient
 4. Predict bounded positive/negative patch evidence.
 5. Select an exact-K evidence set with a straight-through differentiable gate.
 6. Aggregate `E+` and `E-`.
-7. Derive four-state probabilities from availability, decisiveness, and
-   polarity using the closed-form decoder.
+7. Derive four-state probabilities with the monotone bipolar conditional
+   decoder: availability separates insufficient evidence, while a conditional
+   softmax over signed evidence separates support, contradict, and uncertain.
 8. Apply evidence-retained, evidence-deleted, and multiple random-disjoint
    equal-area masks before the shared contextual block, then re-score with
    branch-specific validity masks.
@@ -88,9 +89,11 @@ future hard-concrete/L0 gate.
 Validation checkpoint selection defaults to NLL, not the stochastic control
 loss total. Evaluation controls are deterministic per sample/split/protocol;
 prediction rows export control seeds, evidence/control patch indices, and grid
-dimensions. After training, `best.pt` is reloaded and positive `tau_a`, `tau_d`,
-and `tau_p` are fitted only on the locked calibration split. Training writes a
-calibration artifact but never evaluates the locked test.
+dimensions. After training, `best.pt` is reloaded and positive `tau_a`,
+`tau_p`, and `uncertainty_mass` are fitted only on the locked calibration
+split. Training writes a calibration artifact but never evaluates the locked
+test. Artifacts from the retired absolute-difference decoder are incompatible
+with run-lock format v3 and cannot enter the active release chain.
 
 Feature-space keep/drop/control is a mechanism-training contract, not by itself
 proof of pixel-causal grounding. Paper-level causal claims require separate

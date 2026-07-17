@@ -28,7 +28,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from bives_cxr.audit import audit_manifests
 from bives_cxr.backbones import Qwen35VisionAdapter, load_qwen35_visual_and_processor
-from bives_cxr.calibration import fit_decoder_temperatures
+from bives_cxr.calibration import fit_decoder_parameters
 from bives_cxr.data import (
     BiVESManifestDataset,
     SameStatementStateBatchSampler,
@@ -37,6 +37,7 @@ from bives_cxr.data import (
     read_manifest,
     statement_text_by_id,
 )
+from bives_cxr.decoder import DECODER_PARAMETER_NAMES
 from bives_cxr.losses import BiVESLoss, BiVESLossConfig
 from bives_cxr.metrics import (
     classification_metrics,
@@ -605,12 +606,12 @@ def evaluate_grouped_mechanisms(
     }
 
 
-def set_decoder_temperatures(
+def set_decoder_parameters(
     experiment: BiVESExperiment,
-    temperatures: dict[str, float],
+    parameters: dict[str, float],
 ) -> None:
-    for name in ("tau_a", "tau_d", "tau_p"):
-        value = float(temperatures[name])
+    for name in DECODER_PARAMETER_NAMES:
+        value = float(parameters[name])
         if not math.isfinite(value) or not 1e-4 <= value <= 1e4:
             raise ValueError(f"{name} must be finite and bounded in [1e-4, 1e4]")
         getattr(experiment.head.decoder, name).fill_(value)
@@ -846,9 +847,12 @@ def main() -> None:
         gate_mode=str(config["bives"]["mask"].get("type", "soft_topk")),
         topk=int(config["bives"]["mask"].get("topk", 16)),
         gate_temperature=float(config["bives"]["mask"].get("temperature", 0.5)),
+        decoder_type=str(config["bives"]["decoder"].get("type", "")),
         tau_a=float(config["bives"]["decoder"].get("tau_a", 1.0)),
-        tau_d=float(config["bives"]["decoder"].get("tau_d", 1.0)),
         tau_p=float(config["bives"]["decoder"].get("tau_p", 1.0)),
+        uncertainty_mass=float(
+            config["bives"]["decoder"].get("uncertainty_mass", 1.0)
+        ),
         num_controls=int(intervention_config.get("num_controls", 4)),
         control_mode=str(intervention_config.get("control_mode", "random_disjoint")),
         contextual_layers=int(config["bives"].get("contextual_layers", 1)),
@@ -1226,9 +1230,9 @@ def main() -> None:
     load_checkpoint_model_state(experiment, best_checkpoint)
     selected_best_step = int(best_checkpoint["step"])
     base_checkpoint_sha256 = file_sha256(best_path)
-    uncalibrated_temperatures = {
+    uncalibrated_decoder_parameters = {
         name: float(getattr(experiment.head.decoder, name).detach().cpu())
-        for name in ("tau_a", "tau_d", "tau_p")
+        for name in DECODER_PARAMETER_NAMES
     }
 
     def write_predictions(name: str, prediction_rows: list[dict[str, Any]]) -> None:
@@ -1239,7 +1243,7 @@ def main() -> None:
                 handle.write(json.dumps(row, ensure_ascii=False) + "\n")
 
     split_metrics: dict[str, Any] = {}
-    calibration_temperatures: dict[str, float] | None = None
+    calibrated_decoder_parameters: dict[str, float] | None = None
     calibration_pre_rows: list[dict[str, Any]] = []
     if calibration_loader is not None:
         calibration_pre, calibration_pre_rows = evaluate(
@@ -1251,20 +1255,20 @@ def main() -> None:
         )
         split_metrics["calibration_pre"] = calibration_pre
         write_predictions("calibration_pre", calibration_pre_rows)
-        calibration_temperatures = fit_decoder_temperatures(
+        calibrated_decoder_parameters = fit_decoder_parameters(
             torch.tensor([row["evidence_pos"] for row in calibration_pre_rows]),
             torch.tensor([row["evidence_neg"] for row in calibration_pre_rows]),
             torch.tensor([row["target"] for row in calibration_pre_rows]),
             initial=(
-                uncalibrated_temperatures["tau_a"],
-                uncalibrated_temperatures["tau_d"],
-                uncalibrated_temperatures["tau_p"],
+                uncalibrated_decoder_parameters["tau_a"],
+                uncalibrated_decoder_parameters["tau_p"],
+                uncalibrated_decoder_parameters["uncertainty_mass"],
             ),
             max_iter=int(evaluation_config.get("calibration_max_iter", 100)),
         )
 
-    if calibration_temperatures is not None:
-        set_decoder_temperatures(experiment, calibration_temperatures)
+    if calibrated_decoder_parameters is not None:
+        set_decoder_parameters(experiment, calibrated_decoder_parameters)
         calibration_post, calibration_post_rows = evaluate(
             experiment,
             calibration_loader,
@@ -1277,8 +1281,8 @@ def main() -> None:
         calibrated_checkpoint = {
             **best_checkpoint,
             "selected_best_step": selected_best_step,
-            "uncalibrated_temperatures": uncalibrated_temperatures,
-            "calibrated_temperatures": calibration_temperatures,
+            "uncalibrated_decoder_parameters": uncalibrated_decoder_parameters,
+            "calibrated_decoder_parameters": calibrated_decoder_parameters,
             "bives_head": experiment.head.state_dict(),
         }
         torch.save(
@@ -1286,30 +1290,30 @@ def main() -> None:
             output_dir / "checkpoints" / "best_calibrated.pt",
         )
         calibration_artifact = {
-                "format_version": 2,
-                "calibration_algorithm": "three_temperature_lbfgs_v1",
-                "selected_best_step": selected_best_step,
-                "base_checkpoint_sha256": base_checkpoint_sha256,
-                "run_lock_sha256": run_lock_sha256,
-                "statement_cache_sha256": run_lock["statement_cache_sha256"],
-                "statement_vocabulary_sha256": run_lock[
-                    "statement_vocabulary_sha256"
-                ],
-                "uncalibrated_temperatures": uncalibrated_temperatures,
-                "calibrated_temperatures": calibration_temperatures,
-                "calibration_manifest": str(config["data"]["calibration_manifest"]),
-                "calibration_manifest_sha256": file_sha256(
-                    config["data"]["calibration_manifest"]
-                ),
-                "control_protocol_version": CONTROL_PROTOCOL_VERSION,
-                "evaluation_control_seed": int(evaluation_config["control_seed"]),
-                "calibration_predictions_file": "calibration_pre_predictions.jsonl",
-                "calibration_predictions_sha256": file_sha256(
-                    output_dir / "calibration_pre_predictions.jsonl"
-                ),
-                "calibration_pre_nll": float(calibration_pre["nll"]),
-                "calibration_post_nll": float(calibration_post["nll"]),
-            }
+            "format_version": 3,
+            "calibration_algorithm": "monotone_decoder_lbfgs_v1",
+            "selected_best_step": selected_best_step,
+            "base_checkpoint_sha256": base_checkpoint_sha256,
+            "run_lock_sha256": run_lock_sha256,
+            "statement_cache_sha256": run_lock["statement_cache_sha256"],
+            "statement_vocabulary_sha256": run_lock[
+                "statement_vocabulary_sha256"
+            ],
+            "uncalibrated_decoder_parameters": uncalibrated_decoder_parameters,
+            "calibrated_decoder_parameters": calibrated_decoder_parameters,
+            "calibration_manifest": str(config["data"]["calibration_manifest"]),
+            "calibration_manifest_sha256": file_sha256(
+                config["data"]["calibration_manifest"]
+            ),
+            "control_protocol_version": CONTROL_PROTOCOL_VERSION,
+            "evaluation_control_seed": int(evaluation_config["control_seed"]),
+            "calibration_predictions_file": "calibration_pre_predictions.jsonl",
+            "calibration_predictions_sha256": file_sha256(
+                output_dir / "calibration_pre_predictions.jsonl"
+            ),
+            "calibration_pre_nll": float(calibration_pre["nll"]),
+            "calibration_post_nll": float(calibration_post["nll"]),
+        }
         calibration_artifact["canonical_artifact_sha256"] = canonical_json_sha256(
             calibration_artifact
         )
@@ -1329,8 +1333,8 @@ def main() -> None:
         "best_selection_score": best_selection_score,
         "selected_best_step": selected_best_step,
         "selected_checkpoint": str(best_path),
-        "uncalibrated_temperatures": uncalibrated_temperatures,
-        "calibrated_temperatures": calibration_temperatures,
+        "uncalibrated_decoder_parameters": uncalibrated_decoder_parameters,
+        "calibrated_decoder_parameters": calibrated_decoder_parameters,
         "split_metrics": split_metrics,
         "manifest_sha256": {
             split: file_sha256(path)

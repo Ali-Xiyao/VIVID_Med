@@ -32,7 +32,7 @@ from scripts.train_bives_cxr import (
     git_commit,
     load_checkpoint_model_state,
     save_json,
-    set_decoder_temperatures,
+    set_decoder_parameters,
     set_seed,
 )
 
@@ -79,8 +79,8 @@ def main() -> None:
         raise SystemExit(f"locked-test output directory is not empty: {args.output_dir}")
     checkpoint = torch.load(args.checkpoint, map_location="cpu", weights_only=False)
     calibration = json.loads(args.calibration_artifact.read_text(encoding="utf-8"))
-    if not calibration.get("calibrated_temperatures"):
-        raise ValueError("calibration artifact has no calibrated temperatures")
+    if not calibration.get("calibrated_decoder_parameters"):
+        raise ValueError("calibration artifact has no calibrated decoder parameters")
     current_commit = git_commit()
     run_lock = validate_calibrated_release_chain(
         checkpoint_path=args.checkpoint,
@@ -179,9 +179,12 @@ def main() -> None:
         gate_mode=str(config["bives"]["mask"].get("type", "soft_topk")),
         topk=int(config["bives"]["mask"].get("topk", 16)),
         gate_temperature=float(config["bives"]["mask"].get("temperature", 0.5)),
+        decoder_type=str(config["bives"]["decoder"].get("type", "")),
         tau_a=float(config["bives"]["decoder"].get("tau_a", 1.0)),
-        tau_d=float(config["bives"]["decoder"].get("tau_d", 1.0)),
         tau_p=float(config["bives"]["decoder"].get("tau_p", 1.0)),
+        uncertainty_mass=float(
+            config["bives"]["decoder"].get("uncertainty_mass", 1.0)
+        ),
         num_controls=int(config["bives"]["interventions"].get("num_controls", 4)),
         control_mode=str(
             config["bives"]["interventions"].get(
@@ -205,9 +208,9 @@ def main() -> None:
         frozen_statement_embeddings=frozen,
     ).to(device)
     load_checkpoint_model_state(experiment, checkpoint)
-    set_decoder_temperatures(
+    set_decoder_parameters(
         experiment,
-        calibration["calibrated_temperatures"],
+        calibration["calibrated_decoder_parameters"],
     )
     loader = DataLoader(
         dataset,

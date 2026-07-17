@@ -117,8 +117,8 @@ def build_release_fixture(root: Path, *, git_commit: str) -> dict[str, object]:
         "run_lock_sha256": canonical_json_sha256(run_lock),
         "bives_head": {
             "decoder.tau_a": torch.tensor(1.0),
-            "decoder.tau_d": torch.tensor(1.0),
             "decoder.tau_p": torch.tensor(1.0),
+            "decoder.uncertainty_mass": torch.tensor(1.0),
         },
     }
     checkpoint_path = root / "best.pt"
@@ -137,21 +137,21 @@ def build_release_fixture(root: Path, *, git_commit: str) -> dict[str, object]:
         + "\n",
         encoding="utf-8",
     )
-    temperatures = {"tau_a": 1.0, "tau_d": 1.0, "tau_p": 1.0}
-    expected_nll = _calibration_prediction_nll(predictions, temperatures)
+    decoder_parameters = {"tau_a": 1.0, "tau_p": 1.0, "uncertainty_mass": 1.0}
+    expected_nll = _calibration_prediction_nll(predictions, decoder_parameters)
     calibration = {
         "base_checkpoint_sha256": file_sha256(checkpoint_path),
         "run_lock_sha256": checkpoint["run_lock_sha256"],
         "statement_cache_sha256": run_lock["statement_cache_sha256"],
         "statement_vocabulary_sha256": run_lock["statement_vocabulary_sha256"],
         "selected_best_step": 7,
-        "format_version": 2,
-        "calibration_algorithm": "three_temperature_lbfgs_v1",
+        "format_version": 3,
+        "calibration_algorithm": "monotone_decoder_lbfgs_v1",
         "calibration_manifest_sha256": run_lock["manifest_sha256"]["calibration"],
         "control_protocol_version": run_lock["control_protocol_version"],
         "evaluation_control_seed": 20260717,
-        "uncalibrated_temperatures": temperatures,
-        "calibrated_temperatures": temperatures,
+        "uncalibrated_decoder_parameters": decoder_parameters,
+        "calibrated_decoder_parameters": decoder_parameters,
         "calibration_predictions_file": str(predictions),
         "calibration_predictions_sha256": file_sha256(predictions),
         "calibration_pre_nll": expected_nll,
@@ -238,8 +238,8 @@ class FormalArtifactLockTests(unittest.TestCase):
                 "run_lock_sha256": canonical_json_sha256(lock),
                 "bives_head": {
                     "decoder.tau_a": torch.tensor(1.0),
-                    "decoder.tau_d": torch.tensor(1.0),
                     "decoder.tau_p": torch.tensor(1.0),
+                    "decoder.uncertainty_mass": torch.tensor(1.0),
                 },
             }
             checkpoint_path = root / "best.pt"
@@ -258,21 +258,27 @@ class FormalArtifactLockTests(unittest.TestCase):
                 + "\n",
                 encoding="utf-8",
             )
-            temperatures = {"tau_a": 1.0, "tau_d": 1.0, "tau_p": 1.0}
-            expected_nll = _calibration_prediction_nll(prediction_path, temperatures)
+            decoder_parameters = {
+                "tau_a": 1.0,
+                "tau_p": 1.0,
+                "uncertainty_mass": 1.0,
+            }
+            expected_nll = _calibration_prediction_nll(
+                prediction_path, decoder_parameters
+            )
             calibration = {
                 "base_checkpoint_sha256": file_sha256(checkpoint_path),
                 "run_lock_sha256": checkpoint["run_lock_sha256"],
                 "statement_cache_sha256": lock["statement_cache_sha256"],
                 "statement_vocabulary_sha256": lock["statement_vocabulary_sha256"],
                 "selected_best_step": 7,
-                "format_version": 2,
-                "calibration_algorithm": "three_temperature_lbfgs_v1",
+                "format_version": 3,
+                "calibration_algorithm": "monotone_decoder_lbfgs_v1",
                 "calibration_manifest_sha256": lock["manifest_sha256"]["calibration"],
                 "control_protocol_version": lock["control_protocol_version"],
                 "evaluation_control_seed": 20260717,
-                "uncalibrated_temperatures": temperatures,
-                "calibrated_temperatures": temperatures,
+                "uncalibrated_decoder_parameters": decoder_parameters,
+                "calibrated_decoder_parameters": decoder_parameters,
                 "calibration_predictions_file": str(prediction_path),
                 "calibration_predictions_sha256": file_sha256(prediction_path),
                 "calibration_pre_nll": expected_nll,
@@ -293,8 +299,10 @@ class FormalArtifactLockTests(unittest.TestCase):
                 validate_checkpoint_run_lock(checkpoint, current_git_commit="abc123")
             (model / "model-00001-of-00001.safetensors").write_bytes(b"weight")
             invalid_calibration = dict(calibration)
-            invalid_calibration["calibrated_temperatures"] = {
-                "tau_a": float("nan"), "tau_d": 1.0, "tau_p": 1.0
+            invalid_calibration["calibrated_decoder_parameters"] = {
+                "tau_a": float("nan"),
+                "tau_p": 1.0,
+                "uncertainty_mass": 1.0,
             }
             invalid_calibration["canonical_artifact_sha256"] = canonical_json_sha256(
                 {key: value for key, value in invalid_calibration.items() if key != "canonical_artifact_sha256"}

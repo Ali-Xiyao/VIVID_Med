@@ -27,7 +27,7 @@ bives:
   contextual_heads: 4
   contextual_dropout: 0.0
   mask: {type: soft_topk, topk: 16, temperature: 0.5}
-  decoder: {tau_a: 1.0, tau_d: 1.0, tau_p: 1.0}
+  decoder: {type: monotone_bipolar_conditional, tau_a: 1.0, tau_p: 1.0, uncertainty_mass: 1.0}
   interventions: {replacement: zero, num_controls: 2, control_mode: random_disjoint}
 sampling:
   type: same_statement_state_group

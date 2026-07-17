@@ -405,3 +405,40 @@
   blind hyperparameter search is stopped; formal and mini-P0 execution remain
   blocked until a targeted mechanism repair can demonstrate all four states
   on the one-quartet gate.
+
+## 2026-07-17 Support Polarity Root Cause
+
+- The supplied analytic review matches the recorded run: with `tau_d=tau_p=1`,
+  legacy support probability on the wrong half-axis has a stationary point at
+  `delta=log(sqrt(2)-1)=-asinh(1)=-0.88137`; the observed support delta was
+  `-0.9011`. The failure is therefore decoder geometry, not evidence that the
+  image transform is intrinsically unlearnable or that IES alone is too large.
+- The active migration surface includes the decoder/model config, all five
+  active YAMLs, calibration fitting/reconstruction, train/final evaluator
+  checkpoint temperature handling, release-chain provenance validation,
+  tests, and implementation/proposal documentation. A decoder-only forward
+  edit would leave the formal lock chain internally inconsistent.
+- Authorized repair is the monotone bipolar conditional decoder: availability
+  remains `1-exp(-T/tau_a)`; conditional S/C/U masses come from logits
+  `[delta/(2*tau_p), -delta/(2*tau_p), log(2*uncertainty_mass)]`. The old
+  absolute-exponential decisiveness formula is historical/ablation-only.
+
+## 2026-07-17 Monotone Decoder Gate Result
+
+- The decoder repair removes the support failure. The validation-NLL-selected
+  step 50 has train/validation accuracy `1.0`; validation support rho is
+  `+0.7957`, contradict rho is `-0.9160`, pair violation is `0`, insufficient
+  total evidence is the lowest at `0.0065`, removal-to-insufficient is `1.0`,
+  eligible target-control gap is `1.7962`, and eligible control L1 is
+  `0.000733`.
+- The only failed acceptance criterion is uncertain polarity generalization.
+  Train uncertain rho is `+0.0046`, but validation uncertain rho is `+0.7130`.
+  At step 30 validation uncertain rho was `+0.2644`, then drifted while train
+  remained balanced; at step 100 it reached `+0.9439` and validation accuracy
+  fell to `0.75`.
+- The uncertain exact-K train/validation overlap is only `4/28` union patches
+  (Jaccard `0.1429`) at the selected checkpoint, versus `10/22` (`0.4545`) for
+  support. Capacity is sufficient to fit the train quartet, and the decoder
+  monotonicity contracts pass, so the next diagnosis is the uncertain
+  synthetic transform plus exact-K selection stability, not another decoder
+  or loss-weight search. Mini-P0 and formal runs remain blocked.

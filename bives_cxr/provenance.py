@@ -15,11 +15,12 @@ import torch
 import yaml
 
 from .calibration import probabilities_from_evidence
+from .decoder import DECODER_PARAMETER_NAMES
 from .interventions import CONTROL_PROTOCOL_VERSION
 from .metrics import classification_metrics
 
 
-RUN_LOCK_FORMAT_VERSION = 2
+RUN_LOCK_FORMAT_VERSION = 3
 MODEL_SNAPSHOT_FILES = (
     "config.json", "generation_config.json", "preprocessor_config.json",
     "processor_config.json", "tokenizer_config.json", "tokenizer.json",
@@ -402,30 +403,33 @@ def validate_calibrated_release_chain(
         raise ValueError("calibration control protocol does not match run_lock")
     if int(calibration.get("evaluation_control_seed", -1)) != int(run_lock.get("evaluation_control_seed")):
         raise ValueError("calibration evaluation control seed does not match run_lock")
-    if calibration.get("calibration_algorithm") != "three_temperature_lbfgs_v1":
+    if calibration.get("calibration_algorithm") != "monotone_decoder_lbfgs_v1":
         raise ValueError("calibration algorithm/version is unsupported")
-    for field in ("uncalibrated_temperatures", "calibrated_temperatures"):
+    for field in (
+        "uncalibrated_decoder_parameters",
+        "calibrated_decoder_parameters",
+    ):
         values = calibration.get(field)
         if not isinstance(values, dict):
             raise ValueError(f"calibration artifact is missing {field}")
-        for name in ("tau_a", "tau_d", "tau_p"):
+        for name in DECODER_PARAMETER_NAMES:
             value = float(values.get(name, float("nan")))
             if not math.isfinite(value) or not 1e-4 <= value <= 1e4:
                 raise ValueError(f"calibration {field}.{name} is not finite and bounded")
-    checkpoint_temperatures = {
+    checkpoint_parameters = {
         name: float(checkpoint["bives_head"][f"decoder.{name}"].detach().cpu())
-        for name in ("tau_a", "tau_d", "tau_p")
+        for name in DECODER_PARAMETER_NAMES
     }
     if any(
         not math.isclose(
-            checkpoint_temperatures[name],
-            float(calibration["uncalibrated_temperatures"][name]),
+            checkpoint_parameters[name],
+            float(calibration["uncalibrated_decoder_parameters"][name]),
             rel_tol=0.0,
             abs_tol=1e-7,
         )
-        for name in checkpoint_temperatures
+        for name in checkpoint_parameters
     ):
-        raise ValueError("calibration uncalibrated temperatures do not match checkpoint")
+        raise ValueError("calibration uncalibrated decoder parameters do not match checkpoint")
     for field in ("calibration_pre_nll", "calibration_post_nll"):
         if not math.isfinite(float(calibration.get(field, float("nan")))):
             raise ValueError(f"calibration artifact has invalid {field}")
@@ -443,11 +447,11 @@ def validate_calibrated_release_chain(
         raise ValueError("calibration prediction SHA256 does not match")
     recomputed_pre_nll = _calibration_prediction_nll(
         prediction_path,
-        calibration["uncalibrated_temperatures"],
+        calibration["uncalibrated_decoder_parameters"],
     )
     recomputed_post_nll = _calibration_prediction_nll(
         prediction_path,
-        calibration["calibrated_temperatures"],
+        calibration["calibrated_decoder_parameters"],
     )
     for field, actual in (
         ("calibration_pre_nll", recomputed_pre_nll),
@@ -480,7 +484,7 @@ def validate_calibrated_release_chain(
 
 def _calibration_prediction_nll(
     prediction_path: str | Path,
-    temperatures: dict[str, Any],
+    decoder_parameters: dict[str, Any],
 ) -> float:
     """Rebuild decoder probabilities from immutable calibration evidence rows."""
 
@@ -516,9 +520,9 @@ def _calibration_prediction_nll(
     probabilities = probabilities_from_evidence(
         torch.tensor(evidence_pos, dtype=torch.float32),
         torch.tensor(evidence_neg, dtype=torch.float32),
-        torch.tensor(float(temperatures["tau_a"]), dtype=torch.float32),
-        torch.tensor(float(temperatures["tau_d"]), dtype=torch.float32),
-        torch.tensor(float(temperatures["tau_p"]), dtype=torch.float32),
+        torch.tensor(float(decoder_parameters["tau_a"]), dtype=torch.float32),
+        torch.tensor(float(decoder_parameters["tau_p"]), dtype=torch.float32),
+        torch.tensor(float(decoder_parameters["uncertainty_mass"]), dtype=torch.float32),
     )
     return float(
         classification_metrics(

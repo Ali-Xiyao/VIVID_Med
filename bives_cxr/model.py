@@ -26,9 +26,10 @@ class BiVESModelConfig:
     gate_mode: str = "soft_topk"
     topk: int = 16
     gate_temperature: float = 0.5
+    decoder_type: str = "monotone_bipolar_conditional"
     tau_a: float = 1.0
-    tau_d: float = 1.0
     tau_p: float = 1.0
+    uncertainty_mass: float = 1.0
     num_controls: int = 4
     control_mode: str = "random_disjoint"
     contextual_layers: int = 1
@@ -39,7 +40,7 @@ class BiVESModelConfig:
 class BiVESCXR(nn.Module):
     """Statement-conditioned bipolar spatial evidence field."""
 
-    decoder_kind = "bipolar_closed_form"
+    decoder_kind = "monotone_bipolar_conditional"
     has_flat_state_head = False
 
     def __init__(self, config: BiVESModelConfig) -> None:
@@ -50,6 +51,8 @@ class BiVESCXR(nn.Module):
             raise ValueError("contextual_layers must be positive")
         if config.contextual_heads <= 0 or config.fusion_dim % config.contextual_heads:
             raise ValueError("contextual_heads must divide fusion_dim")
+        if config.decoder_type != "monotone_bipolar_conditional":
+            raise ValueError("active BiVES requires decoder_type=monotone_bipolar_conditional")
         self.config = config
         self.visual_projection = nn.Linear(config.visual_dim, config.fusion_dim)
         self.statement_projection = nn.Linear(config.statement_dim, config.fusion_dim)
@@ -81,7 +84,11 @@ class BiVESCXR(nn.Module):
             topk=config.topk,
             temperature=config.gate_temperature,
         )
-        self.decoder = EvidenceStateDecoder(config.tau_a, config.tau_d, config.tau_p)
+        self.decoder = EvidenceStateDecoder(
+            config.tau_a,
+            config.tau_p,
+            config.uncertainty_mass,
+        )
 
     def score_tokens(
         self,

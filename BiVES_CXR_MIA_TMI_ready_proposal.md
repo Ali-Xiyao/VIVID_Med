@@ -392,20 +392,25 @@ A=1-\exp(-T/\tau_A).
 - \(A\approx0\)：几乎没有足够视觉证据；
 - \(A\approx1\)：存在足量视觉证据。
 
-定义证据决断度：
+定义有符号证据差：
 
 \[
-D=1-\exp\left(-\frac{|E^+-E^-|}{\tau_D}\right).
+\Delta=E^+-E^-.
 \]
 
-- \(D\approx0\)：支持与反驳证据接近，冲突或模糊；
-- \(D\approx1\)：证据具有清晰方向。
-
-定义极性：
+在 evidence available 的条件下，使用单调双极条件解码器：
 
 \[
-Q=\sigma\left(\frac{E^+-E^-}{\tau_P}\right).
+(\pi_S,\pi_C,\pi_U)
+=\operatorname{softmax}\left(
+\frac{\Delta}{2\tau_P},
+-\frac{\Delta}{2\tau_P},
+\log(2m_U)
+\right),
 \]
+
+其中 \(m_U>0\) 是 uncertain mass。它控制零极性附近的模糊质量，
+而不改变 support/contradict 的方向单调性。
 
 四类概率：
 
@@ -414,15 +419,15 @@ p_I=1-A,
 \]
 
 \[
-p_U=A(1-D),
+p_U=A\pi_U,
 \]
 
 \[
-p_S=ADQ,
+p_S=A\pi_S,
 \]
 
 \[
-p_C=AD(1-Q).
+p_C=A\pi_C.
 \]
 
 它们满足：
@@ -434,8 +439,14 @@ p_S+p_C+p_U+p_I=1.
 这一解码具有明确语义：
 
 - **insufficient = low evidence availability**；
-- **uncertain = available but non-decisive/conflicting evidence**；
-- **support / contradict = available, decisive evidence with opposite polarity**。
+- **uncertain = available but near-zero/competing signed evidence**；
+- **support / contradict = available evidence with opposite signed polarity**。
+
+在固定总证据量 \(T\) 时，\(p_S\) 对 \(\Delta\) 严格单调递增，
+\(p_C\) 对 \(\Delta\) 严格单调递减，\(p_U\) 关于 \(\Delta=0\)
+对称且在零点最大。因此 support 的 NLL 不再在错误的负半轴产生驻点。
+旧的 \(|\Delta|\)-exponential decoder 仅保留为历史消融，不进入 active
+配置、校准或正式发布链。
 
 主要观察损失：
 

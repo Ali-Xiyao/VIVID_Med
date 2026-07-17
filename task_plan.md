@@ -474,3 +474,21 @@ scope.
 | Instrument train behavior | complete | Train-side primary metrics, all loss terms, auxiliary weight, and train predictions are emitted at each overfit checkpoint. |
 | Stronger synthetic probe | complete | Ran separable non-clinical S/C/U/I transforms through the real frozen Qwen3.5-2B visual path; added the proposal-aligned optional state-only/auxiliary-ramp schedule and a 200-step non-formal safety ceiling. |
 | Rescue decision | complete_failed_gate | The best bounded run reached train/val accuracy 0.75 with correct ranking/intervention directions but never learned absolute support polarity; ramped and `lambda_IES=0.25` candidates were worse. Formal/mini-P0 work stays blocked. |
+
+# 2026-07-17 Monotone Decoder Repair
+
+## Objective
+
+Replace only the non-monotone conditional geometry of the closed-form BiVES
+decoder, preserve the bipolar evidence field and no-flat-head contract, close
+the calibration/provenance/config migration, and rerun exactly one unchanged
+100-step local mechanism gate before considering mini-P0.
+
+| Gate | Status | Acceptance criterion |
+| --- | --- | --- |
+| Root-cause verification | complete | Reproduce the legacy wrong-polarity stationary point near `-asinh(1)` and enumerate every active `tau_d`/decoder provenance dependency. |
+| Monotone decoder implementation | complete | Active decoder uses conditional S/C/U softmax with positive `uncertainty_mass`; S rises strictly with delta, C falls strictly, U is symmetric/maximal at zero, and no trainable flat head is added. |
+| Calibration/release migration | complete | `tau_d` is replaced by `uncertainty_mass` in calibration, checkpoint provenance, evaluator, all active configs, and method docs; run-lock/calibration format is v3. |
+| Regression gate | complete | Compile, synthetic smoke, 48/48 tests, 1001-point monotonicity, all-half-axis gradient direction, legacy `-asinh(1)` trap, and release-chain tests pass. |
+| Controlled GPU gate | complete_failed_uncertain_generalization | The complete 100-step run selected step 50 with train/val accuracy 1.0 and fixed S/C polarity, but val uncertain `abs(rho)=0.7130` while train uncertain is `0.0046`; all other intervention checks pass. |
+| Git handoff | in_progress | Record the explicit failed-one-criterion decision, commit, and push; formal/mini-P0 stays blocked until uncertain train-to-val stability is repaired. |

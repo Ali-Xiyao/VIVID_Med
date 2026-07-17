@@ -7,6 +7,7 @@ BiVES-CXR is the only active paper and code mainline.
 | Purpose | File |
 | --- | --- |
 | Final research proposal | `../BiVES_CXR_MIA_TMI_ready_proposal.md` |
+| Support-polarity root cause and decoder repair | `../BiVES_support_polarity_root_cause_and_repair.md` |
 | Repository overview | `../README.md` |
 | Implementation contract | `bives_cxr_implementation.md` |
 | Manifest schema | `bives_cxr_manifest_schema.md` |
@@ -57,6 +58,10 @@ evaluation, loaders, configs, profiles, prompts, and external tools.
 bundle that previously remained under `delete/`, including old Qwen2.5-era
 configs and utility scripts.
 
+`../legacy/bives_cxr/legacy_abs_exp_decoder.py` preserves the retired
+absolute-difference decoder only for the documented failure ablation. Active
+imports, configs, calibration, and release artifacts cannot select it.
+
 Historical result files under ignored `outputs/` remain untouched. They are
 pilot/provenance evidence only and cannot close a BiVES paper gate.
 
@@ -65,7 +70,7 @@ pilot/provenance evidence only and cannot close a BiVES paper gate.
 The repository has an executable BiVES core, strict same-statement group
 training, mask-before-contextual-block exact-K interventional closure, full-row
 primary evaluation, a separate grouped mechanism evaluator, best-checkpoint
-selection, decoder-temperature calibration, a vision-only Qwen3.5 loader,
+selection, monotone-decoder parameter calibration, a vision-only Qwen3.5 loader,
 provenance-complete statement caches, deterministic intervention controls,
 an isolated locked-test release entry, synthetic CPU smoke, and proposal-level
 unit tests.
