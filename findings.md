@@ -488,3 +488,41 @@
   `uncertain_failure_not_reproduced` with selected validation uncertain
   `abs(rho)=0.03850`. This validates the local engineering gate only, not a
   clinical uncertain-data claim or formal result.
+
+## 2026-07-17 Formal P0 launch preflight
+
+- The user authorized the next launch only after the synthetic Qwen3.5-2B
+  mechanism gate passed. This does not satisfy the separate real-data
+  readiness boundary.
+- Exact local and remote checks both found the required four locked P0
+  manifests, P0 dataset-lock JSON, and canonical Qwen3.5 statement embedding
+  cache absent from the configured locations.
+- The remote project also still reports source `3edb9f4`, so it does not yet
+  contain the current BiVES implementation.
+- Therefore no formal/mini-P0, calibration, or locked-test command was
+  launched; the next legitimate step is construction and audit of the formal
+  P0 assets followed by a fresh source sync.
+
+## 2026-07-17 P0 data-source decision
+
+- The final proposal resolves the source roles: MIMIC-CXR-JPG image/report
+  pairs are the in-domain P0 candidate source; an internal expert-audited
+  BiVES-CXR Audit Set is the later locked test; VinDr-CXR is an external
+  availability/label/box and grounding candidate; CheXpert is secondary.
+- Local storage confirms the MIMIC image and report directory trees and the
+  complete VinDr train/test DICOM, image-label, and box-annotation surfaces.
+  VinDr labels cannot replace the report-derived, patient-disjoint four-state
+  P0 construction.
+- P0 labels cannot be manufactured from report omission: the proposal requires
+  explicit positive/negative auditing, a U/I blind-label pilot, same-statement
+  coverage, and text-leakage checks before formal manifests are locked.
+- The active source tree currently has audit, lock, and statement-cache tools,
+  but no active MIMIC report parser or P0 manifest builder. The next active
+  deliverable is therefore an auditable intake schema and preparation tool,
+  not a formal training launch.
+- `scripts/index_mimic_bives_p0_candidates.py` is now the active intake
+  preparation tool. Its first local ignored shard contains `1,000` paired
+  studies and `1,632` image candidates, all explicitly `unparsed` and with no
+  report text or BiVES state emitted. This is suitable input to a frozen
+  parser-plus-blinded-review workflow, but is not evidence that any P0 label
+  is correct.

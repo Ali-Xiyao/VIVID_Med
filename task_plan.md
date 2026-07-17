@@ -525,3 +525,23 @@ data-side repair and rerun one non-formal 100-step mechanism gate.
 | Bounded repair | complete | Replaced only the local synthetic uncertain engineering fixture with an equal-area 2x2 support/contradict spatial mixture and saved positive/negative masks. No decoder, loss, K, or capacity change. |
 | Controlled 100-step local gate | complete_passed | Qwen3.5-2B selected step 80 at validation NLL `0.3711495355`, accuracy `1.0`, uncertain `abs(rho)=0.038496`; step 100 remains accuracy `1.0`, uncertain `abs(rho)=0.032554`. |
 | Mini-P0/formal boundary | blocked_data_readiness | The synthetic mechanism gate is green, but no mini-P0/formal run was launched. Frozen real manifests and the canonical statement cache are still required before the separate readiness audit can unlock execution. |
+
+# 2026-07-17 Formal P0 Launch Authorization Preflight
+
+| Gate | Status | Evidence |
+| --- | --- | --- |
+| User launch authorization | complete | User authorized launch after the local synthetic uncertainty gate passed. |
+| Local locked P0 assets | blocked | `p0_train.jsonl`, `p0_val.jsonl`, `p0_calibration.jsonl`, `p0_test.jsonl`, `p0_dataset_lock.json`, and `qwen35_canonical.pt` are absent from the exact configured paths. |
+| Server locked P0 assets | blocked | The same six configured assets are absent under the remote project root. |
+| Server source freshness | blocked | The remote `.bives_source_commit` remains at historical source `3edb9f4`, not the current local/pushed BiVES implementation. |
+| Formal launch | blocked_data_readiness | No Qwen3.5 model load, GPU allocation, training, calibration, or locked-test job was submitted. Real-data manifest/cache construction and a fresh source sync are required first. |
+
+# 2026-07-17 P0 Data-Source Decision and Intake Preparation
+
+| Work item | Status | Decision / evidence |
+| --- | --- | --- |
+| P0 in-domain source | complete | Use local `H:\Xiyao_Wang\000_Public Dataset\mimic-cxr\mimic-cxr`: it contains separate MIMIC image and report trees arranged by `pXX/patient/study`. MIMIC reports are candidate generation only until P0-1/P0-2 audit evidence exists. |
+| P0 external route | complete | Use VinDr-CXR only for P0-5 availability/label/box/permission audit and later external evaluation. Its train/test image-label CSVs and box annotation CSVs are present; it must not be mixed into the P0 in-domain train split. |
+| CheXpert role | complete | Keep CheXpert as secondary external/linear-probe material, not a substitute for report-derived four-state P0 labels. |
+| Active P0 intake chain | in_progress | Added an active path-only MIMIC intake indexer and generated the first ignored shard (`1,000` paired studies / `1,632` images). A frozen parser candidate table, blind review, adjudication, matching, four-split manifest construction, and cache build remain before training. |
+| Source sync / formal launch | blocked | The remote project lacks the raw-data root and remains on historical source `3edb9f4`; synchronize only after local P0 audit artifacts pass. |
