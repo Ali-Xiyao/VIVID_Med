@@ -7,6 +7,7 @@ import unittest
 from pathlib import Path
 
 import yaml
+import numpy as np
 from PIL import Image
 import torch
 from torch.utils.data import DataLoader
@@ -14,6 +15,7 @@ from torch.utils.data import DataLoader
 from bives_cxr.audit import audit_manifests
 from bives_cxr.backbones import validate_qwen35_model_path
 from bives_cxr.data import BiVESManifestDataset, SameStatementStateBatchSampler
+from scripts.prepare_local_bives_overfit import transformed
 from scripts.train_bives_cxr import (
     assert_full_sample_coverage,
     load_config,
@@ -30,6 +32,15 @@ def write_jsonl(path: Path, rows: list[dict[str, str]]) -> None:
 
 
 class BiVESReadinessTest(unittest.TestCase):
+    def test_validation_uncertain_transform_preserves_posterize_levels(self) -> None:
+        width, height = 32, 32
+        gradient = np.tile(np.arange(width, dtype=np.uint8) * 8, (height, 1))
+        image = Image.fromarray(gradient, mode="L")
+        train_uncertain = transformed(image, 2).convert("L")
+        val_uncertain = transformed(image, 6).convert("L")
+        self.assertLessEqual(np.unique(np.asarray(train_uncertain)).size, 8)
+        self.assertLessEqual(np.unique(np.asarray(val_uncertain)).size, 8)
+
     def test_manifest_dataset_loads_images_and_dataloader_batches(self) -> None:
         """Regression for Dataset methods accidentally nesting under a helper."""
         with tempfile.TemporaryDirectory() as temp:

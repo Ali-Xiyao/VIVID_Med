@@ -492,3 +492,19 @@ the calibration/provenance/config migration, and rerun exactly one unchanged
 | Regression gate | complete | Compile, synthetic smoke, 48/48 tests, 1001-point monotonicity, all-half-axis gradient direction, legacy `-asinh(1)` trap, and release-chain tests pass. |
 | Controlled GPU gate | complete_failed_uncertain_generalization | The complete 100-step run selected step 50 with train/val accuracy 1.0 and fixed S/C polarity, but val uncertain `abs(rho)=0.7130` while train uncertain is `0.0046`; all other intervention checks pass. |
 | Git handoff | complete | Repair and explicit failed-one-criterion decision are committed; regression evidence is recorded and `main` is pushed. Formal/mini-P0 stays blocked until uncertain train-to-val stability is repaired. |
+
+# 2026-07-17 Uncertain Transform Replay and Local Gate
+
+## Objective
+
+Follow the supplied support-polarity follow-up without touching the accepted
+decoder, loss weights, K budget, or model capacity. The only allowed code repair
+is the synthetic validation transform order; mini-P0 and formal execution remain
+blocked unless the same local 100-step mechanism gate passes.
+
+| Gate | Status | Acceptance criterion |
+| --- | --- | --- |
+| Zero-training transform replay | complete | Replayed the selected monotone-decoder checkpoint under U0-U5 uncertain transform variants and recorded state probabilities, signed evidence, top-K overlap, K sweep, gate-logit Spearman, and Qwen token similarity. |
+| Synthetic transform-order repair | complete | Validation synthetic images now apply geometry before the state transform, use median fill, then apply photometric contrast last; uncertain validation keeps the posterize cue at 8 gray levels. |
+| Controlled 100-step local gate | complete_failed_uncertain_stability | The unchanged Qwen3.5-2B/K=16/LR/loss 100-step local gate still fails: train accuracy `1.0`, validation accuracy `0.75`, selected/final validation NLL `0.4459805632`, and validation uncertain `abs(rho)=0.8424913883`. |
+| Formal/mini-P0 boundary | blocked | No mini-P0, formal training, calibration, or locked-test evaluation was launched. The next target is selector/evidence-field stability rather than decoder geometry, loss weights, K, or model capacity. |

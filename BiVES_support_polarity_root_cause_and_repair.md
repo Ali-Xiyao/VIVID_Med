@@ -714,3 +714,45 @@ control effect remains small
 - 保留 availability、decisiveness 和 polarity；
 - 可进行温度/uncertainty-mass calibration；
 - 与 keep/drop/control evidence closure 完全兼容。
+---
+
+## 2026-07-17 follow-up: uncertain transform replay
+
+The support-polarity repair is complete and should remain frozen. The next
+debugging pass therefore did not change the decoder, loss weights, exact-K
+budget, or Qwen3.5 capacity.
+
+Zero-training replay from the selected monotone-decoder checkpoint confirmed
+that the old uncertain validation path was defective:
+
+```text
+U3 old path = posterize -> contrast -> bicubic rotation
+posterize levels: 8 -> 244 gray values
+U0 top-K Jaccard: 0.1429
+gate-logit Spearman vs U0: 0.3729
+```
+
+The synthetic input generator has been repaired so validation geometry is
+applied before the state transform, with median fill, and contrast is applied
+last. This preserves the uncertain posterize cue:
+
+```text
+train_uncertain.png: 8 gray levels
+val_uncertain.png:   8 gray levels
+```
+
+However, the unchanged 100-step local Qwen3.5-2B mechanism gate still failed
+after this transform-order repair:
+
+```text
+selected/final step: 100
+train accuracy:      1.0
+validation accuracy: 0.75
+validation NLL:      0.4459805632
+val uncertain |rho|: 0.8424913883
+```
+
+Conclusion: the remaining blocker is not support polarity and is not solved by
+transform order alone. Mini-P0 and formal execution remain blocked. The next
+repair target is exact-K selector / evidence-field stability for uncertain,
+using patch-level counterfactual replay before any further training scale-up.

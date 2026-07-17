@@ -26,6 +26,7 @@ BiVES-CXR is the only active paper and code mainline.
 | CPU smoke | `../scripts/smoke_bives_cxr.py` |
 | Real-weight Qwen3.5 vision smoke | `../scripts/smoke_qwen35_vision.py` |
 | Qwen3.5-to-BiVES server integration gate | `../scripts/smoke_qwen35_bives_integration.py` |
+| Zero-training uncertain transform replay | `../scripts/replay_bives_uncertain_transform.py` |
 | Manifest audit | `../scripts/audit_bives_manifest.py` |
 | Joint four-split dataset lock | `../scripts/lock_bives_dataset.py` |
 | Source-only deployment manifest | `../scripts/write_bives_source_manifest.py` |
@@ -103,3 +104,14 @@ Formal local training has not been started. Before local P0:
 5. verify same-statement cross-state coverage;
 6. run Qwen3.5-2B P0 locally;
 7. unlock Qwen3.5-4B only after the proposal go/no-go gates pass.
+
+## Current mechanism-gate blocker
+
+Support polarity has been repaired by the monotone decoder. The remaining
+local mechanism blocker is uncertain train-to-validation stability. A
+zero-training replay showed that the old uncertain validation transform
+destroyed the discrete posterize cue, and the synthetic transform order now
+applies geometry before state transform and contrast last. The follow-up
+100-step local gate still failed on validation uncertain polarity, so the next
+target is selector/evidence-field stability rather than another decoder,
+loss-weight, K, or model-capacity change.

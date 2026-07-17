@@ -442,3 +442,25 @@
   monotonicity contracts pass, so the next diagnosis is the uncertain
   synthetic transform plus exact-K selection stability, not another decoder
   or loss-weight search. Mini-P0 and formal runs remain blocked.
+
+## 2026-07-17 Uncertain Transform Replay And Repair
+
+- The supplied stop decision is correct: support polarity is fixed, and the
+  accepted monotone decoder should not be edited again in this phase. Loss
+  weights, K, and Qwen3.5 capacity were also kept unchanged.
+- Zero-training replay of the selected monotone-decoder checkpoint confirms
+  one concrete validation-transform defect. The old U3 path
+  `posterize -> contrast -> bicubic rotate` expands the uncertain cue from 8
+  grayscale levels to 244 levels and has low U0 top-K overlap (Jaccard
+  `0.1429`) plus low gate-logit rank agreement (Spearman `0.3729`).
+- Repairing the synthetic validation order to `geometry -> state transform ->
+  contrast` preserves the posterize cue (`train_uncertain.png` and
+  `val_uncertain.png` both have 8 grayscale levels). However, the same
+  100-step local gate still fails after this repair: train accuracy is `1.0`,
+  validation accuracy is `0.75`, selected validation NLL is `0.4459805632`,
+  and validation uncertain `abs(rho)` remains high at `0.8424913883`.
+- Therefore the current blocker is no longer support polarity and is not fixed
+  by transform order alone. The next mechanism target is exact-K
+  selector/evidence-field train-to-validation stability for uncertain, using
+  counterfactual replay and patch-level evidence diagnostics before any
+  mini-P0 or formal run.

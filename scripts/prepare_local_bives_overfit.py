@@ -6,6 +6,7 @@ import argparse
 import json
 from pathlib import Path
 
+import numpy as np
 from PIL import Image, ImageEnhance, ImageFilter, ImageOps
 
 
@@ -23,6 +24,13 @@ def transformed(image: Image.Image, index: int) -> Image.Image:
     image = image.convert("L")
     state_index = index % len(STATES)
     validation_variant = index >= len(STATES)
+    if validation_variant:
+        fill = int(np.median(np.asarray(image)))
+        image = image.rotate(
+            1.0,
+            resample=Image.Resampling.BICUBIC,
+            fillcolor=fill,
+        )
     if state_index == 0:
         image = ImageOps.autocontrast(image)
     elif state_index == 1:
@@ -34,7 +42,6 @@ def transformed(image: Image.Image, index: int) -> Image.Image:
         image = ImageEnhance.Brightness(image).enhance(0.55)
     if validation_variant:
         image = ImageEnhance.Contrast(image).enhance(0.92)
-        image = image.rotate(1.0, resample=Image.Resampling.BICUBIC)
     return image.convert("RGB")
 
 
