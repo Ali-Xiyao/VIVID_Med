@@ -5,10 +5,10 @@ experiment:
   mode: local_proxy
 data:
   data_root: .
-  train_manifest: local_runs/bives_cxr/proxy_p0_sc_v3_input/train_proxy.jsonl
-  val_manifest: local_runs/bives_cxr/proxy_p0_sc_v3_input/val_proxy.jsonl
-  max_train_samples: 16
-  max_val_samples: 16
+  train_manifest: local_runs/bives_cxr/proxy_p0_5k_sc_input/train_proxy.jsonl
+  val_manifest: local_runs/bives_cxr/proxy_p0_5k_sc_input/val_proxy.jsonl
+  max_train_samples: 48
+  max_val_samples: 48
   image_size: 448
   num_workers: 0
 model:
@@ -69,6 +69,6 @@ training:
   gradient_accumulation_steps: 1
   eval_interval: 10
   max_grad_norm: 1.0
-  output_dir: local_runs/bives_cxr/qwen35_2b_proxy_p0_v3
+  output_dir: local_runs/bives_cxr/qwen35_2b_proxy_p0_v4_5k
 seed: 17
 device: cuda:1

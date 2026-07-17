@@ -1319,7 +1319,7 @@ TCIG=\Delta_{target}-\Delta_{control},
 
 | Run ID | 内容 | 输出 | Gate |
 |---|---|---|---|
-| P0-W | 冻结规则弱标签代理 P0（parser v3 数据修复后总体 S/C 通过，per-finding 仍混合） | target-local 规则作用域、唯一候选 ID、规则/报告/图像哈希、16/16 患者隔离 S/C/U/I proxy rows | 总体 held-out S/C AUROC 0.8125、U/I 1.0；pulmonary edema S/C 1.0，但 pleural effusion 0.5，故仍停止 4B/9B 扩展且不得作为专家真值 |
+| P0-W | 冻结规则弱标签代理 P0（5,000-study intake、parser v3、三 finding 扩展验证） | target-local 规则作用域、唯一候选 ID、规则/报告/图像哈希、48/48 患者隔离 S/C/U/I proxy rows | 排序门通过：总体 held-out S/C AUROC 0.8056、U/I 1.0，consolidation/pleural effusion/pulmonary edema 的 S/C 分别为 0.875/0.8125/1.0；决策门失败：四分类 argmax 全落到 insufficient、accuracy 0.25；train-proxy 参数拟合只能把 held-out accuracy 提到 0.5417，故仍停止 4B/9B 扩展且不得作为专家真值或正式 P0 结果 |
 | P0-1 | 报告解析人工抽样审计（当前不可用） | 各字段 precision/recall | 未完成，不阻塞代理 P0，但阻塞临床可靠性声明 |
 | P0-2 | U/I 双盲标注 pilot（当前取消） | agreement、混淆 | 无审阅者；不得声称定义已被专家稳定区分 |
 | P0-3 | same-statement 覆盖统计 | 每 finding 每状态样本量 | 主 finding 有足够跨状态组 |

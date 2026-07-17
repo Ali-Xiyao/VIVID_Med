@@ -32,6 +32,7 @@ BiVES-CXR is the only active paper and code mainline.
 | P0 MIMIC intake index | `../scripts/index_mimic_bives_p0_candidates.py` |
 | P0 parser candidate and blinded-review packet | `../scripts/prepare_bives_p0_report_review.py`, `../scripts/validate_bives_p0_review_packet.py` |
 | Nonclinical weak-label proxy-P0 builder | `../scripts/build_bives_proxy_p0.py` |
+| Frozen-feature proxy finding screen | `../scripts/diagnose_bives_proxy_sc.py` |
 | Weak-label proxy-P0 experiment record | `bives_cxr_proxy_p0_experiment_log.md` |
 | Joint four-split dataset lock | `../scripts/lock_bives_dataset.py` |
 | Source-only deployment manifest | `../scripts/write_bives_source_manifest.py` |
@@ -102,17 +103,31 @@ emitting locked-test metrics. The normal evaluator still requires
 `--run-locked-test`.
 
 Expert review is unavailable and has been removed from the executable path.
-The local proxy P0 is therefore explicitly weak-label and nonformal. Its v2
-run is complete and failed held-out S/C generalization; the completed chain was:
+The local proxy P0 is therefore explicitly weak-label and nonformal. The
+current parser-v3 expansion over 5,000 paired MIMIC studies completed one
+bounded Qwen3.5-2B run; the completed chain was:
 
 1. build deterministic patient-disjoint proxy train/validation quartets with
    `scripts/build_bives_proxy_p0.py`;
 2. require rule/report/image hashes and `weak_proxy_unreviewed` provenance;
 3. audit all real and synthetic images plus exact S/C/U/I groups;
 4. retain `proxy_dataset_lock.json` and `formal_result=false`;
-5. run only the bounded Qwen3.5-2B proxy P0 locally;
-6. stop after its failed S/C survival gate and keep 4B/9B, calibration, and
-   locked-test claims closed.
+5. screen findings with frozen Qwen3.5-2B visual features before training;
+6. run one bounded 50-step Qwen3.5-2B proxy P0 locally on 48 train and 48
+   patient-disjoint validation rows;
+7. record aggregate/per-finding ranking and absolute four-state decision gates
+   separately.
+
+The expanded run passes the ranking gate: held-out S/C AUROC is `0.8056`, U/I
+AUROC is `1.0`, and per-finding S/C AUROC is `0.875`, `0.8125`, and `1.0` for
+consolidation, pleural effusion, and pulmonary edema. It fails the absolute
+decision gate because all 48 validation argmax predictions are insufficient
+(`accuracy=0.25`, `macro-F1=0.10`). Keep 4B/9B, calibration, locked-test, and
+formal clinical claims closed. An exploratory decoder-parameter fit on the
+train proxy improves held-out NLL from `1.3692` to `1.1620` and accuracy to
+`0.5417`, but still recovers only 1/12 contradict and 2/12 uncertain rows. This
+shows that uncalibrated geometry is material but not the whole failure; it is
+not a locked calibration result and does not reopen scaling.
 
 ## Current mechanism-gate status
 

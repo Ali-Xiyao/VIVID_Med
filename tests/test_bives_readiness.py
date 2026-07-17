@@ -172,8 +172,8 @@ class BiVESReadinessTest(unittest.TestCase):
             (config_root / "qwen35_2b_proxy_p0.template.yaml").read_text(encoding="utf-8")
         )
         self.assertEqual(proxy["experiment"]["mode"], "local_proxy")
-        self.assertEqual(proxy["data"]["max_train_samples"], 16)
-        self.assertEqual(proxy["data"]["max_val_samples"], 16)
+        self.assertEqual(proxy["data"]["max_train_samples"], 48)
+        self.assertEqual(proxy["data"]["max_val_samples"], 48)
         self.assertFalse(proxy["audit"]["require_both_insufficient_kinds"])
         self.assertFalse(proxy["evaluation"]["run_test"])
 

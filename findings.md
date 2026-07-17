@@ -626,3 +626,49 @@
 - Per-finding evidence remains mixed: pulmonary edema S/C AUROC is `1.0`, but
   pleural effusion is `0.5` on four S/C examples. This supports the parser/data
   root cause while still blocking 4B/9B scaling and formal claims.
+
+## 2026-07-17 expanded 5k-study candidate coverage
+
+- Expanding only the local MIMIC intake from 1,000 to 5,000 paired studies
+  yielded 8,220 image rows and 20,204 unique parser-v3 finding candidates with
+  the identical rules hash. No raw image was copied into the repository.
+- Independent S/C patient counts are: pleural effusion `338/1050`, pulmonary
+  edema `271/507`, consolidation `207/765`, pneumothorax `78/1191`,
+  atelectasis `512/19`, and cardiomegaly `303/11`.
+- The frozen-feature expansion gate therefore admits only pleural effusion,
+  pulmonary edema, consolidation, and pneumothorax at 20 S plus 20 C patients.
+  Atelectasis and cardiomegaly remain coverage-ineligible regardless of their
+  aggregate row count.
+- Read-only Qwen3.5-2B features on the four coverage-eligible findings give
+  LOO centroid S/C AUROC: pleural effusion `0.7425`, pulmonary edema `0.7775`,
+  consolidation `0.8425`, and pneumothorax `0.6050`. Pneumothorax is excluded;
+  the other three pass the predeclared `>=0.65` gate.
+- The retained three findings support 4 train plus 4 validation quartets each.
+  The builder produced 48/48 rows with 46/45 unique split patients, zero
+  cross-split patient/image leakage, and nonformal lock
+  `3473ad6aab7350029e593b3c9e9f1e65b4433fdcdd058e8f813bfe9cd00ae9df`.
+- The one frozen expanded Qwen3.5-2B run completed 50/50 steps in `68.8994s`
+  and selected step 50 by validation NLL `1.369244`. Held-out aggregate S/C
+  AUROC is `0.8056`; consolidation, pleural effusion, and pulmonary edema are
+  `0.875`, `0.8125`, and `1.0`, respectively. U/I AUROC is `1.0` overall and
+  for every finding. The ranking improvement is therefore cross-finding.
+- Absolute prediction remains unusable: all 48 validation rows choose
+  `insufficient`, yielding accuracy `0.25`, macro-F1 `0.10`, and a confusion
+  matrix with only the insufficient prediction column populated. This is a
+  decision/probability-geometry failure after a passed ranking gate, not
+  authority to scale to 4B/9B or claim formal/clinical P0 success.
+- A zero-training decoder-geometry diagnostic fit the existing positive
+  parameters on the 48 train-proxy evidence rows only. The fit
+  (`tau_a=0.4469`, `tau_p=0.1104`, `uncertainty_mass=0.5917`) improves frozen
+  validation NLL `1.3692 -> 1.1620`, ECE `0.4003 -> 0.1925`, accuracy
+  `0.25 -> 0.5417`, and macro-F1 `0.10 -> 0.4786`, while leaving canonical
+  ranking AUROCs unchanged. It still predicts only 1/12 contradict and 2/12
+  uncertain correctly, so calibration is a partial explanation rather than a
+  completed repair or formal artifact.
+- Frozen held-out evidence distributions show that availability is learned but
+  bipolar centering is not. Median total evidence is S `0.9387`, C `0.8518`, U
+  `0.8627`, and I `0.4356`, while median signed evidence is S `+0.1309`, C
+  `+0.0464`, U `+0.0863`, and I `+0.0215`. Contradict remains on the positive
+  side of the origin and uncertain is not centered near zero. This explains
+  strong conditional ranking plus weak absolute C/U decisions without
+  implicating insufficient availability or requiring a larger backbone.

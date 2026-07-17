@@ -2,10 +2,11 @@
 
 ## Status
 
-The parser-v3 data repair and one bounded Qwen3.5-2B rerun completed locally on
-2026-07-17. The aggregate support/contradict survival gate now passes, but the
-per-finding result remains mixed. This is a nonclinical engineering proxy and
-must not be reported as an expert-audited or formal BiVES-CXR result.
+The expanded parser-v3 proxy cycle completed locally on 2026-07-17. The frozen
+Qwen3.5-2B representation separates support from contradict across all three
+retained findings, but the closed-form four-state argmax remains collapsed to
+`insufficient`. This is a nonclinical engineering proxy and must not be
+reported as an expert-audited or formal BiVES-CXR result.
 
 ## Authorization and claim boundary
 
@@ -31,23 +32,28 @@ Parser v3 now uses target-local scope, preserves cross-line context, recognizes
 explicit absence phrases, and includes every scope rule in its provenance
 hash.
 
-The regenerated parser table contains 4,201 globally unique candidates. A
-read-only patient-balanced Qwen3.5-2B frozen-feature audit produced:
+The original 1,000-study parser-v3 table contained 4,201 globally unique
+candidates. The single-variable expansion indexed 5,000 paired MIMIC studies
+and 8,220 image rows, then regenerated 20,204/20,204 unique parser-v3
+candidates under the unchanged rules SHA256
+`224cb4c4194ce0384c35a74f9fcb9cbbd3137a8bac60b288f12b13bdc39a530a`.
+A read-only patient-balanced Qwen3.5-2B frozen-feature audit on 20 support and
+20 contradict patients per coverage-eligible finding produced:
 
 | Finding | S/C patients | LOO centroid AUROC |
 | --- | ---: | ---: |
-| Pleural effusion | 10 / 10 | 0.750 |
-| Pulmonary edema | 10 / 10 | 0.785 |
-| Consolidation | 10 / 10 | 0.640 |
-| Pneumothorax | 10 / 10 | 0.590 |
-| Cardiomegaly | 4 / 4 | 0.375 |
-| Atelectasis | 5 / 5 | 0.360 |
+| Pleural effusion | 20 / 20 | 0.7425 |
+| Pulmonary edema | 20 / 20 | 0.7775 |
+| Consolidation | 20 / 20 | 0.8425 |
+| Pneumothorax | 20 / 20 | 0.6050 |
 
-The one authorized data-side repair therefore removed the unreliable
-atelectasis ontology and retained pleural effusion plus pulmonary edema. The
-new ignored proxy input has 16 train rows / four quartets and 16 validation
-rows / four quartets, with zero patient or image-hash overlap. Proxy dataset
-lock SHA256: `7ba18607e835154796378b6b79871b6367031877b7f7f7fa0ebb67bfec583753`.
+The predeclared `>=0.65` feature gate retained pleural effusion, pulmonary
+edema, and consolidation, and excluded pneumothorax. Atelectasis and
+cardiomegaly were coverage-ineligible because they had fewer than 20 independent
+contradict patients. The ignored expanded proxy input has 48 train rows / 12
+quartets and 48 validation rows / 12 quartets, with zero cross-split patient or
+image-hash overlap. Proxy dataset lock SHA256:
+`3473ad6aab7350029e593b3c9e9f1e65b4433fdcdd058e8f813bfe9cd00ae9df`.
 
 ## Runtime
 
@@ -56,8 +62,8 @@ model: H:/Xiyao_Wang/001_models/Qwen3.5-2B
 device: cuda:1 (NVIDIA GeForce RTX 3090)
 mode: local_proxy
 steps: 50/50
-elapsed: 29.4116 seconds
-selected step: 40 by minimum validation NLL
+elapsed: 68.8994 seconds
+selected step: 50 by minimum validation NLL
 formal_result: false
 ```
 
@@ -68,19 +74,53 @@ wrote all step metrics/predictions, and released GPU1 after exit.
 
 | Metric | Train proxy | Held-out proxy validation |
 | --- | ---: | ---: |
-| Accuracy | 0.9375 | 0.7500 |
-| Macro F1 | 0.9365 | 0.7401 |
-| S vs C AUROC | 1.0000 | 0.8125 |
+| Accuracy | 0.2500 | 0.2500 |
+| Macro F1 | 0.1000 | 0.1000 |
+| S vs C AUROC | 0.8819 | 0.8056 |
 | U vs I AUROC | 1.0000 | 1.0000 |
-| NLL | 0.5884 | 0.8241 |
-| Evidence-only sufficiency | 0.9091 | 1.0000 |
-| Evidence-removal insufficient | 0.3636 | 0.5000 |
+| NLL | 1.3675 | 1.3692 |
+| Evidence-only sufficiency | not eligible | not eligible |
+| Evidence-removal insufficient | not eligible | not eligible |
 | Irrelevant stability | 1.0000 | 1.0000 |
 
-Per-finding held-out S/C AUROC is `1.0` for pulmonary edema but only `0.5`
-for pleural effusion (four S/C examples per finding). Thus the aggregate S/C
-ranking repair is real, but the evidence is too small and heterogeneous to
-claim stable multi-finding generalization.
+Per-finding held-out S/C AUROC is `0.875` for consolidation, `0.8125` for
+pleural effusion, and `1.0` for pulmonary edema (eight S/C examples per
+finding). Per-finding U/I AUROC is `1.0` for all three. Thus the ranking signal
+is not supplied by a single finding. However, every validation argmax is
+`insufficient`; the four-state confusion matrix has only its last column
+populated. The result therefore passes the ranking gate but fails the absolute
+decision/calibration gate.
+
+## Zero-training decoder-geometry diagnostic
+
+To distinguish representation failure from uncalibrated probability geometry,
+the existing monotone-decoder fitter was applied to the 48 train-proxy evidence
+pairs only, then evaluated once on the frozen 48-row validation proxy. This is
+an exploratory diagnosis, not a locked calibration split or release artifact.
+
+| Metric | Uncalibrated validation | Train-proxy-fitted validation |
+| --- | ---: | ---: |
+| Accuracy | 0.2500 | 0.5417 |
+| Macro F1 | 0.1000 | 0.4786 |
+| NLL | 1.3692 | 1.1620 |
+| ECE | 0.4003 | 0.1925 |
+| S vs C AUROC | 0.8056 | 0.8056 |
+| U vs I AUROC | 1.0000 | 1.0000 |
+
+The fitted positive parameters are `tau_a=0.4469`, `tau_p=0.1104`, and
+`uncertainty_mass=0.5917`. They recover all 12 insufficient cases and 11/12
+support cases, but only 1/12 contradict and 2/12 uncertain cases. Calibration
+therefore explains much of the all-insufficient collapse but does not solve the
+four-state decision problem.
+
+The frozen evidence distribution localizes the remaining error. Median total
+evidence is `0.9387`, `0.8518`, `0.8627`, and `0.4356` for S/C/U/I, so the
+availability axis separates synthetic insufficient. Median signed evidence
+`E+ - E-` is `+0.1309`, `+0.0464`, `+0.0863`, and `+0.0215`: contradict never
+crosses the negative polarity origin and uncertain is not centered near zero.
+The proxy model therefore learns relative S/C ordering without learning an
+absolute bipolar origin. This is the direct reason parameter fitting restores
+I/S more readily than C/U.
 
 ## Historical invalid/failed attempts
 
@@ -88,13 +128,20 @@ claim stable multi-finding generalization.
   evidence.
 - Parser v2 fixed candidate lineage, but its atelectasis-only 8/4 run selected
   step 30 and obtained held-out S/C AUROC `0.0` despite train AUROC `1.0`.
-- The parser-v3 rerun is the only result used for the current decision.
+- The 16/16 parser-v3 run improved aggregate S/C AUROC to `0.8125`, but its
+  per-finding result was mixed (pulmonary edema `1.0`, pleural effusion `0.5`).
+- The 48/48 expanded parser-v3 run is the current decision artifact.
 
 ## Decision
 
-The parser/data repair changes the proxy result from aggregate S/C
-learning-red to aggregate-green, while exposing pleural-effusion instability.
-Do not tune the closed-form decoder, losses, exact-K, or capacity, and do not
-scale this proxy to Qwen3.5-4B/9B. The next data task is to enlarge
-patient-disjoint same-statement validation and retain only findings that pass
-per-finding S/C gates. Clinical and formal claims remain unavailable.
+The 5k expansion resolves the prior per-finding ranking instability for the
+three retained statements. It does not establish a usable four-state decision
+rule: uncalibrated argmax is collapsed to insufficient. Do not scale this
+proxy to Qwen3.5-4B/9B, and do not reopen the accepted decoder, losses, exact-K,
+or capacity from this result. The train-proxy parameter fit confirms that
+absolute probability geometry is material but insufficient. The next
+permissible work is zero-training evidence-distribution and leakage diagnosis
+on the frozen predictions. The distribution audit now identifies an absolute
+polarity-origin failure, but no loss/decoder change or second model run is
+authorized inside this completed cycle. Clinical and formal claims remain
+unavailable.

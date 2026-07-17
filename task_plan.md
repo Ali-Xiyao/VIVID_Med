@@ -671,3 +671,39 @@ training run. Diagnose the weak-label/data boundary first.
 | One-off negation-scope probe referenced `s` instead of `sent`. | First contextual report audit | It failed before producing counts; corrected the local variable and reran the read-only probe. |
 | `Start-Process` returned a PID but the diagnostic child exited before logging. | First parser-v3 feature launch | Relaunched the same read-only command as a bounded foreground job; it completed in 20.5 seconds and released GPU1. |
 | `metrics_final.json` had an empty `split_metrics` map for nonformal runs. | Parser-v3 result collection | The step events and predictions were intact. Patched the trainer to re-evaluate the validation-selected checkpoint and write final `val` plus `train_proxy` metrics for future local runs. |
+
+# 2026-07-17 Expanded Patient-Disjoint Proxy Validation
+
+## Objective
+
+Test whether the parser-v3 mixed per-finding result is caused by the initial
+1,000-study intake and four S/C validation examples per finding. Change only
+the local MIMIC intake size; keep parser v3, Qwen3.5-2B, decoder, losses, K,
+seed, and training budget frozen.
+
+| Gate | Status | Acceptance criterion |
+| --- | --- | --- |
+| 5k intake index | complete | Indexed 5,000/5,000 paired studies and 8,220 images with zero missing-report or empty-image studies; raw images remained outside the repo. |
+| Parser-v3 coverage | complete | Regenerated 20,204/20,204 unique candidates with unchanged rules hash. Pleural effusion, pulmonary edema, consolidation, and pneumothorax each have >=20 independent S and C patients; atelectasis/cardiomegaly do not. |
+| Frozen-feature per-finding gate | complete | On 20 S + 20 C patients each, pleural effusion=0.7425, pulmonary edema=0.7775, and consolidation=0.8425 pass; pneumothorax=0.6050 is excluded. |
+| Expanded proxy lock | complete | Built 48 train / 48 validation rows (12 quartets each) across the three passing findings; audit passed with lock `3473ad6a...ae9df`. |
+| One bounded 2B rerun | complete_mixed_gate | The local 50-step Qwen3.5-2B run completed normally on 48/48 rows and selected step 50. Aggregate held-out S/C AUROC is 0.8056 and every retained finding is >=0.8125; U/I is 1.0. Absolute four-state argmax collapses all 48 validation rows to insufficient (accuracy 0.25), so ranking passes but the decision gate fails. No 4B/9B, formal calibration, locked test, or model/hyperparameter change is authorized. |
+| Zero-training decoder-geometry attribution | complete_partial_explanation | Fit the existing three positive decoder parameters on train-proxy evidence only and evaluated the frozen validation evidence. NLL improves 1.3692 -> 1.1620 and accuracy 0.25 -> 0.5417, but only 1/12 contradict and 2/12 uncertain rows are recovered. This is diagnostic-only, not a locked calibration result. |
+| Frozen evidence-distribution attribution | complete_root_cause | Validation insufficient has the lowest median total evidence (0.4356 versus 0.8518-0.9387), but median signed evidence remains positive for contradict (+0.0464) and uncertain (+0.0863). The model learns availability and relative ordering but not the absolute bipolar origin. |
+
+## Expansion decision
+
+- Stop after the single pre-authorized 2B run; do not reinterpret ranking AUROC
+  as four-state classification readiness.
+- Preserve the expanded patient-disjoint validation split and selected-step
+  predictions as the fixed diagnostic surface.
+- Probability geometry is a confirmed partial cause, and the frozen evidence
+  distribution localizes the residual to absolute polarity centering. Do not
+  change decoder/loss/K or start another model run inside this expansion cycle.
+
+## Expansion errors
+
+| Error | Attempt | Resolution |
+| --- | --- | --- |
+| A combined planning/progress patch used an outdated exact hash string as its context and did not apply. | First 5k planning writeback | Re-read the file tails and applied smaller, stable-anchor patches; no file was partially changed. |
+| A combined six-file result patch used an exact experiment-log line break that did not match. | First decoder-diagnostic writeback | The patch was rejected before any hunk applied. Split it into per-file patches and corrected the canonical per-finding metric before writeback. |

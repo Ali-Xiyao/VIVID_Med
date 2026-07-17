@@ -76,11 +76,14 @@ does not synchronize experiment code/assets to the server and does not submit
 SSH or Slurm jobs. Changing the execution host does not relax any manifest,
 dataset-lock, statement-cache, calibration, or locked-test gate.
 
-The first `qwen35_2b_proxy_p0` run has completed as an explicitly nonclinical
-weak-label engineering experiment. Its S/C/U labels come from the frozen rule
-parser and its insufficient rows are reproducible synthetic evidence-removal
-images. The corrected v2 run failed held-out S/C polarity generalization, so
-4B/9B scaling is stopped. See
+The expanded `qwen35_2b_proxy_p0` cycle has completed as an explicitly
+nonclinical weak-label engineering experiment. Its S/C/U labels come from the
+frozen parser and its insufficient rows are reproducible synthetic
+evidence-removal images. The 5,000-study parser-v3 run passes aggregate and
+per-finding S/C ranking, but its uncalibrated four-state argmax collapses to
+insufficient. A train-proxy decoder-parameter diagnostic improves held-out
+accuracy only to `0.5417` and leaves contradict/uncertain weak, so 4B/9B
+scaling remains stopped. See
 [`docs/bives_cxr_proxy_p0_experiment_log.md`](docs/bives_cxr_proxy_p0_experiment_log.md).
 It cannot be reported as expert-audited clinical ground truth or as a formal
 locked-test result.
