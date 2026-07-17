@@ -707,3 +707,36 @@ seed, and training budget frozen.
 | --- | --- | --- |
 | A combined planning/progress patch used an outdated exact hash string as its context and did not apply. | First 5k planning writeback | Re-read the file tails and applied smaller, stable-anchor patches; no file was partially changed. |
 | A combined six-file result patch used an exact experiment-log line break that did not match. | First decoder-diagnostic writeback | The patch was rejected before any hunk applied. Split it into per-file patches and corrected the canonical per-finding metric before writeback. |
+
+# 2026-07-18 Optimization-Identifiability Gate
+
+## Authority and frozen boundary
+
+`BiVES_next_direction_without_local_clinical_review_2026-07-17.md` is the
+execution authority for this cycle. Commit `c113b2a` is frozen as
+**Proxy-P0-A**: 5,000-study candidate pool, 48/48 proxy rows, Qwen3.5-2B frozen
+vision, 50 steps, relative S/C ranking signal, synthetic availability signal,
+and failed absolute four-state fit. Do not overwrite or reinterpret it.
+
+This cycle changes no parser pool, labels, clinical-claim boundary, model
+family, exact-K budget, decoder, or evidence parameterization before the two
+predeclared optimization diagnostics are evaluated.
+
+| Gate | Status | Acceptance / stop rule |
+| --- | --- | --- |
+| Proxy-P0-A freeze record | complete | `docs/bives_cxr_proxy_p0_a_freeze.md` binds `c113b2a`, hashes the local config/manifests/metrics/checkpoint, and freezes the nonclinical failure boundary without publishing ignored data or weights. |
+| Step0/step50 evidence audit | implementation_complete | `bives_cxr/optimization_audit.py` and the trainer save fixed-quartet E+/E-/T/delta/rho/probabilities/dense gate logits, signed-state direction, per-loss module gradient norms/cosines, and full train/val evidence summaries at steps 0/50/400. Runtime evidence begins with Run A. |
+| Frozen-feature logistic probes | complete | Patient-group-disjoint global AUROC is `0.7889`; pleural effusion/pulmonary edema/consolidation are `0.8550/0.8075/0.8000`, with intercept, NLL, Brier, and ECE saved under ignored local outputs. |
+| Run A: state-only overfit | complete_failed_survival_gate | Completed the fixed local 400-step run with final-step selection. Train accuracy is `0.7917`, below the required `1.0`; train S/C polarity is correct and insufficient has the lowest total evidence, but support and uncertain each recall only `8/12`. |
+| Run B: full-objective overfit | not_run_by_gate | The authority permits Run B only after Run A fits all 48 train rows. Run A failed, so Run B is intentionally not launched. |
+| Optimization-identifiability verdict | complete_hard_stop | `docs/bives_cxr_optimization_identifiability_verdict.md` records the fixed result. Stop on current optimization/readout, selector, or effective capacity; no auxiliary-conflict claim, parameterization refactor, sweep, extension, or 4B/9B scaling is authorized. |
+| Public expert-data route | intake_complete_model_gate_closed | VinDr integrity passed (`18,006` entries, `0` missing, `70/70` sampled hashes, `16/16` decodes). The ignored test-consensus intake has 6,000 S/C rows for pleural effusion and consolidation; edema is ineligible with zero positives. Patient-level CI is blocked because the public release exposes no patient ID. CheXpert expert provenance and CheXlocalize remain unresolved. Do not run the failed current BiVES route on this intake. |
+
+## Hard stops
+
+- No Qwen3.5-4B/9B run.
+- No parser U/I expansion or new rule-label search.
+- No loss-weight sweep, decoder change, or magnitude-polarity refactor before
+  the A/B verdict.
+- No formal calibration, locked-test, or MIA/TMI-ready clinical claim.
+- All execution remains local; no SSH/server/Slurm work.

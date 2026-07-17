@@ -672,3 +672,76 @@
   side of the origin and uncertain is not centered near zero. This explains
   strong conditional ranking plus weak absolute C/U decisions without
   implicating insufficient availability or requiring a larger backbone.
+
+## 2026-07-18 next-direction authority
+
+- The new review narrows the prior root-cause wording: positive contradict
+  delta is a confirmed failure representation, but not yet proof of theoretical
+  non-identifiability because the 50-step run did not fit even the 48-row train
+  proxy (accuracy `0.25`, NLL `1.3675` versus uniform `log(4)=1.3863`).
+- The next cycle is an optimization-identifiability gate, not another P0 or
+  paper result: step0/step50 evidence and gradient audit, frozen-feature
+  logistic probes, then exactly two fixed 400-step train-overfit diagnostics
+  (state-only and current full objective).
+- Public expert evaluation is re-scoped into expert S/C polarity,
+  intervention-induced availability, and optional reader ambiguity. Parser U
+  and synthetic I remain weak-proxy/mechanism artifacts only.
+
+## 2026-07-18 optimization-identifiability implementation
+
+- The frozen Qwen3.5-2B feature cache supports a fixed patient-group-disjoint
+  logistic probe without reloading model weights. Global S/C AUROC is `0.7889`;
+  pleural effusion, pulmonary edema, and consolidation are `0.8550`, `0.8075`,
+  and `0.8000`. The corresponding full-fit intercepts are small
+  (`+0.0351`, `-0.0416`, `+0.0418`), so there is usable relative signal in the
+  frozen representation even though calibration remains weak.
+- The diagnostic trainer now has an explicit `local_diagnostic` mode capped at
+  500 steps and `selection_mode: final`. The two tracked arms are fixed at 400
+  steps, the same 48/48 rows, seed 17, K=16, Qwen3.5-2B frozen vision, and no
+  validation checkpoint selection. State-only zeros every auxiliary weight;
+  the matched full arm retains the current objective exactly.
+- The optimization audit records fixed-batch dense gate logits and module-level
+  gradient geometry, plus train/validation evidence distributions. The state
+  direction test reconstructs the decoder graph from detached evidence so it
+  measures dNLL/dDelta at constant total evidence rather than differentiating
+  through a sibling output tensor.
+- At implementation time, Run A waited for unrelated `022_tooth9` work to
+  release a local GPU; no process was preempted. The later verdict section
+  records the completed run and supersedes this historical waiting state.
+
+## 2026-07-18 optimization-identifiability verdict
+
+- The fixed state-only Qwen3.5-2B arm completed all 400 local steps with final
+  selection and no validation tuning. Train accuracy is `0.7917`, not the
+  preregistered `1.0`; validation accuracy is `0.5000`. The hard survival gate
+  therefore fails and the matched full-objective arm must not run.
+- The failure is not an absolute-polarity-origin failure. Train median signed
+  evidence is support `+1.9700` and contradict `-2.8745`; insufficient median
+  total evidence is lowest at `0.8951`. The state-NLL direction audit is also
+  correct. Magnitude-polarity factorization is not justified by this result.
+- Final train state recalls are S `8/12`, C `10/12`, U `8/12`, I `12/12`.
+  The step-400 state gradient is dominated by the gate head (`264.79` of total
+  norm `265.69`), while auxiliary weights are zero. The bounded remaining
+  diagnosis is optimization/readout, selector, or effective capacity, not an
+  observed auxiliary-loss conflict.
+- A resume-path bug had allowed the step-0 audit to rerun after restoring step
+  50. The trainer now requires `step == 0`. A separate zero-optimizer-step
+  initialization replay exactly reproduced the original step-0 metrics and
+  audit; four copied recovery files match the replay by SHA-256. No trained
+  weight or final verdict changed.
+- The local VinDr package has official 15k/3k DICOM trees and image-label/box
+  CSVs and is the strongest present public S/C candidate. CheXpert-small
+  `valid.csv` is not yet provenance-verified as the special radiologist expert
+  set. CheXlocalize was not found in the checked dataset locations. Missing
+  expert assets will not be silently replaced with parser-derived labels.
+- The VinDr bounded integrity audit passes: `18,006` official entries, `0`
+  missing files, `70/70` sampled SHA-256 checks, and `16/16` DICOM decodes.
+  The official test set is a five-radiologist consensus with binary positive
+  and negative labels, so same-finding S/C is justified without parser labels.
+- The test consensus has pleural effusion `111/2,889` and consolidation
+  `96/2,904` positive/negative images; every positive has at least one matching
+  box and no negative has a matching box. Edema has `0/3,000` positives and is
+  fail-closed as ineligible. The 6,000-row ignored intake does not expose U/I.
+- VinDr exposes no usable patient ID. The intake therefore marks patient-level
+  CI unavailable rather than treating image IDs as patients. This blocks that
+  later paper gate even though the image-level expert S/C data are ready.

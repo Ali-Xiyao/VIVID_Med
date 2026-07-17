@@ -20,6 +20,8 @@ There is no flat four-class prediction head in the active model.
 ## Active mainline
 
 - Proposal: [`BiVES_CXR_MIA_TMI_ready_proposal.md`](BiVES_CXR_MIA_TMI_ready_proposal.md)
+- Current diagnostic authority: [`BiVES_next_direction_without_local_clinical_review_2026-07-17.md`](BiVES_next_direction_without_local_clinical_review_2026-07-17.md)
+- Frozen Proxy-P0-A record: [`docs/bives_cxr_proxy_p0_a_freeze.md`](docs/bives_cxr_proxy_p0_a_freeze.md)
 - Code: [`bives_cxr/`](bives_cxr/)
 - Active configs: [`configs/bives_cxr/`](configs/bives_cxr/)
 - Training entry: [`scripts/train_bives_cxr.py`](scripts/train_bives_cxr.py)
@@ -87,6 +89,22 @@ scaling remains stopped. See
 [`docs/bives_cxr_proxy_p0_experiment_log.md`](docs/bives_cxr_proxy_p0_experiment_log.md).
 It cannot be reported as expert-audited clinical ground truth or as a formal
 locked-test result.
+
+The bounded optimization-identifiability gate is now closed. A fixed
+patient-group-disjoint logistic probe found usable frozen S/C signal (global
+AUROC `0.7889`), but the 400-step state-only Qwen3.5-2B run reached only
+`0.7917` train accuracy instead of the required `1.0`. It learned the correct
+support/contradict polarity direction and lowest insufficient evidence, so the
+failure does not justify a magnitude-polarity refactor. Run B was not started;
+4B/9B scaling, decoder/loss changes, and further weak-label four-state runs
+remain closed. See
+[`docs/bives_cxr_optimization_identifiability_verdict.md`](docs/bives_cxr_optimization_identifiability_verdict.md).
+
+The separate public-data intake is documented in
+[`docs/bives_cxr_public_expert_sc_intake.md`](docs/bives_cxr_public_expert_sc_intake.md).
+VinDr test consensus is ready for pleural-effusion and consolidation S/C data
+preparation, but this does not reopen the failed model gate or authorize an
+expert evaluation run with the current checkpoint.
 
 For a bounded local engineering run, first copy the tracked template to the
 ignored local-config area and point it at local manifest paths. This run is

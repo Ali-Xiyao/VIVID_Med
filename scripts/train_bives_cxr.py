@@ -46,6 +46,10 @@ from bives_cxr.metrics import (
     patient_bootstrap_confidence_intervals,
 )
 from bives_cxr.model import BiVESCXR, BiVESModelConfig
+from bives_cxr.optimization_audit import (
+    fixed_batch_optimization_audit,
+    summarize_prediction_evidence,
+)
 from bives_cxr.interventions import CONTROL_PROTOCOL_VERSION, bives_control_seed
 from bives_cxr.statement_cache import load_statement_embedding_matrix
 from bives_cxr.provenance import (
@@ -645,10 +649,11 @@ def main() -> None:
     if str(config["model"]["family"]).lower() != "qwen3.5":
         raise ValueError("active BiVES-CXR configs are Qwen3.5-only")
     experiment_mode = str(config.get("experiment", {}).get("mode", "local_formal"))
-    nonformal_modes = {"local_debug", "local_overfit", "local_proxy"}
+    nonformal_modes = {"local_debug", "local_overfit", "local_proxy", "local_diagnostic"}
     if experiment_mode not in nonformal_modes | {"local_formal"}:
         raise ValueError(
-            "experiment.mode must be local_debug, local_overfit, local_proxy, or local_formal"
+            "experiment.mode must be local_debug, local_overfit, local_proxy, "
+            "local_diagnostic, or local_formal"
         )
     if args.debug and experiment_mode != "local_debug":
         raise ValueError(
@@ -659,22 +664,31 @@ def main() -> None:
         # Explicitly non-formal: train/val only, with no formal lock or release artifacts.
         # local_proxy permits a larger patient-disjoint weak-label audit while retaining
         # a hard ceiling; debug and overfit keep their original tiny caps.
-        if experiment_mode == "local_proxy":
+        if experiment_mode in {"local_proxy", "local_diagnostic"}:
             max_train_samples = min(int(config["data"].get("max_train_samples", 64)), 64)
             max_val_samples = min(int(config["data"].get("max_val_samples", 64)), 64)
             if min(max_train_samples, max_val_samples) < 4:
-                raise ValueError("local_proxy requires at least one complete quartet per split")
+                raise ValueError(
+                    f"{experiment_mode} requires at least one complete quartet per split"
+                )
             if max_train_samples % 4 or max_val_samples % 4:
-                raise ValueError("local_proxy sample limits must be multiples of four")
+                raise ValueError(
+                    f"{experiment_mode} sample limits must be multiples of four"
+                )
         else:
             max_train_samples = min(int(config["data"].get("max_train_samples", 8)), 8)
             max_val_samples = min(int(config["data"].get("max_val_samples", 4)), 4)
         config["data"]["max_train_samples"] = max_train_samples
         config["data"]["max_val_samples"] = max_val_samples
         config["data"]["num_workers"] = 0
-        max_debug_steps = 2 if experiment_mode == "local_debug" else 200
+        if experiment_mode == "local_debug":
+            max_debug_steps = 2
+        elif experiment_mode == "local_diagnostic":
+            max_debug_steps = 500
+        else:
+            max_debug_steps = 200
         config["training"]["max_steps"] = min(int(config["training"].get("max_steps", max_debug_steps)), max_debug_steps)
-        if experiment_mode in {"local_overfit", "local_proxy"} and int(config["training"]["max_steps"]) < 1:
+        if experiment_mode in {"local_overfit", "local_proxy", "local_diagnostic"} and int(config["training"]["max_steps"]) < 1:
             raise ValueError(f"{experiment_mode} requires at least one optimization step")
         if experiment_mode == "local_debug":
             config["training"]["eval_interval"] = 1
@@ -976,7 +990,7 @@ def main() -> None:
     assert val_loader is not None
     overfit_train_loader = (
         make_primary_eval_loader(train_dataset, f"{experiment_mode}_train_eval")
-        if experiment_mode in {"local_overfit", "local_proxy"}
+        if experiment_mode in {"local_overfit", "local_proxy", "local_diagnostic"}
         else None
     )
     val_grouped_loader = make_grouped_eval_loader(val_dataset, "val")
@@ -1038,10 +1052,14 @@ def main() -> None:
         raise ValueError("training.gradient_accumulation_steps must be positive")
     selection_metric = str(evaluation_config.get("selection_metric", "nll"))
     selection_mode = str(evaluation_config.get("selection_mode", "min"))
-    if selection_mode not in {"min", "max"}:
-        raise ValueError("evaluation.selection_mode must be min or max")
+    if selection_mode not in {"min", "max", "final"}:
+        raise ValueError("evaluation.selection_mode must be min, max, or final")
     step = 0
-    best_selection_score = float("inf") if selection_mode == "min" else float("-inf")
+    best_selection_score = (
+        float("inf")
+        if selection_mode == "min"
+        else float("-inf") if selection_mode == "max" else float("nan")
+    )
     events: list[dict[str, Any]] = []
     resume_epoch = 0
     resume_batch_index = 0
@@ -1075,6 +1093,128 @@ def main() -> None:
     cursor_batch_index = resume_batch_index
     optimizer.zero_grad(set_to_none=True)
     accumulated_micro_steps = 0
+
+    diagnostics_config = config.get("diagnostics", {})
+    optimization_audit_enabled = bool(
+        diagnostics_config.get("optimization_identifiability", False)
+    )
+    optimization_snapshot_steps = {
+        int(value) for value in diagnostics_config.get("snapshot_steps", [])
+    }
+    if optimization_audit_enabled:
+        invalid_snapshot_steps = {
+            value
+            for value in optimization_snapshot_steps
+            if value < 0 or value > max_steps
+        }
+        if invalid_snapshot_steps:
+            raise ValueError(
+                "diagnostics.snapshot_steps must lie in [0, training.max_steps]"
+            )
+
+    def write_optimization_audit(
+        audit_step: int,
+        *,
+        train_rows: list[dict[str, Any]],
+        val_rows: list[dict[str, Any]],
+    ) -> None:
+        if not optimization_audit_enabled or audit_step not in optimization_snapshot_steps:
+            return
+        was_training = experiment.training
+        experiment.eval()
+        audit_batch = move_to_device(feasibility_batch, device)
+        audit_outputs, audit_grids = experiment(
+            audit_batch["pixel_values"],
+            audit_batch["image_grid_thw"],
+            audit_batch["statement_indices"],
+            audit_batch["content_valid_mask"],
+            run_interventions=True,
+            control_seeds=audit_batch["control_seeds"],
+        )
+        audit_auxiliary_weight = auxiliary_weight_for_step(max(1, audit_step))
+        audit_losses = loss_fn(
+            audit_outputs,
+            audit_batch["targets"],
+            require_uniform_grid(audit_grids),
+            audit_batch["support_pair_indices"],
+            audit_batch["contradict_pair_indices"],
+            audit_batch["uncertain_indices"],
+            auxiliary_weight=audit_auxiliary_weight,
+        )
+        payload = fixed_batch_optimization_audit(
+            experiment,
+            audit_batch,
+            audit_outputs,
+            audit_losses,
+            loss_config,
+            step=audit_step,
+            auxiliary_weight=audit_auxiliary_weight,
+        )
+        payload["train_evidence_distribution"] = summarize_prediction_evidence(
+            train_rows
+        )
+        payload["val_evidence_distribution"] = summarize_prediction_evidence(val_rows)
+        save_json(output_dir / f"optimization_audit_step_{audit_step}.json", payload)
+        optimizer.zero_grad(set_to_none=True)
+        experiment.train(was_training)
+
+    initialization_audit_only = bool(
+        diagnostics_config.get("initialization_audit_only", False)
+    )
+    if initialization_audit_only and 0 not in optimization_snapshot_steps:
+        raise ValueError(
+            "diagnostics.initialization_audit_only requires snapshot step 0"
+        )
+    if optimization_audit_enabled and step == 0 and 0 in optimization_snapshot_steps:
+        if overfit_train_loader is None:
+            raise ValueError(
+                "optimization-identifiability audit requires a train evaluation loader"
+            )
+        step_zero_train_metrics, step_zero_train_rows = evaluate(
+            experiment,
+            overfit_train_loader,
+            primary_eval_loss_fn,
+            device,
+            assert_full_coverage=True,
+        )
+        step_zero_val_metrics, step_zero_val_rows = evaluate(
+            experiment,
+            val_loader,
+            primary_eval_loss_fn,
+            device,
+            assert_full_coverage=True,
+        )
+        save_json(
+            output_dir / "metrics_step_0.json",
+            {
+                "step": 0,
+                "overfit_train": step_zero_train_metrics,
+                **step_zero_val_metrics,
+            },
+        )
+        for name, rows in (
+            ("train_predictions_step_0.jsonl", step_zero_train_rows),
+            ("val_predictions_step_0.jsonl", step_zero_val_rows),
+        ):
+            with (output_dir / name).open("w", encoding="utf-8") as handle:
+                for row in rows:
+                    handle.write(json.dumps(row, ensure_ascii=False) + "\n")
+        write_optimization_audit(
+            0,
+            train_rows=step_zero_train_rows,
+            val_rows=step_zero_val_rows,
+        )
+        if initialization_audit_only:
+            save_json(
+                output_dir / "initialization_audit_complete.json",
+                {
+                    "status": "complete_without_optimizer_step",
+                    "step": 0,
+                    "formal_result": False,
+                },
+            )
+            return
+
     while step < max_steps:
         train_batch_sampler.set_epoch(epoch)
         grouped_collator.set_epoch(epoch)
@@ -1169,13 +1309,21 @@ def main() -> None:
                         f"selection metric {selection_metric!r} is absent from validation metrics"
                     )
                 selection_score = float(validation[selection_metric])
-                improved = (
-                    selection_score < best_selection_score
-                    if selection_mode == "min"
-                    else selection_score > best_selection_score
-                )
+                if selection_mode == "final":
+                    improved = step == max_steps
+                else:
+                    improved = (
+                        selection_score < best_selection_score
+                        if selection_mode == "min"
+                        else selection_score > best_selection_score
+                    )
                 if improved:
                     best_selection_score = selection_score
+                write_optimization_audit(
+                    step,
+                    train_rows=overfit_train_rows,
+                    val_rows=validation_rows,
+                )
                 checkpoint = {
                     "step": step,
                     "best_selection_metric": selection_metric,

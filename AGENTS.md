@@ -25,6 +25,8 @@ belong under `legacy/`.
 - `scripts/smoke_qwen35_bives_integration.py`: bounded local-CUDA official-vs-selective visual alignment plus two-step synthetic S/C/U/I gate.
 - `scripts/audit_bives_manifest.py`: manifest and split readiness audit.
 - `scripts/{prepare,extract,audit}_vindr_cxr*.py`: current external-data tools.
+- `scripts/prepare_bives_vindr_expert_sc.py`: fail-closed VinDr test-consensus
+  S/C intake; it does not create U/I labels or authorize model evaluation.
 - `tests/`: active BiVES contract tests.
 - `docs/`: active handoff and schema documentation.
 - `legacy/`: archived pre-BiVES code, configs, proposals, and tools.

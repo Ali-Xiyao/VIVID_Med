@@ -8,6 +8,8 @@ BiVES-CXR is the only active paper and code mainline.
 | --- | --- |
 | Final research proposal | `../BiVES_CXR_MIA_TMI_ready_proposal.md` |
 | Support-polarity root cause and decoder repair | `../BiVES_support_polarity_root_cause_and_repair.md` |
+| Current no-clinical-review direction | `../BiVES_next_direction_without_local_clinical_review_2026-07-17.md` |
+| Frozen Proxy-P0-A diagnostic record | `bives_cxr_proxy_p0_a_freeze.md` |
 | Repository overview | `../README.md` |
 | Implementation contract | `bives_cxr_implementation.md` |
 | Manifest schema | `bives_cxr_manifest_schema.md` |
@@ -33,6 +35,8 @@ BiVES-CXR is the only active paper and code mainline.
 | P0 parser candidate and blinded-review packet | `../scripts/prepare_bives_p0_report_review.py`, `../scripts/validate_bives_p0_review_packet.py` |
 | Nonclinical weak-label proxy-P0 builder | `../scripts/build_bives_proxy_p0.py` |
 | Frozen-feature proxy finding screen | `../scripts/diagnose_bives_proxy_sc.py` |
+| Optimization-identifiability audit | `../bives_cxr/optimization_audit.py` |
+| Optimization-identifiability verdict | `bives_cxr_optimization_identifiability_verdict.md` |
 | Weak-label proxy-P0 experiment record | `bives_cxr_proxy_p0_experiment_log.md` |
 | Joint four-split dataset lock | `../scripts/lock_bives_dataset.py` |
 | Source-only deployment manifest | `../scripts/write_bives_source_manifest.py` |
@@ -40,6 +44,7 @@ BiVES-CXR is the only active paper and code mainline.
 | Explicit locked-test evaluator | `../scripts/evaluate_bives_final.py` |
 | CPU tests | `../tests/test_bives_core.py`, `../tests/test_bives_readiness.py` |
 | VinDr archive/integrity utilities | `../scripts/extract_vindr_cxr.py`, `../scripts/audit_vindr_cxr_integrity.py` |
+| VinDr expert S/C intake | `../scripts/prepare_bives_vindr_expert_sc.py`, `bives_cxr_public_expert_sc_intake.md` |
 | P0 data-source and audit boundary | `bives_cxr_p0_data_readiness.md` |
 
 ## Active model boundary
@@ -128,6 +133,15 @@ train proxy improves held-out NLL from `1.3692` to `1.1620` and accuracy to
 `0.5417`, but still recovers only 1/12 contradict and 2/12 uncertain rows. This
 shows that uncalibrated geometry is material but not the whole failure; it is
 not a locked calibration result and does not reopen scaling.
+
+The 50-step run remains frozen as Proxy-P0-A. A patient-group-disjoint fixed
+logistic probe on cached Qwen3.5-2B visual features obtains global S/C AUROC
+`0.7889`; the three retained findings obtain `0.8550`, `0.8075`, and `0.8000`.
+The subsequent 400-step state-only run learned correct absolute S/C polarity
+but reached only `0.7917` train accuracy, failing the preregistered `1.0`
+train-fit gate. The matched full-objective arm was not run. The weak-label
+four-state route is stopped; only a separately bounded public expert S/C data
+and evaluation route may proceed.
 
 ## Current mechanism-gate status
 

@@ -134,10 +134,28 @@ class BiVESReadinessTest(unittest.TestCase):
                 self.assertNotIn(remote_marker, raw.lower(), path)
             self.assertIn(
                 payload["experiment"].get("mode"),
-                {"local_debug", "local_overfit", "local_proxy", "local_formal"},
+                {
+                    "local_debug",
+                    "local_overfit",
+                    "local_proxy",
+                    "local_diagnostic",
+                    "local_formal",
+                },
             )
-            self.assertGreater(float(payload["loss"].get("lambda_pair", 0.0)), 0.0)
-            self.assertGreater(float(payload["loss"].get("lambda_u_pol", 0.0)), 0.0)
+            state_only = payload["experiment"].get("diagnostic_arm") == "state_only"
+            if state_only:
+                for key in (
+                    "lambda_ies",
+                    "lambda_pair",
+                    "lambda_u_pol",
+                    "lambda_i_mag",
+                    "lambda_min",
+                    "lambda_tv",
+                ):
+                    self.assertEqual(float(payload["loss"].get(key, 0.0)), 0.0)
+            else:
+                self.assertGreater(float(payload["loss"].get("lambda_pair", 0.0)), 0.0)
+                self.assertGreater(float(payload["loss"].get("lambda_u_pol", 0.0)), 0.0)
             self.assertEqual(payload["sampling"]["type"], "same_statement_state_group")
             self.assertEqual(payload["bives"]["mask"]["type"], "soft_topk")
             self.assertEqual(float(payload["loss"]["lambda_min"]), 0.0)
@@ -176,6 +194,24 @@ class BiVESReadinessTest(unittest.TestCase):
         self.assertEqual(proxy["data"]["max_val_samples"], 48)
         self.assertFalse(proxy["audit"]["require_both_insufficient_kinds"])
         self.assertFalse(proxy["evaluation"]["run_test"])
+        for name, arm in (
+            ("qwen35_2b_optimization_state_only.template.yaml", "state_only"),
+            ("qwen35_2b_optimization_full.template.yaml", "full_objective"),
+        ):
+            diagnostic = yaml.safe_load((config_root / name).read_text(encoding="utf-8"))
+            self.assertEqual(diagnostic["experiment"]["mode"], "local_diagnostic")
+            self.assertEqual(diagnostic["experiment"]["diagnostic_arm"], arm)
+            self.assertEqual(diagnostic["training"]["max_steps"], 400)
+            self.assertEqual(diagnostic["training"]["eval_interval"], 50)
+            self.assertEqual(diagnostic["evaluation"]["selection_mode"], "final")
+            self.assertEqual(diagnostic["diagnostics"]["snapshot_steps"], [0, 50, 400])
+        initialization = yaml.safe_load(
+            (config_root / "qwen35_2b_optimization_initialization_audit.template.yaml").read_text(
+                encoding="utf-8"
+            )
+        )
+        self.assertTrue(initialization["diagnostics"]["initialization_audit_only"])
+        self.assertEqual(initialization["diagnostics"]["snapshot_steps"], [0])
 
     def test_qwen35_path_guard_accepts_only_multimodal_qwen35(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

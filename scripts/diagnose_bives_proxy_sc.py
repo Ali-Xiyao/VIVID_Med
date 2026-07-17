@@ -13,7 +13,17 @@ from typing import Any
 import numpy as np
 import torch
 from PIL import Image, ImageOps
-from sklearn.metrics import roc_auc_score
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import (
+    accuracy_score,
+    average_precision_score,
+    brier_score_loss,
+    log_loss,
+    roc_auc_score,
+)
+from sklearn.model_selection import StratifiedGroupKFold
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -29,9 +39,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--parsed-candidates", type=Path, required=True)
     parser.add_argument("--train-manifest", type=Path, required=True)
     parser.add_argument("--val-manifest", type=Path, required=True)
-    parser.add_argument("--model-path", type=Path, required=True)
+    parser.add_argument("--model-path", type=Path)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--feature-cache", type=Path)
+    parser.add_argument("--feature-cache-input", type=Path)
     parser.add_argument("--findings", nargs="+", default=list(DEFAULT_FINDINGS))
     parser.add_argument("--max-patients-per-state", type=int, default=10)
     parser.add_argument("--seed", type=int, default=20260717)
@@ -226,6 +237,129 @@ def leave_one_out_centroid_metrics(
     }
 
 
+def expected_calibration_error(
+    probabilities: np.ndarray, labels: np.ndarray, bins: int = 10
+) -> float:
+    edges = np.linspace(0.0, 1.0, bins + 1)
+    total = len(labels)
+    value = 0.0
+    for index in range(bins):
+        if index + 1 == bins:
+            selected = (probabilities >= edges[index]) & (probabilities <= edges[index + 1])
+        else:
+            selected = (probabilities >= edges[index]) & (probabilities < edges[index + 1])
+        if not selected.any():
+            continue
+        value += float(selected.mean()) * abs(
+            float(labels[selected].mean()) - float(probabilities[selected].mean())
+        )
+    return float(value)
+
+
+def logistic_probe_metrics(
+    features: np.ndarray,
+    labels: np.ndarray,
+    patient_ids: np.ndarray,
+    seed: int,
+) -> dict[str, Any]:
+    """Fixed patient-group-disjoint logistic probe without model selection."""
+
+    if features.ndim != 2 or labels.ndim != 1 or len(features) != len(labels):
+        raise ValueError("features/labels shape mismatch")
+    if patient_ids.shape != labels.shape:
+        raise ValueError("patient_ids/labels shape mismatch")
+    if set(labels.tolist()) != {0, 1}:
+        raise ValueError("labels must contain both contradict=0 and support=1")
+    unique_groups_by_class = [
+        len(set(patient_ids[labels == class_index].tolist())) for class_index in (0, 1)
+    ]
+    folds = min(5, *unique_groups_by_class)
+    if folds < 2:
+        raise ValueError("logistic probe requires at least two patient groups per class")
+    splitter = StratifiedGroupKFold(n_splits=folds, shuffle=True, random_state=seed)
+    probabilities = np.full(len(labels), np.nan, dtype=np.float64)
+    fold_rows: list[dict[str, Any]] = []
+    for fold, (train_indices, test_indices) in enumerate(
+        splitter.split(features, labels, groups=patient_ids)
+    ):
+        if set(patient_ids[train_indices]) & set(patient_ids[test_indices]):
+            raise RuntimeError("patient leakage in logistic probe")
+        estimator = make_pipeline(
+            StandardScaler(),
+            LogisticRegression(C=1.0, solver="liblinear", random_state=seed),
+        )
+        estimator.fit(features[train_indices], labels[train_indices])
+        fold_probabilities = estimator.predict_proba(features[test_indices])[:, 1]
+        probabilities[test_indices] = fold_probabilities
+        fold_rows.append(
+            {
+                "fold": fold,
+                "train_records": len(train_indices),
+                "test_records": len(test_indices),
+                "train_patients": len(set(patient_ids[train_indices].tolist())),
+                "test_patients": len(set(patient_ids[test_indices].tolist())),
+            }
+        )
+    if not np.isfinite(probabilities).all():
+        raise RuntimeError("logistic probe did not produce complete out-of-fold predictions")
+    predictions = (probabilities >= 0.5).astype(np.int64)
+    full_estimator = make_pipeline(
+        StandardScaler(),
+        LogisticRegression(C=1.0, solver="liblinear", random_state=seed),
+    )
+    full_estimator.fit(features, labels)
+    logistic = full_estimator.named_steps["logisticregression"]
+    return {
+        "protocol": "fixed_c1_standardized_stratified_patient_group_cv",
+        "folds": folds,
+        "auroc": float(roc_auc_score(labels, probabilities)),
+        "average_precision": float(average_precision_score(labels, probabilities)),
+        "accuracy": float(accuracy_score(labels, predictions)),
+        "nll": float(log_loss(labels, probabilities, labels=[0, 1])),
+        "brier": float(brier_score_loss(labels, probabilities)),
+        "ece_10bin": expected_calibration_error(probabilities, labels, bins=10),
+        "full_fit_intercept": float(logistic.intercept_[0]),
+        "full_fit_coefficient_l2": float(np.linalg.norm(logistic.coef_)),
+        "fold_details": fold_rows,
+    }
+
+
+def load_cached_features(
+    path: Path, rows: list[dict[str, Any]]
+) -> np.ndarray:
+    cache = np.load(path, allow_pickle=False)
+    required = {"features", "candidate_ids", "findings", "states", "patient_ids"}
+    missing = required - set(cache.files)
+    if missing:
+        raise ValueError(f"feature cache missing keys: {sorted(missing)}")
+    candidate_ids = [str(value) for value in cache["candidate_ids"].tolist()]
+    if len(candidate_ids) != len(set(candidate_ids)):
+        raise ValueError("feature cache has duplicate candidate IDs")
+    index_by_id = {candidate_id: index for index, candidate_id in enumerate(candidate_ids)}
+    selected_features: list[np.ndarray] = []
+    for row in rows:
+        candidate_id = str(row["candidate_id"])
+        if candidate_id not in index_by_id:
+            raise ValueError(f"feature cache missing selected candidate {candidate_id}")
+        index = index_by_id[candidate_id]
+        expected = (
+            str(row["canonical_statement_id"]),
+            str(row["parser_state_candidate"]),
+            str(row["patient_id"]),
+        )
+        actual = (
+            str(cache["findings"][index]),
+            str(cache["states"][index]),
+            str(cache["patient_ids"][index]),
+        )
+        if actual != expected:
+            raise ValueError(
+                f"feature cache metadata mismatch for {candidate_id}: {actual} != {expected}"
+            )
+        selected_features.append(cache["features"][index].astype(np.float32, copy=False))
+    return np.stack(selected_features)
+
+
 def extract_features(
     rows: list[dict[str, Any]],
     model_path: Path,
@@ -283,7 +417,7 @@ def extract_features(
 
 
 def feature_diagnostic(
-    rows: list[dict[str, Any]], features: np.ndarray, findings: list[str]
+    rows: list[dict[str, Any]], features: np.ndarray, findings: list[str], seed: int
 ) -> dict[str, Any]:
     payload: dict[str, Any] = {}
     for finding in findings:
@@ -296,7 +430,11 @@ def feature_diagnostic(
         labels = np.asarray(
             [1 if rows[index]["parser_state_candidate"] == "support" else 0 for index in indices]
         )
+        patient_ids = np.asarray([str(rows[index]["patient_id"]) for index in indices])
         metrics = leave_one_out_centroid_metrics(finding_features, labels)
+        metrics["logistic_probe"] = logistic_probe_metrics(
+            finding_features, labels, patient_ids, seed=seed
+        )
         metrics.update(
             {
                 "samples": len(indices),
@@ -306,6 +444,16 @@ def feature_diagnostic(
         )
         payload[finding] = metrics
     return payload
+
+
+def global_logistic_probe(
+    rows: list[dict[str, Any]], features: np.ndarray, seed: int
+) -> dict[str, Any]:
+    labels = np.asarray(
+        [1 if row["parser_state_candidate"] == "support" else 0 for row in rows]
+    )
+    patient_ids = np.asarray([str(row["patient_id"]) for row in rows])
+    return logistic_probe_metrics(features, labels, patient_ids, seed)
 
 
 def root_cause_decision(
@@ -319,6 +467,10 @@ def root_cause_decision(
         finding: metrics["loo_centroid_auroc"]
         for finding, metrics in feature_metrics.items()
     }
+    logistic_aurocs = {
+        finding: metrics["logistic_probe"]["auroc"]
+        for finding, metrics in feature_metrics.items()
+    }
     low_feature_separability = [finding for finding, value in aurocs.items() if value < 0.65]
     candidate_imbalance = {
         finding: (
@@ -327,7 +479,10 @@ def root_cause_decision(
         )
         for finding, details in candidate_summary["findings"].items()
     }
-    if tiny_validation and low_feature_separability:
+    logistic_separable = all(value >= 0.75 for value in logistic_aurocs.values())
+    if logistic_separable and tiny_validation:
+        classification = "frozen_features_separable_but_proxy_validation_tiny"
+    elif tiny_validation and low_feature_separability:
         classification = "tiny_split_plus_weak_label_or_visual_mismatch"
     elif tiny_validation:
         classification = "tiny_split_dominant"
@@ -339,19 +494,26 @@ def root_cause_decision(
         "classification": classification,
         "tiny_validation": tiny_validation,
         "low_feature_separability_findings": low_feature_separability,
+        "logistic_probe_aurocs": logistic_aurocs,
+        "logistic_probe_separable": logistic_separable,
         "candidate_patient_balance_support_contradict": candidate_imbalance,
         "next_step": (
-            "Do not retrain. Expand the patient-disjoint diagnostic/validation sample and "
-            "tighten rule-label eligibility for low-separability findings before one bounded 2B rerun."
-            if classification != "proxy_sc_separable"
-            else "A larger patient-disjoint 2B proxy validation is the only justified next run."
+            "Run only the predeclared frozen-Qwen3.5-2B optimization-identifiability "
+            "gate: fixed-budget state-only first, then the matched full objective only if "
+            "state-only fits the 48-row train proxy. Do not scale to 4B/9B or sweep weights."
+            if logistic_separable
+            else "Do not scale or sweep losses; revisit proxy eligibility before another training run."
         ),
     }
 
 
 def main() -> None:
     args = parse_args()
-    if not torch.cuda.is_available() and str(args.device).startswith("cuda"):
+    if (
+        args.feature_cache_input is None
+        and not torch.cuda.is_available()
+        and str(args.device).startswith("cuda")
+    ):
         raise RuntimeError("CUDA device requested but CUDA is unavailable")
     candidates = read_jsonl(args.parsed_candidates)
     train_rows = read_jsonl(args.train_manifest)
@@ -363,21 +525,29 @@ def main() -> None:
         seed=args.seed,
     )
     device = torch.device(args.device)
-    features = extract_features(
-        selected,
-        model_path=args.model_path,
-        device=device,
-        dtype=args.dtype,
-        attention_implementation=args.attention_implementation,
-    )
+    if args.feature_cache_input is not None:
+        features = load_cached_features(args.feature_cache_input, selected)
+        feature_source = {"kind": "reused_cache", "path": str(args.feature_cache_input)}
+    else:
+        if args.model_path is None:
+            raise ValueError("--model-path is required without --feature-cache-input")
+        features = extract_features(
+            selected,
+            model_path=args.model_path,
+            device=device,
+            dtype=args.dtype,
+            attention_implementation=args.attention_implementation,
+        )
+        feature_source = {"kind": "qwen35_vision", "path": str(args.model_path)}
     candidate_summary = summarize_candidates(candidates, args.findings)
     manifest_summary = summarize_manifests(train_rows, val_rows, args.findings)
-    feature_metrics = feature_diagnostic(selected, features, args.findings)
+    feature_metrics = feature_diagnostic(selected, features, args.findings, args.seed)
     payload = {
         "status": "complete_nonclinical_read_only",
         "formal_result": False,
         "clinical_ground_truth": False,
-        "model_path": str(args.model_path),
+        "model_path": str(args.model_path) if args.model_path is not None else None,
+        "feature_source": feature_source,
         "device": str(device),
         "seed": args.seed,
         "selection": {
@@ -391,6 +561,7 @@ def main() -> None:
         "candidate_summary": candidate_summary,
         "manifest_summary": manifest_summary,
         "frozen_feature_metrics": feature_metrics,
+        "global_logistic_probe": global_logistic_probe(selected, features, args.seed),
         "root_cause_decision": root_cause_decision(
             candidate_summary, manifest_summary, feature_metrics
         ),
