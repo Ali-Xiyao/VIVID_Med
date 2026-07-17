@@ -9,7 +9,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from bives_cxr.provenance import _git_tracked_source_snapshot
+from bives_cxr.provenance import build_git_archive_source_snapshot
 
 
 def main() -> None:
@@ -17,10 +17,7 @@ def main() -> None:
     parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[1])
     parser.add_argument("--output", type=Path, default=None)
     args = parser.parse_args()
-    snapshot = _git_tracked_source_snapshot(args.root, require_clean=True)
-    if snapshot is None:
-        raise SystemExit("source manifest must be generated from a Git checkout")
-    snapshot["kind"] = "source_archive"
+    snapshot = build_git_archive_source_snapshot(args.root)
     output = args.output or (args.root / ".bives_source_manifest.json")
     output.write_text(json.dumps(snapshot, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     print(output)

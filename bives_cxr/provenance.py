@@ -143,6 +143,29 @@ def build_source_snapshot(*, root: str | Path | None = None, require_clean: bool
     return snapshot
 
 
+def build_git_archive_source_snapshot(root: str | Path | None = None) -> dict[str, Any]:
+    """Hash Git blob bytes, matching ``git archive`` across CRLF worktrees."""
+
+    root_path = Path(root) if root is not None else Path(__file__).resolve().parents[1]
+    probe = subprocess.run(["git", "-C", str(root_path), "rev-parse", "--show-toplevel"], capture_output=True, text=True, check=False)
+    if probe.returncode != 0:
+        raise ValueError("archive source snapshot requires a Git checkout")
+    repository = Path(probe.stdout.strip())
+    status = subprocess.run(["git", "-C", str(repository), "status", "--porcelain"], capture_output=True, text=True, check=False)
+    if status.stdout.strip():
+        raise ValueError("archive source snapshot requires a clean Git worktree")
+    commit = subprocess.run(["git", "-C", str(repository), "rev-parse", "HEAD"], capture_output=True, text=True, check=True).stdout.strip()
+    listed = subprocess.run(["git", "-C", str(repository), "ls-tree", "-r", "-z", "--name-only", "HEAD"], capture_output=True, check=True)
+    files: dict[str, str] = {}
+    for raw in listed.stdout.split(b"\0"):
+        if not raw:
+            continue
+        rel = raw.decode("utf-8").replace("\\", "/")
+        blob = subprocess.run(["git", "-C", str(repository), "show", f"HEAD:{rel}"], capture_output=True, check=True).stdout
+        files[rel] = hashlib.sha256(blob).hexdigest()
+    return {"kind": "source_archive", "git_commit": commit, "files": files, "tree_sha256": canonical_json_sha256(files)}
+
+
 def build_run_lock(
     config: dict[str, Any],
     *,
