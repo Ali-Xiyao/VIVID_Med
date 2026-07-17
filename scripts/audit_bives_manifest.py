@@ -25,6 +25,12 @@ def parse_args() -> argparse.Namespace:
         action=argparse.BooleanOptionalAction,
         default=True,
     )
+    parser.add_argument(
+        "--require-both-insufficient-kinds",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Require both natural and synthetic insufficient rows in every audited split.",
+    )
     parser.add_argument("--check-decodable", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument(
         "--reject-constant-images",
@@ -63,6 +69,7 @@ def main() -> None:
         require_provenance=args.require_provenance,
         verify_image_sha256=args.verify_image_sha256,
         require_matching_protocol=args.require_matching_protocol,
+        require_both_insufficient_kinds=args.require_both_insufficient_kinds,
     )
     rendered = json.dumps(report, indent=2, ensure_ascii=False)
     print(rendered)

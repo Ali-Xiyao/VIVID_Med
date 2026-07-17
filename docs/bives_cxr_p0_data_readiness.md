@@ -7,7 +7,7 @@ loading or training.
 
 | Role | Dataset | Allowed use in this phase | Not allowed |
 | --- | --- | --- | --- |
-| In-domain candidate source | MIMIC-CXR-JPG image/report pairs | P0-1 parser candidates, P0-2 blind review, patient-disjoint four-state manifest construction | Treating unreviewed report text or report omission as a BiVES state label |
+| In-domain candidate source | MIMIC-CXR-JPG image/report pairs | Frozen-rule S/C/U proxy candidates and patient-disjoint nonclinical proxy manifests | Treating rule labels as expert truth or report omission as contradict/insufficient |
 | Future locked test | BiVES-CXR Audit Set | Separate expert-audited patient-level test after training and calibration are locked | Training, threshold selection, or cache vocabulary expansion |
 | External P0-5 candidate | VinDr-CXR | Label, bounding-box, image-integrity, licence, and mapping audit | Mixing VinDr rows into MIMIC P0 train/validation/calibration data |
 | Secondary external | CheXpert | Later external statement-verification or linear-probe analysis | Replacing the report-derived four-state P0 source |
@@ -28,8 +28,9 @@ H:\Xiyao_Wang\000_Public Dataset\vindr-cxr-an-open-dataset-of-chest-x-rays-with-
    rule/prompt/model identity, input report hash, extracted finding, polarity,
    uncertainty, laterality, anatomy, severity, view requirement, and quality
    flags in an ignored candidate table.
-3. Sample parser candidates for P0-1 explicit-positive/negative audit and
-   P0-2 blinded U/I review. Do not promote rows with unresolved disagreement.
+3. For the currently authorized proxy P0, retain only unambiguous frozen-rule
+   S/C/U candidates; exclude parser conflicts from those states. Use conflict
+   images only as sources for an explicit synthetic evidence-removal I row.
 4. Freeze the approved 4–6 initial findings. The proposal candidates are
    pleural effusion, pneumothorax, cardiomegaly, pulmonary edema, atelectasis,
    focal opacity/consolidation, and support-device position; a finding enters
@@ -63,7 +64,7 @@ an image path, a report path, `candidate_status: unparsed`, and
 `p0_role: parser_and_blind_review_input`. It intentionally contains neither
 report text nor a state label.
 
-## Frozen parser candidates and blinded review
+## Frozen parser candidates and optional future review
 
 `scripts/prepare_bives_p0_report_review.py` reads an intake index, applies a
 versioned conservative six-finding rule set, writes an ignored parser-candidate
@@ -79,9 +80,10 @@ python scripts/prepare_bives_p0_report_review.py `
   --summary local_runs/bives_cxr/p0_intake/mimic_parser_review_summary_shard0.json
 ```
 
-Two qualified reviewers must independently fill the state fields, then an
-adjudicator must complete the final state. Verify this before any manifest
-construction:
+Qualified reviewers are unavailable, so this packet is retained only as a
+future provenance artifact and is not an active execution dependency. If
+review ever becomes possible, two qualified reviewers and an adjudicator may
+complete it with:
 
 ```powershell
 python scripts/validate_bives_p0_review_packet.py `
@@ -93,11 +95,15 @@ The validator fails on blank reviewer/adjudicator fields, invalid states, or
 the same reviewer recorded twice. It deliberately does not infer missing
 expert labels.
 
-## Formal stop rules
+## Proxy and formal stop rules
 
 - Report omission is never a contradict label.
 - Missing, corrupt, or unreadable images are data errors, never insufficient.
 - Natural and synthetic insufficient examples are both required in every
-  formal split.
-- No P0 manifest, cache, GPU job, calibration, or locked-test evaluation may
-  be created from unreviewed parser candidates.
+  future formal clinical split. The current nonformal proxy may use
+  synthetic-only insufficient rows when this exception is explicit in its
+  audit options and lock.
+- Unreviewed parser candidates may be used only in manifests marked
+  `weak_proxy_unreviewed`, `proxy_only_not_clinical_ground_truth`, and
+  `formal_result=false`. They cannot create a formal clinical lock,
+  calibration claim, or locked-test result.

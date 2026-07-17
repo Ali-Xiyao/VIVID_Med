@@ -61,6 +61,7 @@ audit:
   require_complete_statements: true
   require_provenance: true
   require_matching_protocol: true
+  require_both_insufficient_kinds: true
   verify_image_sha256: true
 
 loss:

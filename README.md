@@ -27,6 +27,7 @@ There is no flat four-class prediction head in the active model.
 - Real-weight vision smoke: [`scripts/smoke_qwen35_vision.py`](scripts/smoke_qwen35_vision.py)
 - Local CUDA integration gate: [`scripts/smoke_qwen35_bives_integration.py`](scripts/smoke_qwen35_bives_integration.py)
 - Manifest audit: [`scripts/audit_bives_manifest.py`](scripts/audit_bives_manifest.py)
+- Weak-label proxy-P0 builder: [`scripts/build_bives_proxy_p0.py`](scripts/build_bives_proxy_p0.py)
 - Statement cache builder: [`scripts/build_bives_statement_embeddings.py`](scripts/build_bives_statement_embeddings.py)
 - Locked-test release: [`scripts/evaluate_bives_final.py`](scripts/evaluate_bives_final.py)
 - Tests: [`tests/test_bives_core.py`](tests/test_bives_core.py)
@@ -74,6 +75,15 @@ All active BiVES-CXR experiments run on this workstation. The active workflow
 does not synchronize experiment code/assets to the server and does not submit
 SSH or Slurm jobs. Changing the execution host does not relax any manifest,
 dataset-lock, statement-cache, calibration, or locked-test gate.
+
+The first `qwen35_2b_proxy_p0` run has completed as an explicitly nonclinical
+weak-label engineering experiment. Its S/C/U labels come from the frozen rule
+parser and its insufficient rows are reproducible synthetic evidence-removal
+images. The corrected v2 run failed held-out S/C polarity generalization, so
+4B/9B scaling is stopped. See
+[`docs/bives_cxr_proxy_p0_experiment_log.md`](docs/bives_cxr_proxy_p0_experiment_log.md).
+It cannot be reported as expert-audited clinical ground truth or as a formal
+locked-test result.
 
 For a bounded local engineering run, first copy the tracked template to the
 ignored local-config area and point it at local manifest paths. This run is

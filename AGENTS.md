@@ -55,6 +55,12 @@ evaluation run on this workstation. Do not synchronize active experiments to
 the server or submit SSH/Slurm jobs. Formal local execution remains blocked
 until the same data-readiness, lock, cache, calibration, and release gates pass.
 
+The nonclinical weak-label proxy P0 has completed and failed its held-out S/C
+survival gate; do not scale it to 4B/9B without a justified data-side repair.
+It may use frozen parser S/C/U candidates and provenance-preserving synthetic
+insufficient images, but every row/result must remain marked unreviewed and
+nonformal. Do not claim expert agreement or clinical U/I validity.
+
 ## Coding style
 
 - Python uses 4-space indentation, `snake_case` functions/variables, and

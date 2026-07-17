@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import Any
 
 
-PARSER_VERSION = "bives_mimic_rule_candidates_v1"
+PARSER_VERSION = "bives_mimic_rule_candidates_v2"
 REVIEW_FIELDS = (
     "candidate_id",
     "source_dataset",
@@ -157,9 +157,12 @@ def parse_candidate(row: dict[str, Any], rules_hash: str) -> list[dict[str, Any]
         status = "candidate" if len(states) == 1 else "requires_review_conflict"
         state = states[0] if len(states) == 1 else None
         cue = ";".join(sorted({cue for _, cue in matches}))
+        source_image_candidate_id = str(row["candidate_id"])
         parsed.append(
             {
-                **{key: row[key] for key in ("candidate_id", "source_dataset", "patient_id", "study_id", "image_id", "image_path", "report_path") if key in row},
+                **{key: row[key] for key in ("source_dataset", "patient_id", "study_id", "image_id", "image_path", "report_path") if key in row},
+                "candidate_id": f"{source_image_candidate_id}::{finding}",
+                "source_image_candidate_id": source_image_candidate_id,
                 "canonical_statement_id": finding,
                 "statement_text": rule["statement_text"],
                 "parser_version": PARSER_VERSION,

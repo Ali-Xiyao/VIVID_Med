@@ -51,6 +51,7 @@ def audit_manifests(
     require_provenance: bool = False,
     verify_image_sha256: bool = True,
     require_matching_protocol: bool = False,
+    require_both_insufficient_kinds: bool = True,
 ) -> dict[str, Any]:
     """Audit split isolation, group semantics, provenance, and image readiness."""
 
@@ -219,7 +220,11 @@ def audit_manifests(
                 f"{split} has {provenance_missing} rows missing required provenance fields "
                 f"{sorted(PROVENANCE_FIELDS)}"
             )
-        if require_provenance and state_counts["insufficient"] > 0:
+        if (
+            require_provenance
+            and require_both_insufficient_kinds
+            and state_counts["insufficient"] > 0
+        ):
             if insufficient_kinds["natural"] == 0 or insufficient_kinds["synthetic"] == 0:
                 report["errors"].append(
                     f"{split} must contain both natural and synthetic insufficient rows; "

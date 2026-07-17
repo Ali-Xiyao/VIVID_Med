@@ -143,6 +143,7 @@ class BiVESReadinessTest(unittest.TestCase):
             if payload["experiment"].get("mode") == "local_formal":
                 self.assertEqual(payload["data"]["data_root"], "data")
                 self.assertTrue(payload["training"]["output_dir"].startswith("outputs/"))
+                self.assertTrue(payload["audit"]["require_both_insufficient_kinds"])
                 self.assertTrue(payload["audit"]["verify_image_sha256"])
                 self.assertTrue(payload["audit"]["require_matching_protocol"])
             self.assertFalse(payload["evaluation"]["run_test"])
@@ -164,6 +165,12 @@ class BiVESReadinessTest(unittest.TestCase):
         self.assertEqual(scale["model"]["statement_embeddings"]["mode"], "frozen_cached")
         self.assertEqual(scale["training"]["max_steps"], main["training"]["max_steps"])
         self.assertEqual(scale["training"]["gradient_accumulation_steps"], 2)
+        proxy = yaml.safe_load(
+            (config_root / "qwen35_2b_proxy_p0.template.yaml").read_text(encoding="utf-8")
+        )
+        self.assertEqual(proxy["experiment"]["mode"], "local_overfit")
+        self.assertFalse(proxy["audit"]["require_both_insufficient_kinds"])
+        self.assertFalse(proxy["evaluation"]["run_test"])
 
     def test_qwen35_path_guard_accepts_only_multimodal_qwen35(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

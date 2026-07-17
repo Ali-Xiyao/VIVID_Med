@@ -587,7 +587,7 @@ point forward, every active BiVES-CXR experiment runs on this workstation.
 | Active docs and CLI wording | complete | Repository guidance, handoff docs, manifest audit, source manifest, and integration-gate messages now describe local-only execution. |
 | Formal environment lock | complete | Renamed the active lock to `requirements-bives-local-lock.txt`; package versions are unchanged. |
 | Regression guard | complete | `test_active_configs_are_qwen35_only` now also rejects remote markers and asserts local formal data/output roots. |
-| Clinical/P0 readiness gate | paused_dependency | Local-only execution changes the host, not the scientific gate. The deferred clinical review still blocks formal manifests/cache and P0 launch. |
+| Clinical/P0 readiness gate | superseded_by_proxy_policy | Local-only execution changes the host. The later weak-label authorization permanently removes clinical review from execution, while preserving the rule that proxy results are nonclinical and nonformal. |
 | Remote experiment operations | retired | Do not sync active experiment assets or submit SSH/Slurm jobs. Historical remote records remain unchanged as provenance. |
 
 ## Local-only transition errors
@@ -595,3 +595,54 @@ point forward, every active BiVES-CXR experiment runs on this workstation.
 | Error | Attempt | Resolution |
 | --- | --- | --- |
 | A combined read/search command returned exit code 1 after printing the requested files. | First active-surface inspection | The final `rg` searched tests for server-only wording and correctly found zero matches; reran targeted scans and treated zero hits as a pass rather than a code failure. |
+| Direct `python -m unittest tests\\test_bives_proxy_p0.py -v` could not import the test module. | First proxy-builder unit-test invocation | This repository does not package `tests/`; use discovery with `python -m unittest discover -s tests -p "test_bives_proxy_p0.py" -v`. |
+
+# 2026-07-17 Weak-Label Proxy P0 Authorization
+
+The user permanently removed qualified clinical review/adjudication from the
+executable workflow because no reviewer is available. This supersedes the
+earlier `deferred_by_user` launch dependency, but it does not turn parser rules
+into clinical ground truth.
+
+## Claim boundary
+
+- The next run is a **weak-label proxy P0 engineering experiment**, not an
+  expert-audited clinical P0 and not evidence that U/I labels are clinically
+  valid.
+- Every generated row must preserve parser version/rules hash, source report
+  hash, source study/image identity, and an explicit weak/synthetic label
+  provenance field.
+- Report omission must still not become contradiction or insufficiency.
+- `insufficient` may be introduced only through an explicit reproducible
+  synthetic evidence-removal transform with source-image provenance.
+- No locked-test or publication-level clinical claim is authorized from this
+  proxy run.
+
+| Gate | Status | Acceptance criterion |
+| --- | --- | --- |
+| Candidate-state inventory | complete | Audited 4,070 candidates / 1,515 images / 244 patients. Retained atelectasis, consolidation, and pulmonary edema; excluded findings without enough independent uncertain patients. |
+| Proxy manifest builder | complete | Built deterministic patient-disjoint manifests with 24 train rows / 6 quartets and 12 validation rows / 3 quartets. S/C/U are rule-derived; I is explicit synthetic evidence removal. |
+| Proxy audit/lock | complete_nonclinical | Fixed cross-finding candidate-ID collisions, regenerated parser v2, and re-audited 4,070 globally unique IDs. Current proxy lock SHA256 is `2cb4f963acab7a66fbece3212c1307b66b71a58013e80719fbbc4b462acf4b19` and declares `formal_result=false`. |
+| Local environment/model preflight | complete | Qwen3.5-2B vision smoke passed on local GPU1; package lock was corrected to the installed local environment; H: space and output path passed. |
+| Local Qwen3.5-2B proxy P0 | complete_failed_proxy_polarity_generalization | The valid v2 bounded atelectasis run completed 50/50 steps in 22.63s and selected step 30. Train S/C AUROC is 1.0 but held-out proxy S/C AUROC is 0.0; U/I AUROC is 1.0. Stop at this survival gate and do not scale to 4B/9B. |
+
+## Proxy P0 decision
+
+- The run is execution-green but learning-red for held-out support versus
+  contradiction polarity.
+- The accepted decoder, loss weights, exact-K budget, and Qwen3.5 capacity are
+  not reopened by this result. The synthetic mechanism gate already passed.
+- The next permissible work is a read-only weak-label/data-split diagnostic of
+  S/C cue noise, statement balance, and source leakage. No larger-model run is
+  authorized from this proxy result.
+
+## Proxy P0 execution errors
+
+| Error | Attempt | Resolution |
+| --- | --- | --- |
+| Candidate inventory initially queried obsolete state-field names. | First parser-table count | Re-read the current candidate schema and counted `parser_state_candidate`. |
+| `rg tests\test_bives_*.py` treated the wildcard as a literal Windows path. | First targeted test search | Used unittest discovery and repository-relative glob handling. |
+| One large `apply_patch` contained an empty hunk. | Combined implementation patch | Split the change into focused patches; no file was partially modified. |
+| The renamed package lock still contained server-era versions. | Local runtime preflight | Replaced them with the actually installed local versions and revalidated imports. |
+| `candidate_id` omitted the finding and collided across six statements for each image. | First proxy-run provenance diagnostic | Parser v2 emits `<image-candidate>::<finding>` IDs, builder rejects global duplicates, artifacts were regenerated, and the v1 run/lock was invalidated. |
+| Recursive cleanup of the ignored proxy directory was blocked by local command policy. | Pre-regeneration cleanup | Performed safe in-place overwrite; the regenerated manifests and lock enumerate only current files. |

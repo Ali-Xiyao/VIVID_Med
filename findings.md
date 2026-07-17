@@ -568,3 +568,41 @@
   into reviewed labels or relax the formal manifest, dataset-lock, statement-
   cache, calibration, or locked-test gates. P0 remains paused because clinical
   review was separately deferred.
+
+## 2026-07-17 permanent clinical-review removal
+
+- The user explicitly removed qualified clinical review/adjudication from the
+  executable plan because no such reviewer will be available.
+- The scientifically honest replacement is a weak-label proxy P0, not a silent
+  promotion of the frozen parser outputs to expert truth. Its results may test
+  pipeline learnability and mechanism behavior, but cannot establish clinical
+  U/I validity or close the proposal's expert-agreement claim.
+- The existing 433-row packet and validator remain provenance artifacts only;
+  they are no longer an execution dependency.
+
+## 2026-07-17 weak-label proxy P0 result
+
+- The real candidate inventory contains 4,070 rows, 1,515 unique images, and
+  244 patients. Only atelectasis, consolidation, and pulmonary edema have
+  enough patient-independent uncertain candidates for the deterministic proxy
+  construction; pleural effusion, cardiomegaly, and pneumothorax were excluded.
+- The proxy builder produced 24 train rows / 6 quartets and 12 validation rows
+  / 3 quartets with global patient-disjointness, exact S/C/U/I grouping,
+  source/report/image hashes, no report text/cue fields, and explicit synthetic
+  evidence-removal provenance for I. The proxy lock is deliberately nonformal.
+- The installed local package set differs from the older server lock. The
+  active local lock now records torch 2.5.1, torchvision 0.20.1, transformers
+  5.5.3, safetensors 0.7.0, numpy 1.26.4, Pillow 12.0.0, scikit-learn 1.7.2,
+  and PyYAML 6.0.3.
+- The first proxy diagnostic exposed a real provenance bug: the parser copied
+  the image-level candidate ID into every finding row, producing cross-finding
+  ID collisions. Parser v2 appends the finding, the builder now rejects global
+  duplicates, and the original v1 lock/run are invalidated.
+- The valid v2 Qwen3.5-2B run selected one atelectasis ontology with 8 train
+  and 4 held-out validation rows. It completed 50 steps on local GPU1 in
+  22.63s and selected step 30 by minimum NLL. Train S/C AUROC reached 1.0, but
+  held-out S/C AUROC is 0.0; U/I AUROC is 1.0 on both. This is a weak-label/
+  data-generalization failure, not evidence that the accepted closed-form
+  decoder needs another redesign.
+- Stop at this failed survival gate. Larger 4B/9B proxy runs and formal/locked
+  claims are not justified; the next work is a read-only S/C data diagnostic.

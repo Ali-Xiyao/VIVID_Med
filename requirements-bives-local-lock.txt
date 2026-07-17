@@ -1,10 +1,10 @@
-# BiVES-CXR formal local environment lock (Windows workstation, 2026-07-17).
-# Install the CUDA 12.8 PyTorch wheels from the official PyTorch index.
-torch==2.9.0
-torchvision==0.24.0
-transformers==5.12.1
-safetensors==0.8.0
-numpy==2.2.6
-pillow==12.2.0
+# BiVES-CXR formal local environment lock (Windows dual-RTX-3090 workstation, 2026-07-17).
+# The installed PyTorch/torchvision wheels use CUDA 12.1.
+torch==2.5.1
+torchvision==0.20.1
+transformers==5.5.3
+safetensors==0.7.0
+numpy==1.26.4
+pillow==12.0.0
 scikit-learn==1.7.2
 pyyaml==6.0.3

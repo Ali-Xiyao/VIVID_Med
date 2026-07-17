@@ -31,6 +31,8 @@ BiVES-CXR is the only active paper and code mainline.
 | Manifest audit | `../scripts/audit_bives_manifest.py` |
 | P0 MIMIC intake index | `../scripts/index_mimic_bives_p0_candidates.py` |
 | P0 parser candidate and blinded-review packet | `../scripts/prepare_bives_p0_report_review.py`, `../scripts/validate_bives_p0_review_packet.py` |
+| Nonclinical weak-label proxy-P0 builder | `../scripts/build_bives_proxy_p0.py` |
+| Weak-label proxy-P0 experiment record | `bives_cxr_proxy_p0_experiment_log.md` |
 | Joint four-split dataset lock | `../scripts/lock_bives_dataset.py` |
 | Source-only deployment manifest | `../scripts/write_bives_source_manifest.py` |
 | Statement cache builder | `../scripts/build_bives_statement_embeddings.py` |
@@ -99,18 +101,18 @@ checkpoint/calibration/cache/four-split lock chain without loading a model or
 emitting locked-test metrics. The normal evaluator still requires
 `--run-locked-test`.
 
-Formal local training has not been started. Before local P0:
+Expert review is unavailable and has been removed from the executable path.
+The local proxy P0 is therefore explicitly weak-label and nonformal. Its v2
+run is complete and failed held-out S/C generalization; the completed chain was:
 
-1. create locked train/validation/calibration/test manifests with provenance,
-   hashes, complete S/C/U/I groups, and pass the strict mandatory audit;
-2. create and retain the matching joint `dataset_lock.json` with
-   `scripts/lock_bives_dataset.py`; bind it in the active YAML before training;
-3. create a clean Git source manifest with
-   `scripts/write_bives_source_manifest.py` before a formal local run;
-4. perform the uncertain-vs-insufficient expert pilot;
-5. verify same-statement cross-state coverage;
-6. run Qwen3.5-2B P0 locally;
-7. unlock Qwen3.5-4B only after the proposal go/no-go gates pass.
+1. build deterministic patient-disjoint proxy train/validation quartets with
+   `scripts/build_bives_proxy_p0.py`;
+2. require rule/report/image hashes and `weak_proxy_unreviewed` provenance;
+3. audit all real and synthetic images plus exact S/C/U/I groups;
+4. retain `proxy_dataset_lock.json` and `formal_result=false`;
+5. run only the bounded Qwen3.5-2B proxy P0 locally;
+6. stop after its failed S/C survival gate and keep 4B/9B, calibration, and
+   locked-test claims closed.
 
 ## Current mechanism-gate status
 

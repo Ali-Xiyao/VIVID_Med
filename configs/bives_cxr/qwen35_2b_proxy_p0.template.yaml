@@ -1,0 +1,72 @@
+experiment:
+  id: bives_cxr_qwen35_2b_proxy_p0
+  route: BiVES-CXR
+  phase: proxy_p0
+  mode: local_overfit
+data:
+  data_root: .
+  train_manifest: local_runs/bives_cxr/proxy_p0_input/train_proxy.jsonl
+  val_manifest: local_runs/bives_cxr/proxy_p0_input/val_proxy.jsonl
+  image_size: 448
+  num_workers: 0
+model:
+  family: Qwen3.5
+  scale: 2B
+  path: H:/Xiyao_Wang/001_models/Qwen3.5-2B
+  dtype: bf16
+  attention_implementation: eager
+  freeze_backbone: true
+  statement_dim: 256
+  statement_embeddings: {mode: learned_id}
+bives:
+  fusion_dim: 256
+  evidence_max: 8.0
+  contextual_layers: 1
+  contextual_heads: 4
+  contextual_dropout: 0.0
+  mask: {type: soft_topk, topk: 16, temperature: 0.5}
+  decoder: {type: monotone_bipolar_conditional, tau_a: 1.0, tau_p: 1.0, uncertainty_mass: 1.0}
+  interventions: {replacement: zero, num_controls: 4, control_mode: random_disjoint}
+sampling:
+  type: same_statement_state_group
+  states: [support, contradict, uncertain, insufficient]
+  groups_per_batch: 1
+  require_complete_groups: true
+audit:
+  check_images: true
+  check_decodable: true
+  reject_constant_images: true
+  require_complete_statements: true
+  require_provenance: true
+  require_matching_protocol: true
+  require_both_insufficient_kinds: false
+  verify_image_sha256: true
+loss:
+  lambda_ies: 0.5
+  lambda_nec: 1.0
+  lambda_ctrl: 0.5
+  lambda_pair: 0.1
+  pair_margin: 0.2
+  lambda_u_pol: 0.1
+  lambda_i_mag: 0.1
+  lambda_min: 0.0
+  lambda_tv: 0.0001
+evaluation:
+  control_seed: 20260717
+  batch_size: 4
+  run_calibration: false
+  run_test: false
+  selection_metric: nll
+  selection_mode: min
+  bootstrap_replicates: 100
+training:
+  lr_new_layers: 0.0001
+  lr_backbone: 0.00001
+  weight_decay: 0.05
+  max_steps: 50
+  gradient_accumulation_steps: 1
+  eval_interval: 10
+  max_grad_norm: 1.0
+  output_dir: local_runs/bives_cxr/qwen35_2b_proxy_p0_v2
+seed: 17
+device: cuda:1

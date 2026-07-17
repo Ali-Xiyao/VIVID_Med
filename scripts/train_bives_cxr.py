@@ -738,6 +738,9 @@ def main() -> None:
         require_matching_protocol=bool(
             audit_config.get("require_matching_protocol", True)
         ),
+        require_both_insufficient_kinds=bool(
+            audit_config.get("require_both_insufficient_kinds", True)
+        ),
     )
     save_json(output_dir / "manifest_readiness_audit.json", audit_report)
     if audit_report["status"] != "pass":
@@ -767,6 +770,9 @@ def main() -> None:
             "require_provenance": bool(audit_config.get("require_provenance", True)),
             "verify_image_sha256": bool(audit_config.get("verify_image_sha256", True)),
             "require_matching_protocol": bool(audit_config.get("require_matching_protocol", True)),
+            "require_both_insufficient_kinds": bool(
+                audit_config.get("require_both_insufficient_kinds", True)
+            ),
             },
         )
 

@@ -49,6 +49,9 @@ class P0ReviewTests(unittest.TestCase):
             )
             parsed_rows = [json.loads(line) for line in parsed.read_text(encoding="utf-8").splitlines()]
             self.assertEqual({row["parser_state_candidate"] for row in parsed_rows}, {"uncertain", "contradict"})
+            self.assertEqual(len({row["candidate_id"] for row in parsed_rows}), 2)
+            self.assertTrue(all(row["candidate_id"].startswith("candidate_1::") for row in parsed_rows))
+            self.assertEqual({row["source_image_candidate_id"] for row in parsed_rows}, {"candidate_1"})
             with packet.open(encoding="utf-8", newline="") as handle:
                 review_row = next(csv.DictReader(handle))
             self.assertNotIn("parser_state_candidate", review_row)
