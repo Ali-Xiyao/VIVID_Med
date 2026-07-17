@@ -9,6 +9,7 @@ data:
   val_manifest: data/bives_cxr/manifests/val_locked.jsonl
   calibration_manifest: data/bives_cxr/manifests/calibration_locked.jsonl
   test_manifest: data/bives_cxr/manifests/test_locked.jsonl
+  dataset_lock: data/bives_cxr/locks/formal_dataset_lock.json
   image_size: 448
   num_workers: 4
 
@@ -73,6 +74,7 @@ loss:
 
 evaluation:
   control_seed: 20260717
+  bootstrap_seed: 20260718
   batch_size: 8
   run_calibration: true
   run_test: false

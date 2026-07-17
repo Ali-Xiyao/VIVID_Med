@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import importlib.metadata
 import json
+import math
 import os
 import random
 import subprocess
@@ -32,6 +33,8 @@ from bives_cxr.data import (
     BiVESManifestDataset,
     SameStatementStateBatchSampler,
     build_group_loss_indices,
+    limit_rows_to_complete_groups,
+    read_manifest,
     statement_text_by_id,
 )
 from bives_cxr.losses import BiVESLoss, BiVESLossConfig
@@ -45,11 +48,13 @@ from bives_cxr.model import BiVESCXR, BiVESModelConfig
 from bives_cxr.interventions import CONTROL_PROTOCOL_VERSION, bives_control_seed
 from bives_cxr.statement_cache import load_statement_embedding_matrix
 from bives_cxr.provenance import (
+    build_source_snapshot,
     build_run_lock,
     canonical_json_sha256,
     file_sha256 as provenance_file_sha256,
     resolved_config_text,
 )
+from bives_cxr.dataset_lock import validate_dataset_lock
 
 
 class BiVESExperiment(nn.Module):
@@ -339,28 +344,7 @@ def git_commit() -> str:
 
 
 def limit_to_complete_groups(dataset: BiVESManifestDataset, max_records: int | None) -> None:
-    if not max_records:
-        return
-    groups: dict[str, dict[str, dict[str, Any]]] = {}
-    for row in dataset.rows:
-        group_id = str(row["group_id"])
-        state = str(row["state"])
-        if state in groups.setdefault(group_id, {}):
-            raise ValueError(f"group_id {group_id!r} has duplicate {state} rows")
-        groups[group_id][state] = row
-    selected: list[dict[str, Any]] = []
-    for group_id in sorted(groups):
-        state_rows = groups[group_id]
-        if all(state in state_rows for state in ("support", "contradict", "uncertain", "insufficient")):
-            selected.extend(
-                state_rows[state]
-                for state in ("support", "contradict", "uncertain", "insufficient")
-            )
-        if len(selected) + 4 > max_records:
-            break
-    if not selected:
-        raise ValueError(f"max_records={max_records} does not retain one complete group_id quartet")
-    dataset.rows = selected
+    dataset.rows = limit_rows_to_complete_groups(dataset.rows, max_records)
 
 
 def load_frozen_statement_embeddings(
@@ -539,8 +523,8 @@ def set_decoder_temperatures(
 ) -> None:
     for name in ("tau_a", "tau_d", "tau_p"):
         value = float(temperatures[name])
-        if value <= 0:
-            raise ValueError(f"{name} must be positive")
+        if not math.isfinite(value) or not 1e-4 <= value <= 1e4:
+            raise ValueError(f"{name} must be finite and bounded in [1e-4, 1e4]")
         getattr(experiment.head.decoder, name).fill_(value)
 
 
@@ -629,11 +613,39 @@ def main() -> None:
             f"see {output_dir / 'manifest_readiness_audit.json'}"
         )
 
-    train_dataset = BiVESManifestDataset(config["data"]["train_manifest"], config["data"]["data_root"])
+    formal_manifest_paths = {
+        split: config["data"][key]
+        for split, key in (
+            ("train", "train_manifest"), ("val", "val_manifest"),
+            ("calibration", "calibration_manifest"), ("test", "test_manifest"),
+        )
+    }
+    dataset_lock = validate_dataset_lock(
+        config["data"]["dataset_lock"],
+        formal_manifest_paths,
+        data_root=config["data"]["data_root"],
+        audit_options={
+            "check_images": bool(audit_config.get("check_images", True)),
+            "require_complete_statements": bool(audit_config.get("require_complete_statements", True)),
+            "check_decodable": bool(audit_config.get("check_decodable", True)),
+            "reject_constant_images": bool(audit_config.get("reject_constant_images", True)),
+            "require_provenance": bool(audit_config.get("require_provenance", True)),
+            "verify_image_sha256": bool(audit_config.get("verify_image_sha256", True)),
+            "require_matching_protocol": bool(audit_config.get("require_matching_protocol", True)),
+        },
+    )
+
+    train_rows = read_manifest(config["data"]["train_manifest"])
+    val_rows = read_manifest(config["data"]["val_manifest"])
+    if args.debug:
+        train_rows = limit_rows_to_complete_groups(train_rows, config["data"].get("max_train_samples"))
+        val_rows = limit_rows_to_complete_groups(val_rows, config["data"].get("max_val_samples"))
+    train_dataset = BiVESManifestDataset(config["data"]["train_manifest"], config["data"]["data_root"], rows=train_rows)
     val_dataset = BiVESManifestDataset(
         config["data"]["val_manifest"],
         config["data"]["data_root"],
         statement_to_index=train_dataset.statement_to_index,
+        rows=val_rows,
     )
     calibration_dataset = (
         BiVESManifestDataset(
@@ -645,8 +657,6 @@ def main() -> None:
         and bool(evaluation_config.get("run_calibration", True))
         else None
     )
-    limit_to_complete_groups(train_dataset, config["data"].get("max_train_samples"))
-    limit_to_complete_groups(val_dataset, config["data"].get("max_val_samples"))
 
     expected_statement_texts = statement_text_by_id(
         train_dataset.rows
@@ -673,7 +683,13 @@ def main() -> None:
     else:
         raise ValueError(f"unsupported statement embedding mode: {statement_embedding_mode}")
 
-    run_lock = build_run_lock(config, git_commit=git_commit())
+    source_snapshot = build_source_snapshot(require_clean=True)
+    run_lock = build_run_lock(
+        config,
+        git_commit=git_commit(),
+        source_snapshot=source_snapshot,
+        dataset_lock=dataset_lock,
+    )
     run_lock_sha256 = canonical_json_sha256(run_lock)
     save_json(output_dir / "run_lock.json", run_lock)
 
@@ -1098,9 +1114,9 @@ def main() -> None:
             calibrated_checkpoint,
             output_dir / "checkpoints" / "best_calibrated.pt",
         )
-        save_json(
-            output_dir / "calibration_artifact.json",
-            {
+        calibration_artifact = {
+                "format_version": 2,
+                "calibration_algorithm": "three_temperature_lbfgs_v1",
                 "selected_best_step": selected_best_step,
                 "base_checkpoint_sha256": base_checkpoint_sha256,
                 "run_lock_sha256": run_lock_sha256,
@@ -1115,8 +1131,18 @@ def main() -> None:
                     config["data"]["calibration_manifest"]
                 ),
                 "control_protocol_version": CONTROL_PROTOCOL_VERSION,
-            },
+                "evaluation_control_seed": int(evaluation_config["control_seed"]),
+                "calibration_predictions_path": str(output_dir / "calibration_pre_predictions.jsonl"),
+                "calibration_predictions_sha256": file_sha256(
+                    output_dir / "calibration_pre_predictions.jsonl"
+                ),
+                "calibration_pre_nll": float(calibration_pre["nll"]),
+                "calibration_post_nll": float(calibration_post["nll"]),
+            }
+        calibration_artifact["canonical_artifact_sha256"] = canonical_json_sha256(
+            calibration_artifact
         )
+        save_json(output_dir / "calibration_artifact.json", calibration_artifact)
 
     final_metrics = {
         "step": step,

@@ -26,6 +26,8 @@ BiVES-CXR is the only active paper and code mainline.
 | Real-weight Qwen3.5 vision smoke | `../scripts/smoke_qwen35_vision.py` |
 | Qwen3.5-to-BiVES server integration gate | `../scripts/smoke_qwen35_bives_integration.py` |
 | Manifest audit | `../scripts/audit_bives_manifest.py` |
+| Joint four-split dataset lock | `../scripts/lock_bives_dataset.py` |
+| Source-only deployment manifest | `../scripts/write_bives_source_manifest.py` |
 | Statement cache builder | `../scripts/build_bives_statement_embeddings.py` |
 | Explicit locked-test evaluator | `../scripts/evaluate_bives_final.py` |
 | CPU tests | `../tests/test_bives_core.py`, `../tests/test_bives_readiness.py` |
@@ -72,7 +74,11 @@ Formal training has not been started by this consolidation. Before server P0:
 
 1. create locked train/validation/calibration/test manifests with provenance,
    hashes, complete S/C/U/I groups, and pass the strict mandatory audit;
-2. perform the uncertain-vs-insufficient expert pilot;
-3. verify same-statement cross-state coverage;
-4. run Qwen3.5-2B P0;
-5. unlock Qwen3.5-4B only after the proposal go/no-go gates pass.
+2. create and retain the matching joint `dataset_lock.json` with
+   `scripts/lock_bives_dataset.py`; bind it in the active YAML before training;
+3. create a clean Git source manifest with
+   `scripts/write_bives_source_manifest.py` before source-only server sync;
+4. perform the uncertain-vs-insufficient expert pilot;
+5. verify same-statement cross-state coverage;
+6. run Qwen3.5-2B P0;
+7. unlock Qwen3.5-4B only after the proposal go/no-go gates pass.

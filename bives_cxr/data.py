@@ -54,8 +54,9 @@ class BiVESManifestDataset(Dataset):
         manifest_path: str | Path,
         data_root: str | Path = ".",
         statement_to_index: dict[str, int] | None = None,
+        rows: list[dict[str, Any]] | None = None,
     ) -> None:
-        self.rows = read_manifest(manifest_path)
+        self.rows = list(rows) if rows is not None else read_manifest(manifest_path)
         self.data_root = Path(data_root)
         if statement_to_index is None:
             statement_ids = sorted({str(row["canonical_statement_id"]) for row in self.rows})
@@ -68,6 +69,32 @@ class BiVESManifestDataset(Dataset):
         if unknown:
             raise ValueError(f"manifest contains statement IDs absent from the training vocabulary: {sorted(unknown)[:5]}")
         self.statement_to_index = dict(statement_to_index)
+
+
+def limit_rows_to_complete_groups(
+    rows: list[dict[str, Any]], max_records: int | None
+) -> list[dict[str, Any]]:
+    """Deterministically select exact quartets before creating an ontology."""
+
+    if not max_records:
+        return list(rows)
+    groups: dict[str, dict[str, dict[str, Any]]] = {}
+    for row in rows:
+        group_id = str(row["group_id"])
+        state = str(row["state"])
+        if state in groups.setdefault(group_id, {}):
+            raise ValueError(f"group_id {group_id!r} has duplicate {state} rows")
+        groups[group_id][state] = row
+    selected: list[dict[str, Any]] = []
+    for group_id in sorted(groups):
+        state_rows = groups[group_id]
+        if all(state in state_rows for state in STATE_NAMES):
+            if len(selected) + len(STATE_NAMES) > max_records:
+                break
+            selected.extend(state_rows[state] for state in STATE_NAMES)
+    if not selected:
+        raise ValueError(f"max_records={max_records} does not retain one complete group_id quartet")
+    return selected
 
     def __len__(self) -> int:
         return len(self.rows)

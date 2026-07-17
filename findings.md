@@ -293,3 +293,23 @@
   gate, not a runnable formal configuration value.
 - Pixel-level causal evaluation remains a separate paper P1. Current results
   and code must continue to use the accurate term `feature-evidence closure`.
+# 2026-07-17 Round-5 Intake
+
+## Fifth-review evidence and decisions
+
+- The active BiVES architecture is accepted; this round must not introduce legacy model paths or redesign the closed-form decoder.
+- The current formal lock does not prove four-way data disjointness, full model weight/processor immutability, or a complete source snapshot. These are release-blocking P0 provenance gaps.
+- Calibration needs a release-chain validator rather than a file-exists check. NaN temperatures must be rejected explicitly because ordinary `<= 0` checks do not reject NaN.
+- Formal P0 sample caps are unsafe because statement-index mapping is created before the capped row set. Formal P0 configs will use frozen manifests without dynamic caps; debug selection will happen before ontology/mapping construction.
+
+## Fifth-review repair outcome
+
+- `scripts/lock_bives_dataset.py` now creates a joint audit-backed lock across all four splits. Training validates it before Qwen loading, binds its canonical SHA to `run_lock.json`, and the final evaluator revalidates it without computing test metrics first.
+- Formal model locks now cover each indexed safetensors shard and local processor/tokenizer assets. A clean tracked source tree is hashed for Git runs; source-only deployments require a verified `.bives_source_manifest.json` inventory.
+- Calibration artifacts now bind the calibration manifest, control protocol/seed, uncalibrated checkpoint temperatures, prediction SHA, pre/post NLL, algorithm version, and a canonical artifact SHA. Temperatures must be finite and within `[1e-4, 1e4]`.
+- Active formal configs now declare dataset-lock locations and an independent bootstrap seed (`20260718`). Their P0 sample caps were removed; debug uses pre-vocabulary complete-quartet selection only.
+
+- User supplied a fifth review of public `main` and requested continued repair.
+- The review must be treated as an issue report to verify against the current
+  checked-out active BiVES surface; do not infer that it authorizes formal
+  training or a new architecture.

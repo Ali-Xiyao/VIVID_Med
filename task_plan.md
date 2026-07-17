@@ -379,3 +379,37 @@ training or locked-test release.
   predeclared run lock is provenance locking, not evaluation.
 - Do not launch formal 4B/9B training until all four P0 gates pass and the
   required manifests/cache exist.
+# 2026-07-17 Round-5 Follow-up Repair
+
+## Objective
+
+Read the supplied round-5 review against current `main` (`d7864b7` claimed by
+the review), identify only active BiVES-CXR defects, and repair/verify them
+without changing the frozen evidence architecture or launching formal training.
+
+## Initial rules
+
+- `BiVES_CXR_MIA_TMI_ready_proposal.md` remains the sole research authority.
+- Active code remains Qwen3.5-only and formal data/model runs remain behind
+  manifest, statement-cache, and lock gates.
+- Inspect the review and active source before assigning any P0/P1 status.
+
+## Accepted fifth-review P0 repair scope
+
+1. Add an explicit joint four-split dataset lock (`train`/`val`/`calibration`/`test`) and bind its canonical SHA to the formal run lock and final evaluator.
+2. Replace the partial base-model lock with a full local model snapshot (weight shards plus required processor/tokenizer assets), and bind a clean source-tree snapshot to formal runs.
+3. Make the calibrated-release chain strict: validate calibration provenance, finite bounded temperatures, checkpoint temperatures, prediction hashes, and canonical calibration-artifact integrity.
+4. Remove dynamic sample limiting from formal P0 configurations. Keep any limit path debug-only and construct the statement ontology/mapping after debug selection.
+
+## Completion
+
+- [x] Joint four-split dataset lock builder/validator and formal config paths.
+- [x] Full Qwen local snapshot (all safetensors shards plus relevant processor/tokenizer assets) and clean source-tree snapshot binding.
+- [x] Strict calibrated-release validation including canonical artifact integrity, finite bounded decoder temperatures, checkpoint-temperature equality, protocol/seed/manifest binding, and prediction hash verification.
+- [x] Formal P0 dynamic caps removed; debug selection happens before statement vocabulary construction.
+- [x] Local regression gate: compile, 38/38 active BiVES tests, synthetic smoke, and Qwen3.5-only active-source scan.
+
+## Deferred fifth-review work
+
+- Matching-protocol registry, image-only visual prompt, minimum valid patch audit, pixel-space causal evidence, and external/VinDr formal execution remain P1 or later.
+- No formal training or final test evaluation may start in this repair phase: the server remains missing the audited/frozen four-split manifests and canonical Qwen3.5-2B checkpoint.

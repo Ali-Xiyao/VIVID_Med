@@ -1,17 +1,20 @@
 from __future__ import annotations
 
+import json
 import tempfile
 import unittest
 from pathlib import Path
 
 import torch
 
+from bives_cxr.dataset_lock import build_dataset_lock, validate_dataset_lock
 from bives_cxr.interventions import bives_control_seed
 from bives_cxr.provenance import (
     build_run_lock,
     canonical_json_sha256,
     file_sha256,
     validate_calibrated_release_chain,
+    validate_checkpoint_run_lock,
 )
 from bives_cxr.statement_cache import (
     build_statement_cache_payload,
@@ -49,8 +52,9 @@ class FormalArtifactLockTests(unittest.TestCase):
             model.mkdir()
             (model / "config.json").write_text('{"model_type":"qwen3_5"}', encoding="utf-8")
             (model / "model.safetensors.index.json").write_text(
-                '{"weight_map":{}}', encoding="utf-8"
+                '{"weight_map":{"x":"model-00001-of-00001.safetensors"}}', encoding="utf-8"
             )
+            (model / "model-00001-of-00001.safetensors").write_bytes(b"weight")
             manifests = {}
             for split in ("train", "val", "calibration", "test"):
                 path = root / f"{split}.jsonl"
@@ -83,12 +87,21 @@ class FormalArtifactLockTests(unittest.TestCase):
                 },
                 "evaluation": {"control_seed": 20260717},
             }
-            lock = build_run_lock(config, git_commit="abc123")
+            lock = build_run_lock(
+                config,
+                git_commit="abc123",
+                dataset_lock={"status": "pass", "format_version": 1},
+            )
             checkpoint = {
                 "step": 7,
                 "config": config,
                 "run_lock": lock,
                 "run_lock_sha256": canonical_json_sha256(lock),
+                "bives_head": {
+                    "decoder.tau_a": torch.tensor(1.0),
+                    "decoder.tau_d": torch.tensor(1.0),
+                    "decoder.tau_p": torch.tensor(1.0),
+                },
             }
             checkpoint_path = root / "best.pt"
             torch.save(checkpoint, checkpoint_path)
@@ -98,7 +111,17 @@ class FormalArtifactLockTests(unittest.TestCase):
                 "statement_cache_sha256": lock["statement_cache_sha256"],
                 "statement_vocabulary_sha256": lock["statement_vocabulary_sha256"],
                 "selected_best_step": 7,
+                "format_version": 2,
+                "calibration_algorithm": "three_temperature_lbfgs_v1",
+                "calibration_manifest_sha256": lock["manifest_sha256"]["calibration"],
+                "control_protocol_version": lock["control_protocol_version"],
+                "evaluation_control_seed": 20260717,
+                "uncalibrated_temperatures": {"tau_a": 1.0, "tau_d": 1.0, "tau_p": 1.0},
+                "calibrated_temperatures": {"tau_a": 1.1, "tau_d": 1.0, "tau_p": 0.9},
+                "calibration_pre_nll": 1.0,
+                "calibration_post_nll": 0.9,
             }
+            calibration["canonical_artifact_sha256"] = canonical_json_sha256(calibration)
             validated = validate_calibrated_release_chain(
                 checkpoint_path=checkpoint_path,
                 checkpoint=checkpoint,
@@ -108,6 +131,26 @@ class FormalArtifactLockTests(unittest.TestCase):
                 current_git_commit="abc123",
             )
             self.assertEqual(validated, lock)
+            (model / "model-00001-of-00001.safetensors").write_bytes(b"tampered-weight")
+            with self.assertRaisesRegex(ValueError, "base model snapshot"):
+                validate_checkpoint_run_lock(checkpoint, current_git_commit="abc123")
+            (model / "model-00001-of-00001.safetensors").write_bytes(b"weight")
+            invalid_calibration = dict(calibration)
+            invalid_calibration["calibrated_temperatures"] = {
+                "tau_a": float("nan"), "tau_d": 1.0, "tau_p": 1.0
+            }
+            invalid_calibration["canonical_artifact_sha256"] = canonical_json_sha256(
+                {key: value for key, value in invalid_calibration.items() if key != "canonical_artifact_sha256"}
+            )
+            with self.assertRaisesRegex(ValueError, "finite and bounded"):
+                validate_calibrated_release_chain(
+                    checkpoint_path=checkpoint_path,
+                    checkpoint=checkpoint,
+                    calibration=invalid_calibration,
+                    statement_cache_path=cache_path,
+                    test_manifest_path=manifests["test"],
+                    current_git_commit="abc123",
+                )
             manifests["test"].write_text("tampered\n", encoding="utf-8")
             with self.assertRaisesRegex(ValueError, "locked test manifest"):
                 validate_calibrated_release_chain(
@@ -118,6 +161,46 @@ class FormalArtifactLockTests(unittest.TestCase):
                     test_manifest_path=manifests["test"],
                     current_git_commit="abc123",
                 )
+
+    def test_joint_dataset_lock_rejects_patient_leakage(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            manifests: dict[str, Path] = {}
+            for split in ("train", "val", "calibration", "test"):
+                rows = []
+                for state in ("support", "contradict", "uncertain", "insufficient"):
+                    rows.append({
+                        "sample_id": f"{split}-{state}",
+                        "patient_id": f"{split}-patient-{state}",
+                        "image_path": f"{split}-{state}.png",
+                        "image_sha256": (f"{split}-{state}".encode("utf-8").hex() + "0" * 64)[:64],
+                        "study_id": f"{split}-study-{state}",
+                        "group_id": f"{split}-group",
+                        "canonical_statement_id": "s1",
+                        "statement_text": "right effusion",
+                        "state": state,
+                    })
+                path = root / f"{split}.jsonl"
+                path.write_text("".join(json.dumps(row) + "\n" for row in rows), encoding="utf-8")
+                manifests[split] = path
+            options = {
+                "check_images": False, "require_complete_statements": True,
+                "check_decodable": False, "reject_constant_images": False,
+                "require_provenance": False, "verify_image_sha256": False,
+                "require_matching_protocol": False,
+            }
+            lock = build_dataset_lock(manifests, data_root=root, audit_options=options)
+            lock_path = root / "dataset_lock.json"
+            lock_path.write_text(json.dumps(lock), encoding="utf-8")
+            self.assertEqual(
+                validate_dataset_lock(lock_path, manifests, data_root=root), lock
+            )
+            leaked = json.loads(manifests["test"].read_text(encoding="utf-8").splitlines()[0])
+            leaked["patient_id"] = "train-patient-support"
+            rows = [leaked] + [json.loads(line) for line in manifests["test"].read_text(encoding="utf-8").splitlines()[1:]]
+            manifests["test"].write_text("".join(json.dumps(row) + "\n" for row in rows), encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "joint four-split dataset audit failed"):
+                validate_dataset_lock(lock_path, manifests, data_root=root)
 
     def test_cache_expectations_and_test_subset_are_exact(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

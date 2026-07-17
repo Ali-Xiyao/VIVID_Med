@@ -43,6 +43,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--calibration-artifact", type=Path, required=True)
     parser.add_argument("--test-manifest", type=Path, required=True)
     parser.add_argument("--statement-cache", type=Path, required=True)
+    parser.add_argument("--dataset-lock", type=Path, required=True)
     parser.add_argument("--data-root", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument(
@@ -76,6 +77,9 @@ def main() -> None:
         statement_cache_path=args.statement_cache,
         test_manifest_path=args.test_manifest,
         current_git_commit=current_commit,
+        calibration_artifact_path=args.calibration_artifact,
+        dataset_lock_path=args.dataset_lock,
+        data_root=args.data_root,
     )
 
     audit_config = config.get("audit", {})
@@ -195,7 +199,7 @@ def main() -> None:
         bootstrap_replicates=int(
             config.get("evaluation", {}).get("bootstrap_replicates", 1000)
         ),
-        bootstrap_seed=int(config.get("seed", 17)),
+        bootstrap_seed=int(config.get("evaluation", {}).get("bootstrap_seed", 20260718)),
     )
     with (args.output_dir / "locked_test_predictions.jsonl").open(
         "w", encoding="utf-8"

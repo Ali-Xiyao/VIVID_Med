@@ -9,9 +9,8 @@ data:
   val_manifest: data/bives_cxr/manifests/p0_val.jsonl
   calibration_manifest: data/bives_cxr/manifests/p0_calibration.jsonl
   test_manifest: data/bives_cxr/manifests/p0_test.jsonl
+  dataset_lock: data/bives_cxr/locks/p0_dataset_lock.json
   image_size: 448
-  max_train_samples: 256
-  max_val_samples: 128
   num_workers: 2
 
 model:
@@ -76,6 +75,7 @@ loss:
 
 evaluation:
   control_seed: 20260717
+  bootstrap_seed: 20260718
   batch_size: 8
   run_calibration: true
   run_test: false
