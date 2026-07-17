@@ -369,7 +369,7 @@ training or locked-test release.
 | P0-3 content-level conflict audit | complete | Audit rejects conflicting states for the same actual image SHA + statement and for the same study + statement; path cache keys use `os.path.normcase`. |
 | P0-4 independent evaluation control seed | complete | Validation/calibration/test controls use one locked evaluation seed independent of the training seed; the seed is recorded in the run lock. |
 | Regression validation | complete | Compile, 37/37 active BiVES tests, and synthetic smoke pass locally; formal data/model training remains blocked. |
-| Git/server handoff | pending | Commit and push the verified source, sync the exact commit to the server, and rerun the source-only server checks without launching formal training. |
+| Git/server handoff | complete | Commit `ca2130f` was pushed and synced by exact archive; 5/5 key SHA256 values matched, and server compile, 37/37 tests, and synthetic smoke passed without formal training. |
 
 ## Guardrails
 
