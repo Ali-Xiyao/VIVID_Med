@@ -935,3 +935,14 @@
 - The new geometry gate is deliberately not relaxed: it requires at least 95%
   feasibility overall and per finding plus at least 90% in every finding-area
   quartile. A failure ends this control family before any Qwen3.5 load.
+- The C2 runtime probe shows strong area-dependent cost but does not authorize
+  an implementation change: the smallest protocol-design target was feasible
+  in 0.26 seconds, while the largest target required 45.27 seconds and was
+  geometrically infeasible. The latter remains in the denominator and will be
+  reported under the frozen area-quartile gate.
+- The complete C2 first pass clears the frozen geometry gates without selective
+  deletion: `375/377 = 99.47%` overall, `62/62 = 100%` consolidation, and
+  `313/315 = 99.37%` pleural effusion. The lowest prespecified stratum is
+  pleural-effusion area quartile 4 at `76/78 = 97.44%`, still above its 90%
+  floor. Both exclusions remain in that quartile and retain the same
+  geometry-only reason; all 375 emitted controls pass every invariant.

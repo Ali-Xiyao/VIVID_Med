@@ -27,7 +27,7 @@ server execution, or a new clinical claim.
 - A new continuation requires a separately reviewed control-family authority;
   it cannot lower the 90% threshold or reuse VinDr test for selection.
 
-## New connected-control candidate (not yet accepted)
+## Accepted connected-control candidate
 
 The stopped R001/R002 package above remains immutable. A separate candidate
 authority now defines an exact-area, target-disjoint, 4-connected control from
@@ -36,9 +36,10 @@ target-shape matching and does not call the coordinate bins true anatomy.
 
 | Artifact | Versioned file | Fixed alias | SHA-256 | Status |
 | --- | --- | --- | --- | --- |
-| Connected-control plan | `CONNECTED_CONTROL_RESCUE_PLAN_20260718.md` | `CONNECTED_CONTROL_RESCUE_PLAN.md` | `a07c7df977cad30f9888762cf8de4c2bb5a81d24c8583560105c7632bb6d6cd6` | byte-identical; `DRAFT_REVIEW_REQUIRED` |
-| Connected-control tracker | `CONNECTED_CONTROL_RESCUE_TRACKER_20260718.md` | `CONNECTED_CONTROL_RESCUE_TRACKER.md` | `86967404dd96aed241c7b17fec949aedeec6aba5b645564419ab8bd98aeb30c1` | byte-identical; C001-C007 blocked |
+| Connected-control plan | `CONNECTED_CONTROL_RESCUE_PLAN_20260718.md` | `CONNECTED_CONTROL_RESCUE_PLAN.md` | `647bf9f466d76553d3ba9a849c73f852227577f9214601776e0b31addd1fb12a` | byte-identical; C1/C2 pass; C3 in progress |
+| Connected-control tracker | `CONNECTED_CONTROL_RESCUE_TRACKER_20260718.md` | `CONNECTED_CONTROL_RESCUE_TRACKER.md` | `7dc637a461c40c5ca4beddfac03aa064749cc6cc401d5600d1aa8bf98094d8a6` | byte-identical; C001-C003 pass; C004 in progress |
+| C1/C2 execution log | `CONNECTED_CONTROL_C1_C2_EXECUTION_LOG_20260718.md` | none | `7e1e9c317d1560a5d369fefa034253cd0732f78eb4f82c0f111ff32bc47096c8` | 98/98 tests; 375/377 geometry pass; full rows replay identical |
 
-This candidate does not authorize implementation or execution. It requires an
-explicit user acceptance after review. If accepted, C001 is recorded first and
-C1/C2 remain CPU-only, model-free dependency gates.
+The user accepted this candidate by replying `继续` on 2026-07-18. C001-C003
+are complete-pass. C004/C3 is authorized only as the frozen 16-image local
+Qwen3.5-2B timing/replay gate; C4 and later rows remain blocked.

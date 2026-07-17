@@ -1,6 +1,6 @@
 # BiVES-CXR Coordinate-Zone Connected-Control Rescue Plan
 
-**Status:** DRAFT_REVIEW_REQUIRED
+**Status:** ACCEPTED_C3_IN_PROGRESS
 **Date:** 2026-07-18
 **Base commit:** `98edc71`
 **Parent authority:** `../BiVES_CXR_MIA_TMI_ready_proposal.md`
@@ -29,8 +29,9 @@ as one.
 
 ## Authority boundary
 
-- This is a planning-only candidate subordinate authority. No row may run
-  until the user explicitly accepts it.
+- This subordinate authority was explicitly accepted when the user replied
+  `继续` on 2026-07-18. Rows unlock strictly in tracker order; acceptance does
+  not bypass any dependency or survival gate.
 - All work is local to this workstation. No server, SSH, Slurm, or remote
   experiment action is permitted.
 - Qwen3.5-2B is the only model allowed after geometry passes. Qwen3.5-4B/9B
@@ -233,9 +234,11 @@ Every execution record must include:
 - [x] Qwen3.5-2B, decoder, K, selector, and checkpoint remain frozen.
 - [x] VinDr test and confirmation isolation remain enforced.
 - [x] Local-only compute and hard stop rules are explicit.
-- [ ] Explicit user acceptance recorded.
+- [x] Explicit user acceptance recorded.
 
 ## Current verdict
 
-`DRAFT_REVIEW_REQUIRED`. No experiment, implementation, data mutation, model
-load, or GPU run is authorized by this draft.
+`ACCEPTED_C3_IN_PROGRESS`. C1 passed 98/98 active tests and synthetic smoke.
+C2 passed at 375/377 overall with every per-finding/quartile gate green and a
+byte-identical full rows replay. C3's 16-image local Qwen3.5-2B timing/replay
+gate is authorized; C4 remains blocked.
