@@ -20,7 +20,37 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def transformed(image: Image.Image, index: int) -> Image.Image:
+def balanced_uncertain(image: Image.Image) -> tuple[Image.Image, Image.Image, Image.Image]:
+    """Build an equal-area support/contradict spatial mixture for local-only U.
+
+    Posterization is a third texture, not an engineering definition of balanced
+    bipolar evidence.  This fixture deliberately exposes equal support-like and
+    contradict-like regions at a scale much larger than one vision patch.
+    """
+
+    support = ImageOps.autocontrast(image.convert("L"))
+    contradict = ImageOps.invert(support)
+    width, height = support.size
+    midpoint_x, midpoint_y = width // 2, height // 2
+    output = Image.new("L", (width, height))
+    positive = Image.new("L", (width, height), color=0)
+    negative = Image.new("L", (width, height), color=0)
+    tiles = (
+        (0, 0, midpoint_x, midpoint_y, support, positive),
+        (midpoint_x, 0, width, midpoint_y, contradict, negative),
+        (0, midpoint_y, midpoint_x, height, contradict, negative),
+        (midpoint_x, midpoint_y, width, height, support, positive),
+    )
+    for left, top, right, bottom, source, mask in tiles:
+        box = (left, top, right, bottom)
+        output.paste(source.crop(box), box)
+        mask.paste(255, box)
+    return output, positive, negative
+
+
+def transformed_with_masks(
+    image: Image.Image, index: int
+) -> tuple[Image.Image, Image.Image | None, Image.Image | None]:
     image = image.convert("L")
     state_index = index % len(STATES)
     validation_variant = index >= len(STATES)
@@ -31,18 +61,24 @@ def transformed(image: Image.Image, index: int) -> Image.Image:
             resample=Image.Resampling.BICUBIC,
             fillcolor=fill,
         )
+    positive_mask: Image.Image | None = None
+    negative_mask: Image.Image | None = None
     if state_index == 0:
         image = ImageOps.autocontrast(image)
     elif state_index == 1:
         image = ImageOps.invert(ImageOps.autocontrast(image))
     elif state_index == 2:
-        image = ImageOps.posterize(ImageOps.autocontrast(image), 3)
+        image, positive_mask, negative_mask = balanced_uncertain(image)
     else:
         image = image.filter(ImageFilter.GaussianBlur(radius=8.0))
         image = ImageEnhance.Brightness(image).enhance(0.55)
     if validation_variant:
         image = ImageEnhance.Contrast(image).enhance(0.92)
-    return image.convert("RGB")
+    return image.convert("RGB"), positive_mask, negative_mask
+
+
+def transformed(image: Image.Image, index: int) -> Image.Image:
+    return transformed_with_masks(image, index)[0]
 
 
 def write_jsonl(path: Path, rows: list[dict[str, str]]) -> None:
@@ -54,7 +90,14 @@ def make_rows(output_dir: Path, split: str, image: Image.Image) -> list[dict[str
     for index, state in enumerate(STATES):
         name = f"{split}_{state}.png"
         target = output_dir / name
-        transformed(image, index + (0 if split == "train" else 4)).save(target)
+        transformed_image, positive_mask, negative_mask = transformed_with_masks(
+            image, index + (0 if split == "train" else 4)
+        )
+        transformed_image.save(target)
+        if state == "uncertain":
+            assert positive_mask is not None and negative_mask is not None
+            positive_mask.save(output_dir / f"{split}_uncertain_positive_mask.png")
+            negative_mask.save(output_dir / f"{split}_uncertain_negative_mask.png")
         rows.append(
             {
                 "sample_id": f"local-overfit-{split}-{state}",

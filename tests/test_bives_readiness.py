@@ -15,7 +15,8 @@ from torch.utils.data import DataLoader
 from bives_cxr.audit import audit_manifests
 from bives_cxr.backbones import validate_qwen35_model_path
 from bives_cxr.data import BiVESManifestDataset, SameStatementStateBatchSampler
-from scripts.prepare_local_bives_overfit import transformed
+from scripts.prepare_local_bives_overfit import balanced_uncertain, transformed_with_masks
+from scripts.replay_bives_uncertain_selector import pil_rotation_alignment_report
 from scripts.train_bives_cxr import (
     assert_full_sample_coverage,
     load_config,
@@ -32,14 +33,30 @@ def write_jsonl(path: Path, rows: list[dict[str, str]]) -> None:
 
 
 class BiVESReadinessTest(unittest.TestCase):
-    def test_validation_uncertain_transform_preserves_posterize_levels(self) -> None:
+    def test_affine_alignment_matches_pil_positive_rotation_direction(self) -> None:
+        report = pil_rotation_alignment_report(grid_h=28, grid_w=28, degrees=1.0)
+        self.assertTrue(report["direction_verified"], report)
+        self.assertLess(report["forward_mse"], report["inverse_mse"])
+
+    def test_validation_uncertain_transform_preserves_balanced_regions(self) -> None:
         width, height = 32, 32
         gradient = np.tile(np.arange(width, dtype=np.uint8) * 8, (height, 1))
         image = Image.fromarray(gradient, mode="L")
-        train_uncertain = transformed(image, 2).convert("L")
-        val_uncertain = transformed(image, 6).convert("L")
-        self.assertLessEqual(np.unique(np.asarray(train_uncertain)).size, 8)
-        self.assertLessEqual(np.unique(np.asarray(val_uncertain)).size, 8)
+        _, train_positive, train_negative = transformed_with_masks(image, 2)
+        _, val_positive, val_negative = transformed_with_masks(image, 6)
+        for positive, negative in ((train_positive, train_negative), (val_positive, val_negative)):
+            self.assertIsNotNone(positive)
+            self.assertIsNotNone(negative)
+            self.assertEqual(
+                int(np.count_nonzero(np.asarray(positive))),
+                int(np.count_nonzero(np.asarray(negative))),
+            )
+
+    def test_balanced_uncertain_has_equal_positive_and_negative_regions(self) -> None:
+        image = Image.fromarray(np.tile(np.arange(32, dtype=np.uint8) * 8, (32, 1)), mode="L")
+        _, positive, negative = balanced_uncertain(image)
+        self.assertEqual(int(np.count_nonzero(np.asarray(positive))), int(np.count_nonzero(np.asarray(negative))))
+        self.assertEqual(int(np.count_nonzero(np.asarray(positive))), 32 * 32 // 2)
 
     def test_manifest_dataset_loads_images_and_dataloader_batches(self) -> None:
         """Regression for Dataset methods accidentally nesting under a helper."""

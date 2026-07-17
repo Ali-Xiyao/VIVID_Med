@@ -27,6 +27,7 @@ BiVES-CXR is the only active paper and code mainline.
 | Real-weight Qwen3.5 vision smoke | `../scripts/smoke_qwen35_vision.py` |
 | Qwen3.5-to-BiVES server integration gate | `../scripts/smoke_qwen35_bives_integration.py` |
 | Zero-training uncertain transform replay | `../scripts/replay_bives_uncertain_transform.py` |
+| Direct uncertain selector/evidence replay | `../scripts/replay_bives_uncertain_selector.py` |
 | Manifest audit | `../scripts/audit_bives_manifest.py` |
 | Joint four-split dataset lock | `../scripts/lock_bives_dataset.py` |
 | Source-only deployment manifest | `../scripts/write_bives_source_manifest.py` |
@@ -105,13 +106,19 @@ Formal local training has not been started. Before local P0:
 6. run Qwen3.5-2B P0 locally;
 7. unlock Qwen3.5-4B only after the proposal go/no-go gates pass.
 
-## Current mechanism-gate blocker
+## Current mechanism-gate status
 
-Support polarity has been repaired by the monotone decoder. The remaining
-local mechanism blocker is uncertain train-to-validation stability. A
-zero-training replay showed that the old uncertain validation transform
-destroyed the discrete posterize cue, and the synthetic transform order now
-applies geometry before state transform and contrast last. The follow-up
-100-step local gate still failed on validation uncertain polarity, so the next
-target is selector/evidence-field stability rather than another decoder,
-loss-weight, K, or model-capacity change.
+Support polarity remains repaired by the monotone decoder. Direct replay of
+the real train/validation uncertain pair showed that the remaining failure was
+not solely exact-K selection: aligned train-mask replay and all-patch pooling
+were also polarity-biased. The local-only uncertain fixture therefore uses an
+equal-area spatial support/contradict mixture, with saved positive/negative
+region masks, rather than treating posterization as a proxy for balanced
+bipolar evidence. The single unchanged 100-step Qwen3.5-2B gate then passed
+with selected validation NLL `0.37115`, validation accuracy `1.0`, and
+uncertain `|rho|=0.03850`.
+
+This is a non-formal synthetic mechanism result only. Mini-P0 and formal runs
+remain behind the separate manifest, statement-cache, and readiness-audit
+gates; the decoder, loss weights, K=16 budget, and model capacity were not
+changed in this phase.

@@ -5,8 +5,8 @@ experiment:
   mode: local_overfit
 data:
   data_root: .
-  train_manifest: local_runs/bives_cxr/qwen35_2b_transform_order_input/train.jsonl
-  val_manifest: local_runs/bives_cxr/qwen35_2b_transform_order_input/val.jsonl
+  train_manifest: local_runs/bives_cxr/qwen35_2b_bipolar_uncertain_input/train.jsonl
+  val_manifest: local_runs/bives_cxr/qwen35_2b_bipolar_uncertain_input/val.jsonl
   image_size: 448
   num_workers: 0
   max_train_samples: 4
@@ -70,6 +70,6 @@ training:
   auxiliary_warmup_steps: 0
   auxiliary_ramp_steps: 0
   max_grad_norm: 1.0
-  output_dir: local_runs/bives_cxr/qwen35_2b_transform_order_gate
+  output_dir: local_runs/bives_cxr/qwen35_2b_bipolar_uncertain_gate
 seed: 17
 device: cuda:0

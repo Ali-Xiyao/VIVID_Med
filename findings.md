@@ -464,3 +464,27 @@
   selector/evidence-field train-to-validation stability for uncertain, using
   counterfactual replay and patch-level evidence diagnostics before any
   mini-P0 or formal run.
+
+## 2026-07-17 Direct uncertain selector/evidence diagnosis
+
+- `scripts/replay_bives_uncertain_selector.py` replaces approximation-only
+  conclusions with an actual train/val uncertain-pair replay. It stores raw
+  Qwen tokens, gates, evidence maps, masks, valid masks, grid, and affine
+  transforms in `selector_evidence_arrays.pt`; JSON stores only the summary.
+- A one-hot grid check establishes that the affine-grid direction used for
+  `PIL.rotate(+1 degree)` is correct (`forward_mse=4.47e-10` versus inverse
+  `7.51e-05`). The previously reported unaligned index Jaccard is no longer
+  used as a final selector conclusion.
+- On the repaired-posterize 100-step gate, aligned cross replay gave
+  `rho_tt=-0.0010`, `rho_vv=0.8425`, `rho_vt=0.9355`, and
+  `rho_tv=-0.8494`; all-valid validation pooling was `rho=0.5654`. Thus the
+  validation polarity is already present in the field / synthetic input and
+  cannot be attributed solely to exact-K selection.
+- The single permitted repair was a local-only 2x2 spatial bipolar mixture:
+  equal-area support-like regions at top-left/bottom-right and
+  contradict-like regions at top-right/bottom-left. Train/validation masks are
+  retained beside the ignored input images. The unchanged Qwen3.5-2B 100-step
+  gate passed, and its direct pair replay reports
+  `uncertain_failure_not_reproduced` with selected validation uncertain
+  `abs(rho)=0.03850`. This validates the local engineering gate only, not a
+  clinical uncertain-data claim or formal result.

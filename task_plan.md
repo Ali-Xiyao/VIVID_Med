@@ -508,3 +508,20 @@ blocked unless the same local 100-step mechanism gate passes.
 | Synthetic transform-order repair | complete | Validation synthetic images now apply geometry before the state transform, use median fill, then apply photometric contrast last; uncertain validation keeps the posterize cue at 8 gray levels. |
 | Controlled 100-step local gate | complete_failed_uncertain_stability | The unchanged Qwen3.5-2B/K=16/LR/loss 100-step local gate still fails: train accuracy `1.0`, validation accuracy `0.75`, selected/final validation NLL `0.4459805632`, and validation uncertain `abs(rho)=0.8424913883`. |
 | Formal/mini-P0 boundary | blocked | No mini-P0, formal training, calibration, or locked-test evaluation was launched. The next target is selector/evidence-field stability rather than decoder geometry, loss weights, K, or model capacity. |
+
+# 2026-07-17 Uncertain Selector/Evidence Diagnostic and Spatial Gate
+
+## Objective
+
+Use the supplied selector/evidence plan without changing the accepted decoder,
+losses, exact-K budget, or Qwen3.5 capacity. First diagnose the real uncertain
+train/validation pair with aligned cross-mask replay, then make at most one
+data-side repair and rerun one non-formal 100-step mechanism gate.
+
+| Gate | Status | Acceptance criterion |
+| --- | --- | --- |
+| Direct aligned pair replay | complete | `replay_bives_uncertain_selector.py` reads actual train/val uncertain images, verifies PIL rotation direction, saves patch arrays, and emits aligned Rtt/Rvv/Rvt/Rtv, soft/all/K sweep, and patch contribution evidence. |
+| Root-cause decision | complete | Old posterized fixture is evidence-field/synthetic-definition dominant: Rvv `rho=0.8425`, Rvt `rho=0.9355`, and all-patch validation `rho=0.5654`; it is not a selector-only failure. |
+| Bounded repair | complete | Replaced only the local synthetic uncertain engineering fixture with an equal-area 2x2 support/contradict spatial mixture and saved positive/negative masks. No decoder, loss, K, or capacity change. |
+| Controlled 100-step local gate | complete_passed | Qwen3.5-2B selected step 80 at validation NLL `0.3711495355`, accuracy `1.0`, uncertain `abs(rho)=0.038496`; step 100 remains accuracy `1.0`, uncertain `abs(rho)=0.032554`. |
+| Mini-P0/formal boundary | blocked_data_readiness | The synthetic mechanism gate is green, but no mini-P0/formal run was launched. Frozen real manifests and the canonical statement cache are still required before the separate readiness audit can unlock execution. |
