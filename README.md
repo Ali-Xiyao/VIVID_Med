@@ -25,7 +25,7 @@ There is no flat four-class prediction head in the active model.
 - Training entry: [`scripts/train_bives_cxr.py`](scripts/train_bives_cxr.py)
 - CPU smoke: [`scripts/smoke_bives_cxr.py`](scripts/smoke_bives_cxr.py)
 - Real-weight vision smoke: [`scripts/smoke_qwen35_vision.py`](scripts/smoke_qwen35_vision.py)
-- Server integration gate: [`scripts/smoke_qwen35_bives_integration.py`](scripts/smoke_qwen35_bives_integration.py)
+- Local CUDA integration gate: [`scripts/smoke_qwen35_bives_integration.py`](scripts/smoke_qwen35_bives_integration.py)
 - Manifest audit: [`scripts/audit_bives_manifest.py`](scripts/audit_bives_manifest.py)
 - Statement cache builder: [`scripts/build_bives_statement_embeddings.py`](scripts/build_bives_statement_embeddings.py)
 - Locked-test release: [`scripts/evaluate_bives_final.py`](scripts/evaluate_bives_final.py)
@@ -62,13 +62,18 @@ The first two checks use synthetic CPU tensors. The third is a read-only
 real-weight vision-tower check and does not retain the language model or start
 training.
 
-Formal server runs use the audited package lock in
-[`requirements-bives-server-lock.txt`](requirements-bives-server-lock.txt).
+Formal local runs use the audited package lock in
+[`requirements-bives-local-lock.txt`](requirements-bives-local-lock.txt).
 The bounded integration gate compares the selective vision-only loader against
 the official full Qwen3.5 visual output, releases the full model, then runs two
 synthetic S/C/U/I BiVES optimization steps.
 
-## Local development and formal training
+## Local-only development and formal training
+
+All active BiVES-CXR experiments run on this workstation. The active workflow
+does not synchronize experiment code/assets to the server and does not submit
+SSH or Slurm jobs. Changing the execution host does not relax any manifest,
+dataset-lock, statement-cache, calibration, or locked-test gate.
 
 For a bounded local engineering run, first copy the tracked template to the
 ignored local-config area and point it at local manifest paths. This run is
@@ -142,8 +147,7 @@ outputs/          Generated experiment artifacts; ignored by Git
 
 ## Data and evidence boundaries
 
-- Medical images and patient data remain local/server-side and are not
-  committed.
+- Medical images and patient data remain local and are not committed.
 - Generated outputs and checkpoints remain ignored.
 - Historical outputs are preserved as pilot/provenance evidence; they are not
   BiVES-CXR results.

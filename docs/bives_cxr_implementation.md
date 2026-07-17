@@ -116,5 +116,8 @@ not compute-matched because the 9B model has higher per-sample FLOPs.
 
 ## Local verification boundary
 
-Local checks are synthetic CPU tests only. Formal experiments run on the
-server using the checked-in Qwen3.5 configs.
+All active checks and experiments run on this workstation using the checked-in
+Qwen3.5 configs and local model paths. Synthetic tests, real-weight integration,
+formal training, calibration, and final evaluation are local-only. Formal runs
+remain gated by the audited manifests, dataset lock, statement cache, clean
+source snapshot, and explicit locked-test release protocol.

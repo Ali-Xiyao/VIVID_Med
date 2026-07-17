@@ -553,5 +553,18 @@
   candidates and 433-row blinded packet remain nonclinical preparation
   artifacts and are retained for a future restart.
 - No weak-label substitution is authorized. Formal four-state manifests,
-  dataset lock, canonical statement cache, server synchronization, and the
-  Qwen3.5-2B P0 launch remain paused behind this non-bypassable dependency.
+  dataset lock, canonical statement cache, and the Qwen3.5-2B P0 launch remain
+  paused behind this non-bypassable dependency.
+
+## 2026-07-17 local-only execution decision
+
+- The user now requires every active BiVES-CXR experiment to run on the local
+  workstation. Server synchronization, SSH execution, and Slurm submission are
+  no longer part of the active experiment workflow.
+- The active configs were already host-compatible: all Qwen3.5 model paths are
+  under `H:/Xiyao_Wang/001_models/`, formal data roots are repository-local,
+  and generated artifacts remain under ignored `outputs/` or `local_runs/`.
+- This changes only the execution host. It does not convert parser candidates
+  into reviewed labels or relax the formal manifest, dataset-lock, statement-
+  cache, calibration, or locked-test gates. P0 remains paused because clinical
+  review was separately deferred.

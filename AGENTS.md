@@ -19,16 +19,16 @@ belong under `legacy/`.
 - `bives_cxr/`: active evidence model, closed-form decoder, intervention logic,
   losses, metrics, Qwen3.5 adapter, and manifest dataset.
 - `configs/bives_cxr/`: the only active experiment configurations.
-- `scripts/train_bives_cxr.py`: server training entry.
+- `scripts/train_bives_cxr.py`: local training entry.
 - `scripts/smoke_bives_cxr.py`: synthetic CPU smoke.
 - `scripts/smoke_qwen35_vision.py`: read-only real-weight vision-only smoke.
-- `scripts/smoke_qwen35_bives_integration.py`: bounded server-only official-vs-selective visual alignment plus two-step synthetic S/C/U/I gate.
+- `scripts/smoke_qwen35_bives_integration.py`: bounded local-CUDA official-vs-selective visual alignment plus two-step synthetic S/C/U/I gate.
 - `scripts/audit_bives_manifest.py`: manifest and split readiness audit.
 - `scripts/{prepare,extract,audit}_vindr_cxr*.py`: current external-data tools.
 - `tests/`: active BiVES contract tests.
 - `docs/`: active handoff and schema documentation.
 - `legacy/`: archived pre-BiVES code, configs, proposals, and tools.
-- `data/`, `outputs/`, `pretrained/`: local/server assets; do not publish them.
+- `data/`, `outputs/`, `pretrained/`: local assets; do not publish them.
 
 ## Build, test, and development commands
 
@@ -50,8 +50,10 @@ python scripts/train_bives_cxr.py \
   --debug
 ```
 
-Local validation is synthetic and read-only. Formal model loading/training runs
-on the server after the data readiness audit passes.
+All active validation, model loading, training, calibration, and final
+evaluation run on this workstation. Do not synchronize active experiments to
+the server or submit SSH/Slurm jobs. Formal local execution remains blocked
+until the same data-readiness, lock, cache, calibration, and release gates pass.
 
 ## Coding style
 

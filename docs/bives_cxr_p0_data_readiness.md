@@ -41,8 +41,8 @@ H:\Xiyao_Wang\000_Public Dataset\vindr-cxr-an-open-dataset-of-chest-x-rays-with-
    `p0_calibration`, `p0_test`), run `audit_bives_manifest.py`, and create the
    joint `p0_dataset_lock.json`.
 7. Build `qwen35_canonical.pt` from the audited train/validation/calibration
-   ontology, lock its hashes into an ignored P0 config, sync source plus assets
-   to the server, and only then submit Qwen3.5-2B P0.
+   ontology, lock its hashes into an ignored P0 config, create the clean local
+   source snapshot, and only then launch Qwen3.5-2B P0 on this workstation.
 
 ## Intake index command
 

@@ -1,4 +1,4 @@
-"""Write the immutable source-tree manifest required by a source-only server deployment."""
+"""Write the immutable source-tree manifest required by a formal local run."""
 
 from __future__ import annotations
 

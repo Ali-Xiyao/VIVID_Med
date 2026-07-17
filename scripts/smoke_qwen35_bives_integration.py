@@ -1,4 +1,4 @@
-"""Bounded real-Qwen3.5 BiVES integration gate for the server."""
+"""Bounded real-Qwen3.5 BiVES integration gate for a local CUDA device."""
 
 from __future__ import annotations
 
@@ -75,7 +75,7 @@ def main() -> None:
         raise ValueError("the bounded integration contract requires exactly 2 steps")
     device = torch.device(args.device)
     if device.type != "cuda" or not torch.cuda.is_available():
-        raise RuntimeError("the real Qwen3.5 integration gate requires a CUDA server allocation")
+        raise RuntimeError("the real Qwen3.5 integration gate requires a local CUDA device")
     dtype = torch.bfloat16 if args.dtype == "bf16" else torch.float16
     args.output_dir.mkdir(parents=True, exist_ok=True)
     stage_path = args.output_dir / "stages.jsonl"

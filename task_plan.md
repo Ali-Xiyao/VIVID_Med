@@ -571,8 +571,27 @@ Qwen3.5 P0 job from parser candidates alone.
 - Do not request or fabricate reviewer/adjudicator decisions.
 - Do not build formal four-state manifests, a dataset lock, or the canonical
   statement cache from the nonclinical parser candidates.
-- Do not synchronize the current BiVES source to the server or launch a
-  Qwen3.5 P0 job while this dependency is paused.
+- Do not launch a Qwen3.5 P0 job while this dependency is paused.
 - Preserve the ignored candidate table, blinded packet, and validator so work
   can resume from the same auditable boundary when qualified review becomes
   available.
+
+# 2026-07-17 Local-Only Experiment Policy
+
+The user replaced the previous mixed local/server execution policy. From this
+point forward, every active BiVES-CXR experiment runs on this workstation.
+
+| Work item | Status | Decision / evidence |
+| --- | --- | --- |
+| Active YAML host paths | complete | All five active configs use local `H:/Xiyao_Wang/001_models/Qwen3.5-*` model paths and local data/output roots. |
+| Active docs and CLI wording | complete | Repository guidance, handoff docs, manifest audit, source manifest, and integration-gate messages now describe local-only execution. |
+| Formal environment lock | complete | Renamed the active lock to `requirements-bives-local-lock.txt`; package versions are unchanged. |
+| Regression guard | complete | `test_active_configs_are_qwen35_only` now also rejects remote markers and asserts local formal data/output roots. |
+| Clinical/P0 readiness gate | paused_dependency | Local-only execution changes the host, not the scientific gate. The deferred clinical review still blocks formal manifests/cache and P0 launch. |
+| Remote experiment operations | retired | Do not sync active experiment assets or submit SSH/Slurm jobs. Historical remote records remain unchanged as provenance. |
+
+## Local-only transition errors
+
+| Error | Attempt | Resolution |
+| --- | --- | --- |
+| A combined read/search command returned exit code 1 after printing the requested files. | First active-surface inspection | The final `rg` searched tests for server-only wording and correctly found zero matches; reran targeted scans and treated zero hits as a pass rather than a code failure. |

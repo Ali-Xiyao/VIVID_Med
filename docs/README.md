@@ -25,7 +25,7 @@ BiVES-CXR is the only active paper and code mainline.
 | Training entry | `../scripts/train_bives_cxr.py` |
 | CPU smoke | `../scripts/smoke_bives_cxr.py` |
 | Real-weight Qwen3.5 vision smoke | `../scripts/smoke_qwen35_vision.py` |
-| Qwen3.5-to-BiVES server integration gate | `../scripts/smoke_qwen35_bives_integration.py` |
+| Qwen3.5-to-BiVES local CUDA integration gate | `../scripts/smoke_qwen35_bives_integration.py` |
 | Zero-training uncertain transform replay | `../scripts/replay_bives_uncertain_transform.py` |
 | Direct uncertain selector/evidence replay | `../scripts/replay_bives_uncertain_selector.py` |
 | Manifest audit | `../scripts/audit_bives_manifest.py` |
@@ -80,10 +80,13 @@ provenance-complete statement caches, deterministic intervention controls,
 an isolated locked-test release entry, synthetic CPU smoke, and proposal-level
 unit tests.
 
-## Local-first execution
+## Local-only execution
 
 The active YAMLs now default to this workstation: `data_root: data` and local
-Qwen3.5 paths under `H:/Xiyao_Wang/001_models/`. The intended local checks are:
+Qwen3.5 paths under `H:/Xiyao_Wang/001_models/`. All active experiments,
+including formal training, calibration, and final evaluation, run locally;
+do not synchronize them to the server or submit SSH/Slurm jobs. The intended
+local checks are:
 
 ```powershell
 python scripts/smoke_bives_cxr.py
@@ -103,7 +106,7 @@ Formal local training has not been started. Before local P0:
 2. create and retain the matching joint `dataset_lock.json` with
    `scripts/lock_bives_dataset.py`; bind it in the active YAML before training;
 3. create a clean Git source manifest with
-   `scripts/write_bives_source_manifest.py` before source-only server sync;
+   `scripts/write_bives_source_manifest.py` before a formal local run;
 4. perform the uncertain-vs-insufficient expert pilot;
 5. verify same-statement cross-state coverage;
 6. run Qwen3.5-2B P0 locally;

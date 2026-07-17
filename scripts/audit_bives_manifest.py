@@ -1,4 +1,4 @@
-"""Audit BiVES-CXR manifests before server training."""
+"""Audit BiVES-CXR manifests before local training."""
 
 from __future__ import annotations
 

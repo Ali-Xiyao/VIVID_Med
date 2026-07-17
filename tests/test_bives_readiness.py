@@ -121,10 +121,17 @@ class BiVESReadinessTest(unittest.TestCase):
         configs = sorted(config_root.glob("*.yaml"))
         self.assertTrue(configs)
         for path in configs:
-            payload = yaml.safe_load(path.read_text(encoding="utf-8"))
+            raw = path.read_text(encoding="utf-8")
+            payload = yaml.safe_load(raw)
             model = payload["model"]
             self.assertEqual(str(model["family"]).lower(), "qwen3.5")
             self.assertIn("Qwen3.5-", str(model["path"]))
+            self.assertTrue(
+                str(model["path"]).startswith("H:/Xiyao_Wang/001_models/Qwen3.5-"),
+                path,
+            )
+            for remote_marker in ("/ipfs/", "sues-hpc", "slurm", "sbatch"):
+                self.assertNotIn(remote_marker, raw.lower(), path)
             self.assertIn(payload["experiment"].get("mode"), {"local_debug", "local_overfit", "local_formal"})
             self.assertGreater(float(payload["loss"].get("lambda_pair", 0.0)), 0.0)
             self.assertGreater(float(payload["loss"].get("lambda_u_pol", 0.0)), 0.0)
@@ -134,6 +141,8 @@ class BiVESReadinessTest(unittest.TestCase):
             self.assertGreaterEqual(int(payload["bives"]["contextual_layers"]), 1)
             self.assertTrue(payload["audit"]["require_complete_statements"])
             if payload["experiment"].get("mode") == "local_formal":
+                self.assertEqual(payload["data"]["data_root"], "data")
+                self.assertTrue(payload["training"]["output_dir"].startswith("outputs/"))
                 self.assertTrue(payload["audit"]["verify_image_sha256"])
                 self.assertTrue(payload["audit"]["require_matching_protocol"])
             self.assertFalse(payload["evaluation"]["run_test"])
