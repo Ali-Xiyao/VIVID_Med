@@ -1,6 +1,6 @@
 # BiVES-CXR Selector/Intervention Rescue Experiment Plan
 
-**Status:** DRAFT_REVIEW_REQUIRED
+**Status:** STOPPED_R002_GEOMETRY_FAIL
 **Date:** 2026-07-18
 **Base commit:** 7c3e7ed
 **Parent authority:** BiVES_CXR_MIA_TMI_ready_proposal.md
@@ -34,8 +34,8 @@ final proposal until explicitly accepted.
 - CheXlocalize is absent and no download is authorized by this draft.
 - No Qwen3.5-4B/9B, server, SSH, Slurm, U/I clinical claim, flat head,
   decoder change, K sweep, or multi-variable rescue is permitted.
-- Every experimental row remains BLOCKED_PENDING_REVIEW until this candidate
-  authority is explicitly accepted.
+- The user accepted this subordinate authority on 2026-07-18. Rows unlock
+  strictly in tracker order; acceptance does not bypass dependency gates.
 
 ## Claim map
 
@@ -306,5 +306,14 @@ module stack.
 - [x] One optional single-variable rescue is specified.
 - [x] Must-run and conditional runs are separated.
 - [x] Local compute cap and stop rules are explicit.
-- [ ] Candidate authority explicitly accepted.
+- [x] Candidate authority explicitly accepted.
 - [ ] Independent patient-level final dataset available.
+
+## Execution verdict
+
+R001 passed, but R002 failed the preregistered geometry survival gate after a
+complete legal translation search. Exact same-band target-shape controls are
+feasible for `337/377 = 89.39%` overall and `280/315 = 88.89%` of pleural-
+effusion protocol-design positives, both below the required 90%; consolidation
+passes at `57/62 = 91.94%`. The route stops before R003, any model load, or GPU
+execution. See `R001_R002_EXECUTION_LOG_20260718.md`.

@@ -907,3 +907,18 @@
 - Timestamped and fixed plan/tracker pairs are byte-identical. Their SHA-256
   values are `1c0edf56...375017` and `fd9e2325...2531e7`; the full values and
   execution boundary are registered in `refine-logs/MANIFEST.md`.
+- R001 is now a real lock rather than a feasibility estimate. It contains 1,510
+  balanced S/C rows over 1,446 unique train images whose actual SHA-256 values
+  match the official VinDr manifest. Protocol-design/confirmation support
+  counts are `62/59` for consolidation and `315/319` for pleural effusion;
+  each has an equal number of deterministic 0-of-3 negatives. Image overlap is
+  zero, and all finding/consensus/area-quartile strata deviate from a perfect
+  half split by at most 0.5 sample.
+- R002 demonstrates that exact topology preservation is itself incompatible
+  with the prespecified coverage threshold. A complete integer translation
+  search with exact pixel autocorrelation improves feasibility from the first
+  conservative attempt's 73.74% to 89.39%, but pleural effusion remains at
+  88.89% rather than the required 90%. The 40 infeasible rows are not random:
+  23 are 3-of-3 pleural-effusion positives in the largest area quartile.
+  Lowering the gate or discarding those large lesions would be post-hoc and
+  would bias the mechanism evaluation toward easier, smaller targets.

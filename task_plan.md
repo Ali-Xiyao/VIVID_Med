@@ -816,11 +816,19 @@ method mutation, extra seed, Qwen3.5-4B/9B, or server work.
 | Phase | Status | Gate |
 | --- | --- | --- |
 | R0 freeze prior evidence | complete | E8 remains failed; E10 is descriptive and VinDr test is prohibited as a tuning surface. |
-| R1 local development-data feasibility | complete_image_disjoint_only | Local VinDr train offers 121 consolidation and 634 pleural-effusion 2-of-3-reader positives with complete boxes; 0-of-3 images provide negatives and 1-of-3 disagreements are excluded. All 15,000 DICOM headers omit PatientID/StudyUID/SeriesUID, so only image-disjoint development is supportable and no patient-level claim is allowed. |
+| R1 local development-data feasibility | complete_locked_image_disjoint_only | R001 locked 1,510 balanced S/C rows over 1,446 actually SHA-verified train DICOMs. Design/confirm image overlap is zero and all 16 finding/consensus/area strata are balanced within one sample. All DICOMs omit patient/study/series IDs, so no patient-level claim is allowed. R002 later failed its geometry gate. |
 | R2 claim and anti-claim freeze | complete | Primary claim: target regions must beat topology-matched controls under distribution-preserving operators. Supporting claim: sparse localization must be consistent across development strata. Anti-claim: gains are generic deletion-area/topology sensitivity or model scale. Protocol repair precedes any model repair. |
 | R3 compact experiment blocks | complete | `refine-logs/EXPERIMENT_PLAN.md` freezes five sequential blocks: development lock, topology control, operator robustness, selector audit/conditional single rescue, and one-time confirmation plus independent final boundary. Each block changes one mechanism and has an explicit stop rule. |
 | R4 tracker and artifact manifest | complete | Timestamped/fixed plan and tracker files are byte-identical and registered in `refine-logs/MANIFEST.md` with SHA-256. Every run row is blocked pending review or an earlier dependency. |
-| R5 review gate | pending_user_review | No execution begins until the candidate authority is reviewed and explicitly accepted. |
+| R5 review gate | complete_accepted_by_user | User replied `继续` after the draft handoff, explicitly authorizing execution under the frozen candidate scope. R001 starts first; downstream rows remain dependency-gated. |
+
+## Rescue execution status
+
+| Run | Status | Evidence |
+| --- | --- | --- |
+| R001 VinDr-train lock | complete_pass | Final replay lock SHA-256 `4251027b3069b21fb6fb5acd6bc02bf003206fbcfffb6d045abd2289ea2ac409`; manifest SHA-256 `bd84cd7ca5384afbcb6228c49331b028a9641dd3dd9011157c2cec75b1f6514f`, 1,510 rows, 1,446 unique actually verified train images, zero split overlap, exact S/C balance. |
+| R002 topology geometry | complete_fail_hard_stop | Final replay lock SHA-256 `ce863abfa7a70db16aa5055f5e2038e9a0ae15b97cab4f8b84cf4370715534e6`; complete legal translation search reaches 89.39% overall and 88.89% for pleural effusion, below 90%; consolidation passes at 91.94%. Geometry rows SHA-256 `45115b0a8c3478f983b2408747cafb1afff7da05de67a9ca09cb7e79739eb9ee`. |
+| R003/R004 frozen-model topology gate | not_run_R002_fail | Stop rule triggered before any Qwen3.5 load or GPU timing smoke. |
 
 ## Rescue-planning errors
 
@@ -828,3 +836,7 @@ method mutation, extra seed, Qwen3.5-4B/9B, or server work.
 | --- | --- | --- |
 | `experiment-plan` referenced three `skills/shared-references/output-*.md` files that are absent from the installed skill roots. | First output-protocol read | No project file changed. Follow the protocol stated in the skill body: timestamped artifact, fixed-name copy, and `refine-logs/MANIFEST.md`; record hashes after writing. |
 | A sequential header-only scan of all 15,000 VinDr train DICOMs exceeded 184 seconds before emitting final grouping statistics. | R1 patient/study grouping audit | The process was terminated by timeout with no artifact. Do not repeat sequentially; use a bounded concurrent header reader with progress output, and fail R1 closed if it cannot establish a grouping key. |
+| A combined R001 source-inventory command returned exit code 1 after printing the requested source because its final optional inventory probe had no matching output. | R001 implementation inventory | No file changed and the required source was present in stdout. Split later schema/geometry inspections into explicit commands whose empty optional results do not fail the whole inspection. |
+| R002 geometry attempt 1 reached only `278/377 = 73.74%` feasibility; consolidation passed `56/62 = 90.32%`, but pleural effusion failed `222/315 = 70.48%`. | Conservative topology-control search | The implementation imposed an extra bounding-box-disjoint constraint not required by the accepted plan. Keep the failed artifact as diagnostic evidence, do not unlock R003, and test exact translated-mask disjointness with overlapping bounding boxes before deciding the gate. |
+| The first R001 lock hashed `rescue_protocol.py` before R002 replaced the conservative geometry search with the complete legal translation search. | Final provenance audit | The split result is unaffected, but the lock's code hash no longer matches the final module. Archive the ignored pre-replay artifacts, rerun R001 with final code, then rerun R002 so the data-lock and geometry-lock chain binds the committed implementation. |
+| A combined final-provenance writeback patch used a nonmatching sentence anchor in the execution log and was rejected atomically. | Final record update | No file changed. Replaced it with a smaller patch anchored on exact manifest/geometry hash lines, then updated the execution-log hash in the manifest. |
