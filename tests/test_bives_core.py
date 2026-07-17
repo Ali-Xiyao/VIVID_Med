@@ -460,6 +460,39 @@ class MetricContractTests(unittest.TestCase):
         self.assertEqual(result["_metadata"]["class_labels"], [0, 1, 2, 3])
         self.assertEqual(result["macro_f1"]["requested_replicates"], 50)
         self.assertLessEqual(result["balanced_accuracy"]["valid_replicates"], 50)
+        self.assertIn("support_vs_contradict_auroc", result)
+        self.assertIn("uncertain_vs_insufficient_auprc", result)
+
+    def test_patient_bootstrap_includes_intervention_endpoints(self) -> None:
+        probabilities = torch.eye(4).repeat(2, 1).numpy()
+        targets = torch.arange(4).repeat(2).numpy()
+        rows = []
+        for index, target in enumerate(targets):
+            original = probabilities[index].tolist()
+            keep = list(original)
+            drop = [0.0, 0.0, 0.0, 1.0]
+            controls = [list(original), list(original)]
+            rows.append(
+                {
+                    "target": int(target),
+                    "original_probs": original,
+                    "keep_probs": keep,
+                    "drop_probs": drop,
+                    "control_branch_probs": controls,
+                }
+            )
+        result = patient_bootstrap_confidence_intervals(
+            probabilities,
+            targets,
+            [f"patient-{index}" for index in range(8)],
+            replicates=50,
+            seed=7,
+            prediction_rows=rows,
+        )
+        self.assertIn("evidence_only_sufficiency", result)
+        self.assertIn("evidence_removal_insufficient", result)
+        self.assertIn("target_control_gap_eligible", result)
+        self.assertIn("target_control_gap_eligible_worst_case", result)
 
 
 class StatementCacheTests(unittest.TestCase):

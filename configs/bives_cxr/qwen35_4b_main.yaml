@@ -22,6 +22,9 @@ model:
   statement_embeddings:
     mode: frozen_cached
     path: data/bives_cxr/statement_embeddings/qwen35_canonical.pt
+    expected_sha256: LOCK_AFTER_BUILD
+    expected_vocabulary_sha256: LOCK_AFTER_BUILD
+    expected_pooling: input_embedding_mean
 
 bives:
   fusion_dim: 512
@@ -54,6 +57,7 @@ audit:
   reject_constant_images: true
   require_complete_statements: true
   require_provenance: true
+  require_matching_protocol: true
   verify_image_sha256: true
 
 loss:
@@ -68,6 +72,7 @@ loss:
   lambda_tv: 0.0001
 
 evaluation:
+  control_seed: 20260717
   batch_size: 8
   run_calibration: true
   run_test: false

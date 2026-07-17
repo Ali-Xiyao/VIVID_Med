@@ -318,6 +318,7 @@ def patient_bootstrap_confidence_intervals(
     patient_ids: list[str],
     replicates: int = 1000,
     seed: int = 17,
+    prediction_rows: list[dict[str, object]] | None = None,
 ) -> dict[str, object]:
     if len(patient_ids) != len(targets):
         raise ValueError("patient_ids and targets must have equal length")
@@ -336,7 +337,22 @@ def patient_bootstrap_confidence_intervals(
         "accuracy": [],
         "macro_f1": [],
         "balanced_accuracy": [],
+        "support_vs_contradict_auroc": [],
+        "support_vs_contradict_auprc": [],
+        "uncertain_vs_insufficient_auroc": [],
+        "uncertain_vs_insufficient_auprc": [],
     }
+    if prediction_rows is not None:
+        if len(prediction_rows) != len(targets):
+            raise ValueError("prediction_rows and targets must have equal length")
+        values.update(
+            {
+                "evidence_only_sufficiency": [],
+                "evidence_removal_insufficient": [],
+                "target_control_gap_eligible": [],
+                "target_control_gap_eligible_worst_case": [],
+            }
+        )
     missing_class_replicates = 0
     for _ in range(replicates):
         sampled_patients = rng.choice(unique_patients, size=len(unique_patients), replace=True)
@@ -366,6 +382,60 @@ def patient_bootstrap_confidence_intervals(
         values["balanced_accuracy"].append(
             float(np.mean(recalls)) if recalls else float("nan")
         )
+        sampled_probabilities = probabilities[sampled_rows]
+        for prefix, selected, positive_class, numerator_class in (
+            ("support_vs_contradict", np.isin(sampled_targets, [0, 1]), 0, (0, 1)),
+            ("uncertain_vs_insufficient", np.isin(sampled_targets, [2, 3]), 2, (2, 3)),
+        ):
+            positive, negative = numerator_class
+            scores = sampled_probabilities[selected, positive] / np.clip(
+                sampled_probabilities[selected, positive]
+                + sampled_probabilities[selected, negative],
+                1e-12,
+                None,
+            )
+            binary = (sampled_targets[selected] == positive_class).astype(np.int64)
+            binary_metrics = _safe_binary_metrics(binary, scores)
+            values[f"{prefix}_auroc"].append(binary_metrics["auroc"])
+            values[f"{prefix}_auprc"].append(binary_metrics["auprc"])
+        if prediction_rows is not None:
+            sampled_predictions = [prediction_rows[int(index)] for index in sampled_rows]
+            eligible_rows: list[dict[str, object]] = []
+            for row, target in zip(sampled_predictions, sampled_targets):
+                original = np.asarray(row["original_probs"], dtype=np.float64)
+                if int(target) != 3 and int(original.argmax()) == int(target):
+                    eligible_rows.append(row)
+            if not eligible_rows:
+                for key in (
+                    "evidence_only_sufficiency",
+                    "evidence_removal_insufficient",
+                    "target_control_gap_eligible",
+                    "target_control_gap_eligible_worst_case",
+                ):
+                    values[key].append(float("nan"))
+            else:
+                eos: list[float] = []
+                eri: list[float] = []
+                mean_gaps: list[float] = []
+                worst_gaps: list[float] = []
+                for row in eligible_rows:
+                    target = int(row["target"])
+                    original = np.asarray(row["original_probs"], dtype=np.float64)
+                    keep = np.asarray(row["keep_probs"], dtype=np.float64)
+                    drop = np.asarray(row["drop_probs"], dtype=np.float64)
+                    controls = np.asarray(row["control_branch_probs"], dtype=np.float64)
+                    target_change = float(np.abs(drop - original).sum())
+                    control_changes = np.abs(controls - original[None, :]).sum(axis=1)
+                    eos.append(float(int(keep.argmax()) == target))
+                    eri.append(float(int(drop.argmax()) == 3))
+                    mean_gaps.append(target_change - float(control_changes.mean()))
+                    worst_gaps.append(target_change - float(control_changes.max()))
+                values["evidence_only_sufficiency"].append(float(np.mean(eos)))
+                values["evidence_removal_insufficient"].append(float(np.mean(eri)))
+                values["target_control_gap_eligible"].append(float(np.mean(mean_gaps)))
+                values["target_control_gap_eligible_worst_case"].append(
+                    float(np.mean(worst_gaps))
+                )
     intervals = {
         key: {
             "lower_95": float(np.nanquantile(metric_values, 0.025)),

@@ -11,6 +11,7 @@ from typing import Any
 
 import torch
 import torch.nn.functional as F
+import yaml
 from safetensors import safe_open
 from transformers import AutoProcessor
 
@@ -31,6 +32,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--pooling", choices=("input_embedding_mean",), default="input_embedding_mean")
     parser.add_argument("--normalize", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--dtype", choices=("float32", "float16", "bfloat16"), default="float32")
+    parser.add_argument(
+        "--lock-config",
+        type=Path,
+        action="append",
+        default=[],
+        help="Write the generated cache SHA/vocabulary/pooling into a BiVES YAML config.",
+    )
     return parser.parse_args()
 
 
@@ -133,12 +141,27 @@ def main() -> None:
     )
     args.output.parent.mkdir(parents=True, exist_ok=True)
     torch.save(payload, args.output)
+    cache_sha256 = file_sha256(args.output)
+    for config_path in args.lock_config:
+        config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+        statement = config["model"]["statement_embeddings"]
+        if str(statement.get("mode")) != "frozen_cached":
+            raise ValueError(f"{config_path} does not use frozen_cached statements")
+        statement["path"] = str(args.output)
+        statement["expected_sha256"] = cache_sha256
+        statement["expected_vocabulary_sha256"] = payload["ontology"]["vocabulary_sha256"]
+        statement["expected_pooling"] = args.pooling
+        config_path.write_text(
+            yaml.safe_dump(config, sort_keys=False, allow_unicode=True),
+            encoding="utf-8",
+        )
     print(
         json.dumps(
             {
                 "output": str(args.output),
                 "statements": len(texts),
                 "embedding_dim": payload["embedding_dim"],
+                "cache_sha256": cache_sha256,
                 "vocabulary_sha256": payload["ontology"]["vocabulary_sha256"],
             },
             ensure_ascii=False,

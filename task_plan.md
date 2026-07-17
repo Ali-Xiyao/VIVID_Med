@@ -352,3 +352,30 @@ formal 4B/9B training in this phase.
 - [x] T7: Run local/server regression gates, commit/push `main`, and synchronize
   source-only changes to the server. Formal training remains blocked until
   manifests/cache are built and audited.
+# 2026-07-17 Round-4 Formal Artifact Closure
+
+## Objective
+
+Freeze the accepted BiVES-CXR network architecture and close the four remaining
+formal-run protocol blockers from the round-4 review before any 4B/9B formal
+training or locked-test release.
+
+## Checklist
+
+| Gate | Status | Acceptance criterion |
+| --- | --- | --- |
+| P0-1 artifact lock chain | complete | `run_lock.json`, checkpoints, calibration artifacts, cache, config, manifests, Git commit, and final evaluator form a fail-fast SHA256 chain. |
+| P0-2 ontology/cache binding | complete | Checkpoint stores the full locked ontology; test may be a consistent subset; the configured cache SHA, vocabulary SHA, and pooling must match exactly. |
+| P0-3 content-level conflict audit | complete | Audit rejects conflicting states for the same actual image SHA + statement and for the same study + statement; path cache keys use `os.path.normcase`. |
+| P0-4 independent evaluation control seed | complete | Validation/calibration/test controls use one locked evaluation seed independent of the training seed; the seed is recorded in the run lock. |
+| Regression validation | complete | Compile, 37/37 active BiVES tests, and synthetic smoke pass locally; formal data/model training remains blocked. |
+| Git/server handoff | pending | Commit and push the verified source, sync the exact commit to the server, and rerun the source-only server checks without launching formal training. |
+
+## Guardrails
+
+- Do not redesign the accepted statement-conditioned bipolar evidence network.
+- Do not reintroduce legacy model families or flat four-class heads.
+- Do not access the locked test from the training loop; hashing it for the
+  predeclared run lock is provenance locking, not evaluation.
+- Do not launch formal 4B/9B training until all four P0 gates pass and the
+  required manifests/cache exist.

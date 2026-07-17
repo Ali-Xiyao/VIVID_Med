@@ -72,7 +72,10 @@ embedding to normalized ontology text, per-text SHA256, a vocabulary SHA256,
 Qwen3.5 model/tokenizer identity and revision, pooling, normalization, dtype,
 and source-manifest hashes. Missing, stale, non-finite, or provenance-incomplete
 caches fail before visual weights load. Build it with
-`scripts/build_bives_statement_embeddings.py`.
+`scripts/build_bives_statement_embeddings.py`. The active prototype is exactly
+the L2-normalized mean of frozen Qwen3.5 input-token embedding lookups; it is
+not a contextual language-encoder output. Use `--lock-config` to write the
+exact cache SHA256, vocabulary SHA256, and pooling rule into each formal YAML.
 
 This is a fixed-ontology verifier. The active implementation does not claim
 open-vocabulary, unseen-statement, or free-text paraphrase generalization.
@@ -103,9 +106,10 @@ pixel keep/drop/equal-area controls through the full frozen vision tower.
 5. Move to Qwen3.5-4B only after the P0 go/no-go.
 6. Use Qwen3.5-9B only for the locked scale study.
 
-The 4B and 9B locked runs use the same 1,000 optimizer steps and matched
-effective group presentations; the 9B config uses gradient accumulation to
-match the 4B effective batch.
+The 4B and 9B locked runs are sample-budget- and optimizer-step-matched: both
+use 1,000 optimizer steps and matched effective group presentations, while the
+9B config uses gradient accumulation to match the 4B effective batch. They are
+not compute-matched because the 9B model has higher per-sample FLOPs.
 
 ## Local verification boundary
 

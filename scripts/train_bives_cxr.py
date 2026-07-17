@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import importlib.metadata
 import json
 import os
@@ -43,8 +42,14 @@ from bives_cxr.metrics import (
     patient_bootstrap_confidence_intervals,
 )
 from bives_cxr.model import BiVESCXR, BiVESModelConfig
-from bives_cxr.interventions import CONTROL_PROTOCOL_VERSION, stable_control_seed
+from bives_cxr.interventions import CONTROL_PROTOCOL_VERSION, bives_control_seed
 from bives_cxr.statement_cache import load_statement_embedding_matrix
+from bives_cxr.provenance import (
+    build_run_lock,
+    canonical_json_sha256,
+    file_sha256 as provenance_file_sha256,
+    resolved_config_text,
+)
 
 
 class BiVESExperiment(nn.Module):
@@ -120,14 +125,16 @@ class Qwen35BiVESCollator:
         image_size: int = 448,
         include_group_indices: bool = True,
         split: str = "train",
-        global_seed: int = 17,
+        training_seed: int = 17,
+        evaluation_control_seed: int = 20260717,
         control_protocol_version: str = CONTROL_PROTOCOL_VERSION,
     ) -> None:
         self.processor = processor
         self.image_size = int(image_size)
         self.include_group_indices = bool(include_group_indices)
         self.split = str(split)
-        self.global_seed = int(global_seed)
+        self.training_seed = int(training_seed)
+        self.evaluation_control_seed = int(evaluation_control_seed)
         self.control_protocol_version = str(control_protocol_version)
         self.epoch = 0
 
@@ -199,12 +206,13 @@ class Qwen35BiVESCollator:
         encoded["control_protocol_version"] = self.control_protocol_version
         encoded["control_seeds"] = torch.tensor(
             [
-                stable_control_seed(
-                    self.control_protocol_version,
-                    self.split,
-                    self.global_seed,
-                    self.epoch if self.split == "train" else "fixed",
-                    item["sample_id"],
+                bives_control_seed(
+                    split=self.split,
+                    sample_id=str(item["sample_id"]),
+                    training_seed=self.training_seed,
+                    evaluation_control_seed=self.evaluation_control_seed,
+                    epoch=self.epoch,
+                    protocol_version=self.control_protocol_version,
                 )
                 for item in batch
             ],
@@ -235,6 +243,27 @@ def set_seed(seed: int) -> None:
     torch.manual_seed(seed)
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(seed)
+
+
+def capture_rng_state() -> dict[str, Any]:
+    return {
+        "python": random.getstate(),
+        "numpy": np.random.get_state(),
+        "torch": torch.get_rng_state(),
+        "cuda": torch.cuda.get_rng_state_all() if torch.cuda.is_available() else [],
+    }
+
+
+def restore_rng_state(state: dict[str, Any]) -> None:
+    required = {"python", "numpy", "torch", "cuda"}
+    missing = required - set(state)
+    if missing:
+        raise ValueError(f"checkpoint RNG state is missing: {sorted(missing)}")
+    random.setstate(state["python"])
+    np.random.set_state(state["numpy"])
+    torch.set_rng_state(state["torch"])
+    if torch.cuda.is_available():
+        torch.cuda.set_rng_state_all(state["cuda"])
 
 
 DEVICE_FIELDS = {
@@ -288,11 +317,7 @@ def save_json(path: Path, payload: dict[str, Any]) -> None:
 
 
 def file_sha256(path: str | Path) -> str:
-    digest = hashlib.sha256()
-    with Path(path).open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
+    return provenance_file_sha256(path)
 
 
 def git_commit() -> str:
@@ -302,7 +327,15 @@ def git_commit() -> str:
         text=True,
         check=False,
     )
-    return result.stdout.strip() if result.returncode == 0 else "unknown"
+    if result.returncode == 0 and result.stdout.strip():
+        return result.stdout.strip()
+    environment_commit = os.environ.get("BIVES_GIT_COMMIT", "").strip()
+    if environment_commit:
+        return environment_commit
+    marker = Path(__file__).resolve().parents[1] / ".bives_source_commit"
+    if marker.is_file() and marker.read_text(encoding="utf-8").strip():
+        return marker.read_text(encoding="utf-8").strip()
+    return "unknown"
 
 
 def limit_to_complete_groups(dataset: BiVESManifestDataset, max_records: int | None) -> None:
@@ -334,11 +367,13 @@ def load_frozen_statement_embeddings(
     path: str | Path,
     statement_to_index: dict[str, int],
     expected_text_by_id: dict[str, str],
+    expected_cache: dict[str, Any] | None = None,
 ) -> torch.Tensor:
     return load_statement_embedding_matrix(
         path,
         statement_to_index,
         expected_text_by_id,
+        expected_cache=expected_cache,
     )
 
 
@@ -448,6 +483,7 @@ def evaluate(
             all_patient_ids,
             replicates=bootstrap_replicates,
             seed=bootstrap_seed,
+            prediction_rows=rows,
         )
     return result, rows
 
@@ -559,8 +595,7 @@ def main() -> None:
         raise SystemExit(f"{output_dir} already contains metrics_final.json")
     output_dir.mkdir(parents=True, exist_ok=True)
     (output_dir / "config_resolved.yaml").write_text(
-        yaml.safe_dump(config, sort_keys=False, allow_unicode=True),
-        encoding="utf-8",
+        resolved_config_text(config), encoding="utf-8"
     )
 
     manifest_paths = {
@@ -583,6 +618,9 @@ def main() -> None:
         reject_constant_images=bool(audit_config.get("reject_constant_images", True)),
         require_provenance=bool(audit_config.get("require_provenance", True)),
         verify_image_sha256=bool(audit_config.get("verify_image_sha256", True)),
+        require_matching_protocol=bool(
+            audit_config.get("require_matching_protocol", True)
+        ),
     )
     save_json(output_dir / "manifest_readiness_audit.json", audit_report)
     if audit_report["status"] != "pass":
@@ -607,9 +645,14 @@ def main() -> None:
         and bool(evaluation_config.get("run_calibration", True))
         else None
     )
-    if args.debug:
-        limit_to_complete_groups(train_dataset, config["data"].get("max_train_samples"))
-        limit_to_complete_groups(val_dataset, config["data"].get("max_val_samples"))
+    limit_to_complete_groups(train_dataset, config["data"].get("max_train_samples"))
+    limit_to_complete_groups(val_dataset, config["data"].get("max_val_samples"))
+
+    expected_statement_texts = statement_text_by_id(
+        train_dataset.rows
+        + val_dataset.rows
+        + (calibration_dataset.rows if calibration_dataset is not None else [])
+    )
 
     statement_embedding_config = config["model"].get(
         "statement_embeddings",
@@ -618,21 +661,21 @@ def main() -> None:
     statement_embedding_mode = str(statement_embedding_config.get("mode", "learned_id"))
     frozen_statement_embeddings = None
     if statement_embedding_mode == "frozen_cached":
-        expected_statement_texts = statement_text_by_id(
-            train_dataset.rows
-            + val_dataset.rows
-            + (calibration_dataset.rows if calibration_dataset is not None else [])
-        )
         frozen_statement_embeddings = load_frozen_statement_embeddings(
             statement_embedding_config["path"],
             train_dataset.statement_to_index,
             expected_statement_texts,
+            expected_cache=statement_embedding_config,
         )
         statement_dim = int(frozen_statement_embeddings.shape[1])
     elif statement_embedding_mode == "learned_id":
         statement_dim = int(config["model"].get("statement_dim", 512))
     else:
         raise ValueError(f"unsupported statement embedding mode: {statement_embedding_mode}")
+
+    run_lock = build_run_lock(config, git_commit=git_commit())
+    run_lock_sha256 = canonical_json_sha256(run_lock)
+    save_json(output_dir / "run_lock.json", run_lock)
 
     visual_model, processor, qwen_config = load_qwen35_visual_and_processor(
         config["model"]["path"],
@@ -682,7 +725,8 @@ def main() -> None:
         image_size=image_size,
         include_group_indices=True,
         split="train",
-        global_seed=int(config.get("seed", 17)),
+        training_seed=int(config.get("seed", 17)),
+        evaluation_control_seed=int(evaluation_config["control_seed"]),
     )
     sampling = config.get("sampling", {})
     if sampling.get("type") != "same_statement_state_group":
@@ -720,7 +764,8 @@ def main() -> None:
             image_size=image_size,
             include_group_indices=False,
             split=split,
-            global_seed=int(config.get("seed", 17)),
+            training_seed=int(config.get("seed", 17)),
+            evaluation_control_seed=int(evaluation_config["control_seed"]),
         )
         return DataLoader(
             dataset,
@@ -740,7 +785,8 @@ def main() -> None:
             image_size=image_size,
             include_group_indices=True,
             split=split,
-            global_seed=int(config.get("seed", 17)),
+            training_seed=int(config.get("seed", 17)),
+            evaluation_control_seed=int(evaluation_config["control_seed"]),
         )
         return DataLoader(
             dataset,
@@ -807,8 +853,12 @@ def main() -> None:
     step = 0
     best_selection_score = float("inf") if selection_mode == "min" else float("-inf")
     events: list[dict[str, Any]] = []
+    resume_epoch = 0
+    resume_batch_index = 0
     if args.resume is not None:
         checkpoint = torch.load(args.resume, map_location="cpu", weights_only=False)
+        if checkpoint.get("run_lock_sha256") != run_lock_sha256:
+            raise ValueError("resume checkpoint belongs to a different run lock")
         load_checkpoint_model_state(experiment, checkpoint)
         optimizer.load_state_dict(checkpoint["optimizer"])
         scheduler.load_state_dict(checkpoint["scheduler"])
@@ -820,15 +870,27 @@ def main() -> None:
             )
         )
         events = list(checkpoint.get("events", []))
+        resume_epoch = int(checkpoint.get("epoch", 0))
+        resume_batch_index = int(checkpoint.get("batch_index", 0))
+        accumulated = int(checkpoint.get("accumulated_micro_steps", 0))
+        if accumulated != 0:
+            raise ValueError(
+                "checkpoint contains partial gradient accumulation without serialized gradients"
+            )
+        restore_rng_state(checkpoint["rng_state"])
     started = time.time()
     experiment.train()
-    epoch = step // max(len(train_loader), 1)
+    epoch = resume_epoch
+    cursor_epoch = resume_epoch
+    cursor_batch_index = resume_batch_index
     optimizer.zero_grad(set_to_none=True)
     accumulated_micro_steps = 0
     while step < max_steps:
         train_batch_sampler.set_epoch(epoch)
         grouped_collator.set_epoch(epoch)
-        for batch in train_loader:
+        for batch_index, batch in enumerate(train_loader):
+            if epoch == resume_epoch and batch_index < resume_batch_index:
+                continue
             batch = move_to_device(batch, device)
             outputs, grids = experiment(
                 batch["pixel_values"],
@@ -856,6 +918,12 @@ def main() -> None:
             optimizer.zero_grad(set_to_none=True)
             accumulated_micro_steps = 0
             step += 1
+            if batch_index + 1 >= len(train_loader):
+                cursor_epoch = epoch + 1
+                cursor_batch_index = 0
+            else:
+                cursor_epoch = epoch
+                cursor_batch_index = batch_index + 1
             if step % eval_interval == 0 or step == max_steps:
                 validation, validation_rows = evaluate(
                     experiment,
@@ -906,10 +974,21 @@ def main() -> None:
                     "model_family": "Qwen3.5",
                     "model_path": str(config["model"]["path"]),
                     "statement_to_index": train_dataset.statement_to_index,
+                    "statement_text_by_id": expected_statement_texts,
+                    "run_lock": run_lock,
+                    "run_lock_sha256": run_lock_sha256,
                     "statement_table": experiment.statement_table.state_dict(),
                     "bives_head": experiment.head.state_dict(),
                     "optimizer": optimizer.state_dict(),
                     "scheduler": scheduler.state_dict(),
+                    "epoch": cursor_epoch,
+                    "batch_index": cursor_batch_index,
+                    "accumulated_micro_steps": accumulated_micro_steps,
+                    "sampler_state": {
+                        "epoch": cursor_epoch,
+                        "next_batch_index": cursor_batch_index,
+                    },
+                    "rng_state": capture_rng_state(),
                     "config": config,
                 }
                 if not freeze_backbone:
@@ -921,16 +1000,28 @@ def main() -> None:
             if step >= max_steps:
                 break
         epoch += 1
+        resume_batch_index = 0
 
     checkpoint = {
         "step": step,
         "model_family": "Qwen3.5",
         "model_path": str(config["model"]["path"]),
         "statement_to_index": train_dataset.statement_to_index,
+        "statement_text_by_id": expected_statement_texts,
+        "run_lock": run_lock,
+        "run_lock_sha256": run_lock_sha256,
         "statement_table": experiment.statement_table.state_dict(),
         "bives_head": experiment.head.state_dict(),
         "optimizer": optimizer.state_dict(),
         "scheduler": scheduler.state_dict(),
+        "epoch": cursor_epoch,
+        "batch_index": cursor_batch_index,
+        "accumulated_micro_steps": accumulated_micro_steps,
+        "sampler_state": {
+            "epoch": cursor_epoch,
+            "next_batch_index": cursor_batch_index,
+        },
+        "rng_state": capture_rng_state(),
         "best_selection_metric": selection_metric,
         "best_selection_mode": selection_mode,
         "best_selection_score": best_selection_score,
@@ -947,6 +1038,7 @@ def main() -> None:
     best_checkpoint = torch.load(best_path, map_location="cpu", weights_only=False)
     load_checkpoint_model_state(experiment, best_checkpoint)
     selected_best_step = int(best_checkpoint["step"])
+    base_checkpoint_sha256 = file_sha256(best_path)
     uncalibrated_temperatures = {
         name: float(getattr(experiment.head.decoder, name).detach().cpu())
         for name in ("tau_a", "tau_d", "tau_p")
@@ -1010,6 +1102,12 @@ def main() -> None:
             output_dir / "calibration_artifact.json",
             {
                 "selected_best_step": selected_best_step,
+                "base_checkpoint_sha256": base_checkpoint_sha256,
+                "run_lock_sha256": run_lock_sha256,
+                "statement_cache_sha256": run_lock["statement_cache_sha256"],
+                "statement_vocabulary_sha256": run_lock[
+                    "statement_vocabulary_sha256"
+                ],
                 "uncalibrated_temperatures": uncalibrated_temperatures,
                 "calibrated_temperatures": calibration_temperatures,
                 "calibration_manifest": str(config["data"]["calibration_manifest"]),

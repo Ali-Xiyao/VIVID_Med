@@ -15,6 +15,33 @@ def stable_control_seed(*parts: object) -> int:
     return int.from_bytes(hashlib.sha256(payload).digest()[:8], "big") & 0x7FFF_FFFF_FFFF_FFFF
 
 
+def bives_control_seed(
+    *,
+    split: str,
+    sample_id: str,
+    training_seed: int,
+    evaluation_control_seed: int,
+    epoch: int = 0,
+    protocol_version: str = CONTROL_PROTOCOL_VERSION,
+) -> int:
+    """Separate train-time control randomness from locked evaluation controls."""
+
+    if split == "train":
+        return stable_control_seed(
+            protocol_version,
+            "train",
+            int(training_seed),
+            int(epoch),
+            sample_id,
+        )
+    return stable_control_seed(
+        protocol_version,
+        split,
+        int(evaluation_control_seed),
+        sample_id,
+    )
+
+
 def _expand_mask(mask: torch.Tensor, tokens: torch.Tensor) -> torch.Tensor:
     if tokens.ndim != 3 or mask.ndim != 2 or mask.shape != tokens.shape[:2]:
         raise ValueError("tokens must be [B,P,D] and mask must be [B,P]")

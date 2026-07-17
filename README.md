@@ -90,6 +90,13 @@ the validation-selected `best.pt` checkpoint is reloaded. The training entry
 cannot evaluate the locked test; final release requires
 `scripts/evaluate_bives_final.py --run-locked-test`.
 
+Formal training creates `run_lock.json` before Qwen3.5 weight loading. Every
+checkpoint carries that lock, its canonical SHA256, and the full statement
+ontology. Calibration binds itself to the uncalibrated `best.pt`, and the final
+evaluator rejects any checkpoint/calibration/cache/test/config/base-model/Git
+combination that does not match the same lock. Evaluation controls use the
+fixed cross-run seed `20260717`, independent of each model training seed.
+
 ## Repository layout
 
 ```text

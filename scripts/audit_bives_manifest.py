@@ -37,6 +37,11 @@ def parse_args() -> argparse.Namespace:
         action=argparse.BooleanOptionalAction,
         default=True,
     )
+    parser.add_argument(
+        "--require-matching-protocol",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+    )
     parser.add_argument("--output", type=Path)
     return parser.parse_args()
 
@@ -57,6 +62,7 @@ def main() -> None:
         reject_constant_images=args.reject_constant_images,
         require_provenance=args.require_provenance,
         verify_image_sha256=args.verify_image_sha256,
+        require_matching_protocol=args.require_matching_protocol,
     )
     rendered = json.dumps(report, indent=2, ensure_ascii=False)
     print(rendered)

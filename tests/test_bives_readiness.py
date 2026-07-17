@@ -40,8 +40,14 @@ class BiVESReadinessTest(unittest.TestCase):
             self.assertGreaterEqual(int(payload["bives"]["contextual_layers"]), 1)
             self.assertTrue(payload["audit"]["require_complete_statements"])
             self.assertTrue(payload["audit"]["verify_image_sha256"])
+            self.assertTrue(payload["audit"]["require_matching_protocol"])
             self.assertFalse(payload["evaluation"]["run_test"])
             self.assertEqual(payload["evaluation"]["selection_metric"], "nll")
+            self.assertEqual(payload["evaluation"]["control_seed"], 20260717)
+            statement = model["statement_embeddings"]
+            self.assertIn("expected_sha256", statement)
+            self.assertIn("expected_vocabulary_sha256", statement)
+            self.assertEqual(statement["expected_pooling"], "input_embedding_mean")
         main = yaml.safe_load((config_root / "qwen35_4b_main.yaml").read_text(encoding="utf-8"))
         self.assertIn("train_locked.jsonl", main["data"]["train_manifest"])
         self.assertIn("calibration_locked.jsonl", main["data"]["calibration_manifest"])
@@ -240,6 +246,13 @@ class BiVESReadinessTest(unittest.TestCase):
                                 "state": state,
                                 "label_source": "expert",
                                 "annotation_status": "expert_reviewed",
+                                "matching_protocol_version": "bives_match_v1",
+                                "matching_stratum": {
+                                    "view": "PA",
+                                    "source_dataset": split,
+                                    "sex": "F",
+                                    "age_bin": "60-69",
+                                },
                                 "insufficient_kind": (
                                     "natural" if statement_index == 0 else "synthetic"
                                 )
@@ -258,6 +271,7 @@ class BiVESReadinessTest(unittest.TestCase):
                 reject_constant_images=True,
                 require_complete_statements=True,
                 require_provenance=True,
+                require_matching_protocol=True,
             )
             self.assertEqual(report["status"], "pass", report["errors"])
             self.assertGreater(report["splits"]["train"]["verified_image_hash_count"], 0)
@@ -293,6 +307,49 @@ class BiVESReadinessTest(unittest.TestCase):
             self.assertEqual(report["status"], "fail")
             self.assertTrue(
                 any("image_sha256 mismatch" in error for error in report["errors"])
+            )
+
+    def test_audit_rejects_conflicting_labels_for_copied_image_content(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            original = root / "original.png"
+            copied = root / "copied.png"
+            image = Image.new("L", (8, 8))
+            image.putdata(list(range(64)))
+            image.save(original)
+            copied.write_bytes(original.read_bytes())
+            rows = []
+            states = ("support", "contradict", "uncertain", "insufficient")
+            for index, state in enumerate(states):
+                image_path = original if index == 0 else copied if index == 1 else root / f"{index}.png"
+                if index >= 2:
+                    variant = Image.new("L", (8, 8))
+                    variant.putdata([(value + index) % 255 for value in range(64)])
+                    variant.save(image_path)
+                rows.append(
+                    {
+                        "sample_id": f"sample-{index}",
+                        "patient_id": f"patient-{index}",
+                        "study_id": f"study-{index}",
+                        "image_path": image_path.name,
+                        "image_sha256": hashlib.sha256(image_path.read_bytes()).hexdigest(),
+                        "group_id": "quartet-1",
+                        "canonical_statement_id": "effusion-right",
+                        "statement_text": "Effusion right",
+                        "state": state,
+                    }
+                )
+            manifest = root / "copied-conflict.jsonl"
+            write_jsonl(manifest, rows)
+            report = audit_manifests(
+                {"train": manifest},
+                data_root=root,
+                verify_image_sha256=True,
+            )
+            self.assertEqual(report["status"], "fail")
+            self.assertTrue(
+                any("image-hash-statement" in error for error in report["errors"]),
+                report["errors"],
             )
 
     def test_group_sampler_does_not_merge_two_quartets_with_same_statement(self) -> None:

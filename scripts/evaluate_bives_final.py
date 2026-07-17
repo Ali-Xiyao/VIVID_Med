@@ -19,7 +19,11 @@ from bives_cxr.data import BiVESManifestDataset, statement_text_by_id
 from bives_cxr.interventions import CONTROL_PROTOCOL_VERSION
 from bives_cxr.losses import BiVESLoss, BiVESLossConfig
 from bives_cxr.model import BiVESModelConfig
-from bives_cxr.statement_cache import load_statement_embedding_matrix
+from bives_cxr.provenance import validate_calibrated_release_chain
+from bives_cxr.statement_cache import (
+    load_statement_embedding_matrix,
+    validate_ontology_subset,
+)
 from scripts.train_bives_cxr import (
     BiVESExperiment,
     Qwen35BiVESCollator,
@@ -64,6 +68,15 @@ def main() -> None:
     calibration = json.loads(args.calibration_artifact.read_text(encoding="utf-8"))
     if not calibration.get("calibrated_temperatures"):
         raise ValueError("calibration artifact has no calibrated temperatures")
+    current_commit = git_commit()
+    run_lock = validate_calibrated_release_chain(
+        checkpoint_path=args.checkpoint,
+        checkpoint=checkpoint,
+        calibration=calibration,
+        statement_cache_path=args.statement_cache,
+        test_manifest_path=args.test_manifest,
+        current_git_commit=current_commit,
+    )
 
     audit_config = config.get("audit", {})
     audit = audit_manifests(
@@ -75,6 +88,9 @@ def main() -> None:
         reject_constant_images=bool(audit_config.get("reject_constant_images", True)),
         require_provenance=True,
         verify_image_sha256=True,
+        require_matching_protocol=bool(
+            audit_config.get("require_matching_protocol", True)
+        ),
     )
     args.output_dir.mkdir(parents=True, exist_ok=True)
     save_json(args.output_dir / "locked_test_manifest_audit.json", audit)
@@ -90,10 +106,18 @@ def main() -> None:
         args.data_root,
         statement_to_index=statement_to_index,
     )
+    locked_ontology = checkpoint.get("statement_text_by_id")
+    if not isinstance(locked_ontology, dict):
+        raise ValueError("checkpoint is missing the full locked statement ontology")
+    if set(locked_ontology) != set(statement_to_index):
+        raise ValueError("checkpoint ontology and statement index do not match")
+    test_ontology = statement_text_by_id(dataset.rows)
+    validate_ontology_subset(locked_ontology, test_ontology)
     frozen = load_statement_embedding_matrix(
         args.statement_cache,
         statement_to_index,
-        statement_text_by_id(dataset.rows),
+        locked_ontology,
+        expected_cache=config["model"]["statement_embeddings"],
     )
     device = torch.device(
         str(config.get("device", "cuda:0" if torch.cuda.is_available() else "cpu"))
@@ -157,7 +181,8 @@ def main() -> None:
             image_size=int(config["data"].get("image_size", 448)),
             include_group_indices=False,
             split="locked_test",
-            global_seed=int(config.get("seed", 17)),
+            training_seed=int(config.get("seed", 17)),
+            evaluation_control_seed=int(config["evaluation"]["control_seed"]),
         ),
     )
     loss_config = BiVESLossConfig(**config.get("loss", {}))
@@ -182,6 +207,8 @@ def main() -> None:
         {
             "release_protocol": "explicit_one_shot_locked_test_v1",
             "control_protocol_version": CONTROL_PROTOCOL_VERSION,
+            "evaluation_control_seed": int(run_lock["evaluation_control_seed"]),
+            "run_lock_sha256": checkpoint["run_lock_sha256"],
             "metrics": metrics,
             "checkpoint": str(args.checkpoint),
             "checkpoint_sha256": file_sha256(args.checkpoint),
@@ -191,7 +218,7 @@ def main() -> None:
             "test_manifest_sha256": file_sha256(args.test_manifest),
             "statement_cache": str(args.statement_cache),
             "statement_cache_sha256": file_sha256(args.statement_cache),
-            "git_commit": git_commit(),
+            "git_commit": current_commit,
         },
     )
 

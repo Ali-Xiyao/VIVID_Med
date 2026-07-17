@@ -14,7 +14,14 @@ Each JSONL row must contain:
   "statement_text": "A right pleural effusion is present.",
   "state": "support",
   "label_source": "expert|rule|adjudicated",
-  "annotation_status": "expert_reviewed"
+  "annotation_status": "expert_reviewed",
+  "matching_protocol_version": "bives_match_v1",
+  "matching_stratum": {
+    "view": "PA",
+    "source_dataset": "CheXpert",
+    "sex": "F",
+    "age_bin": "60-69"
+  }
 }
 ```
 
@@ -75,3 +82,10 @@ Rules:
     same canonical statement.
 12. `image_sha256` is verified against file bytes in streaming chunks and is
     cached per resolved path during an audit. A mismatch is a hard failure.
+13. Formal matched-quartet claims require one non-empty
+    `matching_protocol_version` and one identical `matching_stratum` mapping
+    across all four rows.
+14. Each formal quartet must contain four unique actual image hashes, four
+    unique study IDs, and four unique patient IDs. Byte-identical images copied
+    to different paths are still the same image and cannot carry conflicting
+    labels for one canonical statement.

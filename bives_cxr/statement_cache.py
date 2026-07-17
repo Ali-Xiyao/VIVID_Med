@@ -13,6 +13,11 @@ from .data import normalize_statement_text
 
 
 CACHE_FORMAT_VERSION = 1
+UNLOCKED_EXPECTATION_VALUES = {
+    "",
+    "LOCK_AFTER_BUILD",
+    "TO_BE_FILLED_BY_BUILD_BIVES_STATEMENT_EMBEDDINGS",
+}
 REQUIRED_ENCODER_FIELDS = {
     "model_name_or_path",
     "revision",
@@ -36,6 +41,14 @@ def vocabulary_sha256(text_by_id: dict[str, str]) -> str:
     return hashlib.sha256(
         json.dumps(canonical, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
     ).hexdigest()
+
+
+def file_sha256(path: str | Path) -> str:
+    digest = hashlib.sha256()
+    with Path(path).open("rb") as handle:
+        for chunk in iter(lambda: handle.read(8 << 20), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def build_statement_cache_payload(
@@ -133,10 +146,35 @@ def validate_statement_cache(
     return rows
 
 
+def validate_ontology_subset(
+    locked_text_by_id: dict[str, str],
+    subset_text_by_id: dict[str, str],
+) -> None:
+    locked = {
+        statement_id: normalize_statement_text(text)
+        for statement_id, text in locked_text_by_id.items()
+    }
+    subset = {
+        statement_id: normalize_statement_text(text)
+        for statement_id, text in subset_text_by_id.items()
+    }
+    inconsistent = {
+        statement_id: text
+        for statement_id, text in subset.items()
+        if locked.get(statement_id) != text
+    }
+    if inconsistent:
+        raise ValueError(
+            "statement subset contains unseen or inconsistent statements: "
+            f"{list(inconsistent.items())[:5]}"
+        )
+
+
 def load_statement_embedding_matrix(
     path: str | Path,
     statement_to_index: dict[str, int],
     expected_text_by_id: dict[str, str],
+    expected_cache: dict[str, Any] | None = None,
 ) -> torch.Tensor:
     cache_path = Path(path)
     if not cache_path.is_file():
@@ -144,6 +182,34 @@ def load_statement_embedding_matrix(
             f"formal BiVES config requires frozen Qwen3.5 statement embeddings: {cache_path}"
         )
     payload = torch.load(cache_path, map_location="cpu", weights_only=False)
+    if expected_cache is not None:
+        required = {
+            "expected_sha256",
+            "expected_vocabulary_sha256",
+            "expected_pooling",
+        }
+        missing = required - set(expected_cache)
+        if missing:
+            raise ValueError(
+                f"statement cache expectations are missing: {sorted(missing)}"
+            )
+        for key in required:
+            if str(expected_cache[key]).strip() in UNLOCKED_EXPECTATION_VALUES:
+                raise ValueError(
+                    f"statement cache expectation {key} is not locked; "
+                    "rebuild with --lock-config before formal training"
+                )
+        actual_sha = file_sha256(cache_path)
+        if actual_sha != str(expected_cache["expected_sha256"]).lower():
+            raise ValueError("statement cache SHA256 does not match config")
+        vocabulary = str(
+            payload.get("ontology", {}).get("vocabulary_sha256", "")
+        )
+        if vocabulary != str(expected_cache["expected_vocabulary_sha256"]).lower():
+            raise ValueError("statement cache vocabulary SHA256 does not match config")
+        pooling = str(payload.get("encoder", {}).get("pooling", ""))
+        if pooling != str(expected_cache["expected_pooling"]):
+            raise ValueError("statement cache pooling does not match config")
     mapping = validate_statement_cache(payload, expected_text_by_id)
     return torch.stack(
         [

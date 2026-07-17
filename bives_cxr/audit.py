@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from collections import Counter, defaultdict
 import hashlib
+import json
+import os
 from pathlib import Path
 import re
 from typing import Any
@@ -48,6 +50,7 @@ def audit_manifests(
     reject_constant_images: bool = False,
     require_provenance: bool = False,
     verify_image_sha256: bool = True,
+    require_matching_protocol: bool = False,
 ) -> dict[str, Any]:
     """Audit split isolation, group semantics, provenance, and image readiness."""
 
@@ -66,7 +69,10 @@ def audit_manifests(
     groups_by_split: dict[str, set[str]] = {}
     statement_texts: dict[str, set[str]] = defaultdict(set)
     image_statement_states: dict[tuple[str, str], set[str]] = defaultdict(set)
+    image_hash_statement_states: dict[tuple[str, str], set[str]] = defaultdict(set)
+    study_statement_states: dict[tuple[str, str], set[str]] = defaultdict(set)
     image_hash_cache: dict[str, str] = {}
+    actual_hash_by_sample: dict[str, str] = {}
 
     for split, manifest_path in manifests.items():
         rows = read_manifest(manifest_path)
@@ -102,7 +108,7 @@ def audit_manifests(
             statement_texts[statement_id].add(_normalized_text(row["statement_text"]))
 
             image_path = _resolve_image_path(root, row["image_path"])
-            normalized_path = str(image_path.resolve(strict=False)).lower()
+            normalized_path = os.path.normcase(str(image_path.resolve(strict=False)))
             split_paths.add(normalized_path)
             image_statement_states[(normalized_path, statement_id)].add(str(row["state"]))
             image_hash = str(row.get("image_sha256", "")).strip().lower()
@@ -113,9 +119,11 @@ def audit_manifests(
                     )
                 if not verify_image_sha256:
                     split_hashes.add(image_hash)
+                    actual_hash_by_sample[sample_id] = image_hash
             study_id = str(row.get("study_id", "")).strip()
             if study_id:
                 split_studies.add(study_id)
+                study_statement_states[(study_id, statement_id)].add(str(row["state"]))
             group_id = str(row.get("group_id", "")).strip()
             if group_id:
                 split_groups.add(group_id)
@@ -165,6 +173,10 @@ def audit_manifests(
                     actual_hash = file_sha256(image_path)
                     image_hash_cache[normalized_path] = actual_hash
                 split_hashes.add(actual_hash)
+                actual_hash_by_sample[sample_id] = actual_hash
+                image_hash_statement_states[(actual_hash, statement_id)].add(
+                    str(row["state"])
+                )
                 if image_hash and image_hash != actual_hash:
                     report["errors"].append(
                         f"{split} sample {sample_id!r} image_sha256 mismatch: "
@@ -223,12 +235,48 @@ def audit_manifests(
             normalized_texts = {
                 _normalized_text(row["statement_text"]) for row in group_rows
             }
+            protocols = {
+                str(row.get("matching_protocol_version", "")).strip()
+                for row in group_rows
+                if str(row.get("matching_protocol_version", "")).strip()
+            }
+            strata = {
+                json.dumps(
+                    row.get("matching_stratum"),
+                    ensure_ascii=False,
+                    sort_keys=True,
+                    separators=(",", ":"),
+                )
+                for row in group_rows
+                if isinstance(row.get("matching_stratum"), dict)
+                and row.get("matching_stratum")
+            }
+            group_hashes = {
+                actual_hash_by_sample.get(str(row["sample_id"]), "")
+                for row in group_rows
+            } - {""}
+            group_studies = {
+                str(row.get("study_id", "")).strip() for row in group_rows
+            } - {""}
+            group_patients = {
+                str(row.get("patient_id", "")).strip() for row in group_rows
+            } - {""}
             if (
                 len(group_rows) != len(STATE_NAMES)
                 or any(group_state_counts[state] != 1 for state in STATE_NAMES)
                 or set(group_state_counts) != set(STATE_NAMES)
                 or len(statement_ids) != 1
                 or len(normalized_texts) != 1
+                or (
+                    require_matching_protocol
+                    and (
+                        len(protocols) != 1
+                        or len(strata) != 1
+                        or len(group_hashes) != len(STATE_NAMES)
+                        or len(group_studies) != len(STATE_NAMES)
+                        or len(group_patients) != len(STATE_NAMES)
+                    )
+                )
             ):
                 invalid_quartets[group_id] = {
                     "records": len(group_rows),
@@ -237,8 +285,13 @@ def audit_manifests(
                     },
                     "statement_ids": sorted(statement_ids),
                     "statement_texts": sorted(normalized_texts),
+                    "matching_protocols": sorted(protocols),
+                    "matching_strata": sorted(strata),
+                    "unique_image_hashes": len(group_hashes),
+                    "unique_studies": len(group_studies),
+                    "unique_patients": len(group_patients),
                 }
-        if invalid_quartets and require_provenance:
+        if invalid_quartets and (require_provenance or require_matching_protocol):
             report["errors"].append(
                 f"{split} has {len(invalid_quartets)} invalid group_id quartets; "
                 f"examples={list(invalid_quartets.items())[:3]}"
@@ -320,6 +373,26 @@ def audit_manifests(
         report["errors"].append(
             f"{len(conflicts)} image-statement pairs have conflicting labels; "
             f"examples={list(conflicts.items())[:3]}"
+        )
+    hash_conflicts = {
+        key: sorted(states)
+        for key, states in image_hash_statement_states.items()
+        if len(states) != 1
+    }
+    if hash_conflicts:
+        report["errors"].append(
+            f"{len(hash_conflicts)} image-hash-statement pairs have conflicting labels; "
+            f"examples={list(hash_conflicts.items())[:3]}"
+        )
+    study_conflicts = {
+        key: sorted(states)
+        for key, states in study_statement_states.items()
+        if len(states) != 1
+    }
+    if study_conflicts:
+        report["errors"].append(
+            f"{len(study_conflicts)} study-statement pairs have conflicting labels; "
+            f"examples={list(study_conflicts.items())[:3]}"
         )
 
     if report["errors"]:

@@ -269,3 +269,27 @@
   cache, code, and control-protocol provenance.
 - Added eligible-conditioned specificity/gap metrics, fixed-four-class patient
   bootstrap bookkeeping, and compute-matched 4B/9B optimizer-step budgets.
+# 2026-07-17 Round-4 Review Findings
+
+- The latest independent review accepts the BiVES-CXR core architecture and
+  explicitly says it should be frozen rather than restructured again.
+- The remaining formal blockers are protocol-level: artifact lineage,
+  full-ontology cache binding with legal test subsets, content-hash/study label
+  conflict detection, and a cross-run evaluation control seed.
+- The current final evaluator records artifact hashes but does not yet prove
+  that its checkpoint, calibration artifact, statement cache, locked test,
+  resolved config, and Git commit belong to one run.
+- Exact cache validation against the test-only ontology incorrectly rejects a
+  legal test subset; the full training ontology must instead travel with the
+  checkpoint and remain the cache validation authority.
+- Path-key conflict checks can be bypassed by byte-identical image copies under
+  different paths; actual image SHA and study identity must be audited too.
+- Evaluation controls are deterministic within one run but remain coupled to
+  the model training seed, so multi-seed/model comparisons do not yet share a
+  fixed control randomization protocol.
+- The four formal blockers are now closed in code and regression tests. Active
+  YAMLs intentionally retain `LOCK_AFTER_BUILD` cache fingerprints until the
+  real statement cache is generated; this is a deliberate fail-fast readiness
+  gate, not a runnable formal configuration value.
+- Pixel-level causal evaluation remains a separate paper P1. Current results
+  and code must continue to use the accurate term `feature-evidence closure`.
