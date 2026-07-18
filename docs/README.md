@@ -230,3 +230,10 @@ step-450 exact-K=16 checkpoint, statements, operators, bootstrap, and survival
 thresholds while replacing only the failed C6F v1 controls with the frozen C6G
 v2 controls. It is not classification or clinical validation, and it does not
 authorize training, tuning, reruns, or Qwen3.5-4B/9B.
+
+The authorized opening subsequently failed before the first vision forward or
+score: all 29 bound JPGs are 224x224, while C6G masks were built in the
+MS-CXR-declared native-resolution letterbox space. No progress, evaluation row,
+or metric exists, and GPU1 was released. C6H is frozen as
+`FAIL_PRE_SCORE_PIXEL_ALIGNMENT_NO_RESULT`; applying the masks despite the
+mismatch or relaunching under the same identity is forbidden.

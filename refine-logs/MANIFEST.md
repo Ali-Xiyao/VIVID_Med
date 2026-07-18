@@ -57,6 +57,7 @@ target-shape matching and does not call the coordinate bins true anatomy.
 | C6H one-time evaluation authority | `C6H_MS_CXR_ONE_TIME_EVALUATION_AUTHORITY_20260718.md` | none | `1eb5088ff4f71802e112c2579d086ed57eb739406c10a18c5c8c3f21e06c5302` | separate user authorization for one local Qwen3.5-2B positive-only mechanism evaluation; terminal after pass/fail; no 4B/9B |
 | C6H frozen evaluation config | `C6H_MS_CXR_QWEN35_2B_EVAL_CONFIG_20260718.yaml` | none | `25e298a5b975ee0cba2c8549401511038b9b11d4a50db17008c3e914ac8a9449` | C6G v2 masks; frozen B2 step-450 exact-K=16, statements, operators, bootstrap, thresholds |
 | C6H pre-open execution log | `C6H_MS_CXR_PREOPEN_EXECUTION_LOG_20260718.md` | none | `59a05c4690d721b51d3629bf8c286828825e8b235adbe5c553fb664674ab01a9` | real score-free 29-row rehearsal; 141/141 tests; model snapshot rehash matches; no model loaded yet |
+| C6H pre-score pixel-alignment failure | `C6H_MS_CXR_PRE_SCORE_PIXEL_ALIGNMENT_FAILURE_20260718.md` | none | `d017e423b8bf34b16ab1d9f606aa8b5c2a0a7894e37d974e3feb97254690b7fc` | model/checkpoint opened on GPU1 but zero forwards/scores; 29/29 JPGs are 224x224 and incompatible with native-letterbox C6G masks; no result |
 
 The user accepted this candidate by replying `继续` on 2026-07-18. C001-C005
 are complete-pass. C006/C5 opened the image-disjoint VinDr-train
@@ -129,3 +130,9 @@ mechanism evaluation. It may consume the frozen C6G v2 masks only after a clean
 pre-open lock binds the committed source and every model/checkpoint/data
 identity. It permits no training, tuning, classification claim, rerun, control
 change, server action, or 4B/9B scale-up and terminates after pass or fail.
+
+The C6H opening passed identity/model/GPU gates but stopped before its first
+vision forward or score because every bound JPG is 224x224 while the frozen
+C6G masks use the declared native-resolution letterbox coordinate system. It
+has no result. Any actual-input-space geometry rebuild and replacement opening
+must use a new authority and identity rather than editing or rerunning C6H.

@@ -1199,3 +1199,12 @@
 - GPU1 is the preferred local device because the fresh preflight reported 13
   MiB used versus 599 MiB on GPU0. Availability must be checked again at the
   opening boundary.
+- The first authorized C6H opening exposed a data-geometry mismatch before any
+  forward score: the bound first JPG is 224x224, while its MS-CXR annotation
+  coordinates declare 3056 columns by 2544 rows. C6G used the declared native
+  geometry and produced a letterboxed content mask, whereas scoring the square
+  JPG would produce full-square content. Removing the size check would silently
+  misregister target/control interventions and is scientifically invalid.
+- The failed opening created only `EVALUATION_OPENED.json`. It loaded the frozen
+  2B model, then stopped on the first image before `score_original`; no progress,
+  row, score, or final metrics artifact exists and GPU1 returned to idle.
