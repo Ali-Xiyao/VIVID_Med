@@ -51,6 +51,9 @@ target-shape matching and does not call the coordinate bins true anatomy.
 | C6F MS-CXR post-C5 authority | `C6F_MS_CXR_POST_C5_EVALUATION_AUTHORITY_20260718.md` | none | `6599212f1c9b4177379196435a65deffd278440e94f4574f3057d4b107bc207c` | separate user authorization; positive-only 2B mechanism protocol; frozen C6E intake remains unchanged |
 | C6F frozen evaluation config | `C6F_MS_CXR_QWEN35_2B_EVAL_CONFIG_20260718.yaml` | none | `5bfd243c7c3a42a113e5e5b50b171d988cecb4a1d6a1426b4c94ad7a8e1ffb5a` | Qwen3.5-2B only; unchanged C4/C5 operators and gates; classification metrics and 4B/9B forbidden |
 | C6F pre-open geometry log | `C6F_MS_CXR_PREOPEN_GEOMETRY_EXECUTION_LOG_20260718.md` | none | `acbe78ac76d08b7ef9d4acd62d1c4d861299ab094631afc77a17985552bb82cd` | 29-patient manifest passes; connected-control geometry 28/29; 133/133 tests; model/GPU/score never opened |
+| C6G geometry-only authority | `C6G_MS_CXR_GEOMETRY_ONLY_AUTHORITY_20260718.md` | none | `17305e6887491b179a672d6f67ea1186f06acb8236feef5e0a4f3f6cf62355e0` | new score-free control family; model/GPU/image-decode/score authorization false |
+| C6G frozen geometry thresholds | `C6G_MS_CXR_GEOMETRY_THRESHOLDS_20260718.json` | none | `69a3bedeb43b65065eab41d28fdefe4870214babebbfa7872f5c5e8146ecb5ab` | maxima from 752 accepted frozen C4/C5 geometry rows only |
+| C6G geometry execution log | `C6G_MS_CXR_GEOMETRY_EXECUTION_LOG_20260718.md` | none | `da2b9026575aacda75fed137ce82fdde48a67beeda0d2458623ffb60ad80b6e1` | 29/29 geometry pass; three byte-identical geometry replays; final lock bound to `db3c033`; 137/137 tests; no model/GPU/score |
 
 The user accepted this candidate by replying `继续` on 2026-07-18. C001-C005
 are complete-pass. C006/C5 opened the image-disjoint VinDr-train
@@ -99,6 +102,7 @@ expert-box mechanism gate. Its score-free connected-control audit fails one of
 29 rows, so the dataset lock remains closed and the evaluator correctly stops
 before any model, GPU, JPG decode, or score. No result-driven row exclusion,
 control change, rerun, or Qwen3.5-4B/9B scale-up is authorized.
+
 not a license attestation or research authority and cannot authorize a score,
 annotation visualization, model evaluation, or C5 reopening.
 
@@ -108,3 +112,11 @@ ignored intake artifact remain outside Git. Package hash, official pair/box
 counts, MIMIC binding, image hashes, and zero prior overlap pass. The result is
 still nonformal and explicitly carries no model-evaluation authority; C5 is
 unchanged pending a new reviewed research authority.
+
+C6G is a separate geometry-only authority rather than a repair or rerun of
+C6F. It replaces the categorical same-zone gate with frozen continuous
+centroid/perimeter limits derived only from accepted C4/C5 geometry and expands
+the deterministic connected candidate family uniformly for all 29 rows. The
+final score-free build passes 29/29 and freezes masks plus a geometry lock, but
+keeps model, GPU, image-decode, and score authorization false. C6H remains a
+separate, not-yet-authorized decision.

@@ -207,3 +207,15 @@ This is a non-formal synthetic mechanism result only. Mini-P0 and formal runs
 remain behind the separate manifest, statement-cache, and readiness-audit
 gates; the decoder, loss weights, K=16 budget, and model capacity were not
 changed in this phase.
+
+## C6G MS-CXR geometry-only status
+
+C6F remains frozen as `FAIL_PREOPEN_GEOMETRY_NO_MODEL_ACCESS`. The separate
+C6G authority changes only the geometry question: it uses frozen continuous
+centroid/perimeter limits from 752 accepted C4/C5 controls and a uniform
+deterministic connected-control v2 search. The final local CPU build passes
+29/29 MS-CXR rows with zero exclusions or invariant failures. Its ignored lock
+canonical SHA-256 is
+`6271ba51e8442baad92126473513b0b901619403a4e22c353e455395ec801752`.
+This is a geometry lock only: no JPG was decoded, no Qwen/checkpoint or GPU was
+opened, no score was produced, and C6H remains unauthorized.

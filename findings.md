@@ -1173,3 +1173,15 @@
   `0.6512731080888864` on that row while preserving exact area, disjointness,
   content containment, and one 4-connected component. This supports a new
   geometry-only v2 search, not a C6F rerun or model opening.
+- The final committed-identity C6G build passes all 29 rows with zero
+  denominator exclusions or invariant failures. Selected families are 23
+  target-boundary, 5 dense-lattice, and 1 original-lattice controls; the
+  maximum selected location/perimeter mismatches are `0.11570502283445364`
+  and `0.9295359586241757`, both below their frozen C4/C5 maxima.
+- The timed-out-wrapper build, controlled diagnostic build, and final build
+  have byte-identical rows, candidate certificates, and 29 mask files; the
+  former C6F failure row also replays identically in a single process. The
+  uncontrolled build is replay evidence only, not the final provenance lock.
+  C6F remains byte-identical.
+- C6G establishes geometry feasibility only. It does not authorize a Qwen
+  load, JPG decode, GPU, score, C6H, or 4B/9B scale-up.
