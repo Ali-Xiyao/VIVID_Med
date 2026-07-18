@@ -1029,3 +1029,30 @@
   acquisition order and keeps the current verdict at
   `PLAN_COMPLETE_WAITING_USER_ACCESS`. It does not reopen C5, authorize a
   download, or permit an experiment.
+- A fresh bounded path check confirms that none of
+  `CheXlocalize`, `chexlocalize`, `MS-CXR`, or `ms-cxr` exists under the local
+  public-data root. Real metadata intake therefore cannot start yet.
+- The official CheXlocalize repository documents the exact expected release
+  surfaces needed by a future intake: `CheXpert/test/`,
+  `CheXpert/test_labels.csv`, `CheXlocalize/gt_annotations_test.json`, and
+  `CheXlocalize/gt_segmentations_test.json`. Its raw annotation JSON keys encode
+  patient, study, view, and projection, while each finding maps to one or more
+  coordinate contours. The intake tool can validate those identities and
+  target counts without decoding or rendering an image.
+- The official CheXlocalize download instructions confirm that access requires
+  a Stanford AIMI account, a user-completed registration form and terms
+  acceptance, followed by a user-specific Azure Blob SAS URL. That SAS URL is
+  an account secret and must never be placed in chat, repository files, logs,
+  or a scripted default. The code agent can only process a package after the
+  user downloads it into the public-data root.
+- C6B is now code-complete without the restricted package. The local
+  CheXpert-validation registry binds 234 images, 200 patients, and 200 studies
+  using only namespace-scoped hashes; serialized raw-ID pattern checks are
+  zero. Its canonical payload SHA-256 is
+  `1703aaf6c548e3eea57db66ba41a3f0f516729afdb6839cba9202b35ebb736cd`.
+- The intake accepts only publisher test paths, requires exactly 668 images and
+  500 patients, validates expert contours for both frozen findings, hashes all
+  test image bytes without decoding, rejects validation/path traversal/prior
+  overlap/missing targets, and explicitly emits
+  `model_evaluation_authorized=false`. Passing this metadata tool would still
+  not reopen C5.

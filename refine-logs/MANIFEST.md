@@ -44,6 +44,7 @@ target-shape matching and does not call the coordinate bins true anatomy.
 | C5 execution log | `CONNECTED_CONTROL_C5_EXECUTION_LOG_20260718.md` | none | `b1f8d9ca51c822dd674dc6c66bdbb9142962161847650a70873f905c252e6804` | mechanism replicates; consolidation AUPRC below B0; final stop |
 | C6 data-authority inventory | `CONNECTED_CONTROL_C6_DATA_AUTHORITY_INVENTORY_20260718.md` | none | `2453216d654290f6bb32cfc3b32edacc15c78040aa55bf0376295a654768651f` | read-only metadata audit; no eligible local patient-identified two-finding expert-region candidate; no run authorized |
 | C6A official acquisition plan | `C6A_OFFICIAL_DATA_ACQUISITION_PLAN_20260718.md` | none | `4fd9234f2ba68a6535a5ef410790c2ec6204e1a48f8439b6b845a0cdb414bff3` | CheXlocalize test-only preferred; MS-CXR official test conditional; waiting on user-side access; no download/run authorized |
+| C6B metadata intake tooling log | `C6B_METADATA_INTAKE_TOOLING_LOG_20260718.md` | none | `07c2fdaffd7874d4043ea204f633650b7b4feae61a0a41d098d8dacad9ffeffc` | fail-closed test-only intake ready; hashed validation registry ready; 116/116 tests; real package absent |
 
 The user accepted this candidate by replying `继续` on 2026-07-18. C001-C005
 are complete-pass. C006/C5 opened the image-disjoint VinDr-train
@@ -65,3 +66,9 @@ CheXlocalize validation because of prior project access, and keeps MS-CXR
 official test conditional on PhysioNet authorization plus zero overlap with
 the local prior-use MIMIC registry. User-side access and a later reviewed
 research authority remain mandatory; no download or experiment is authorized.
+
+C6B implements that plan's local metadata-only intake boundary. It builds an
+ignored hashed registry for the already-accessed CheXpert validation split and
+can audit an already-downloaded CheXlocalize test release without decoding or
+rendering images. The package is not present, so the tool has not emitted a
+real intake lock and C007/C5 remain unchanged.
