@@ -64,6 +64,7 @@ BiVES-CXR is the only active paper and code mainline.
 | C6 CheXlocalize metadata-only intake | `../scripts/audit_bives_c6_chexlocalize.py`, `../bives_cxr/c6_intake.py`, `../refine-logs/C6A_OFFICIAL_DATA_ACQUISITION_PLAN_20260718.md` |
 | C6 MS-CXR official-test metadata-only intake | `bives_cxr_c6_ms_cxr_intake.md`, `../scripts/audit_bives_c6_ms_cxr.py`, `../bives_cxr/c6_ms_cxr.py`, `../refine-logs/C6C_MS_CXR_INTAKE_TOOLING_LOG_20260718.md`, `../refine-logs/C6D_MS_CXR_REAL_PACKAGE_PREFLIGHT_LOG_20260718.md`, `../refine-logs/C6E_MS_CXR_STRICT_INTAKE_LOG_20260718.md` |
 | C6F MS-CXR post-C5 evaluation | `../refine-logs/C6F_MS_CXR_POST_C5_EVALUATION_AUTHORITY_20260718.md`, `../refine-logs/C6F_MS_CXR_QWEN35_2B_EVAL_CONFIG_20260718.yaml`, `../refine-logs/C6F_MS_CXR_PREOPEN_GEOMETRY_EXECUTION_LOG_20260718.md`, `../scripts/prepare_bives_c6_ms_cxr_evaluation.py`, `../scripts/evaluate_bives_c6_ms_cxr.py`, `../bives_cxr/c6_ms_cxr_eval.py` |
+| B2 terminal read-only audit | `../scripts/audit_bives_b2_terminal.py`, `../bives_cxr/terminal_audit.py`, `../refine-logs/BIVES_B2_TERMINAL_READ_ONLY_AUDIT_RESULT_20260719.md` |
 | P0 data-source and audit boundary | `bives_cxr_p0_data_readiness.md` |
 
 ## Active model boundary
@@ -263,3 +264,17 @@ TCIG with a wholly negative 95% CI; local mean also fails the complete frozen
 per-finding/high-area gate. Positive localization gain is secondary and does
 not rescue the paired intervention claim. C6I is terminal: no rerun, outcome-
 driven tuning, C5 reopening, or Qwen3.5-4B/9B scale-up is authorized.
+
+## B2 terminal interpretation
+
+The 2026-07-19 read-only terminal audit freezes C6I as the permanent end of the
+B2 rescue route. It decomposes existing C5/C6I target and control effects,
+reports a fixed four-way sign/order taxonomy, and reapplies the two frozen
+operators only for image-space L1/RMS/SSIM/edge/contrast measurements. It does
+not load a model, compute a new score, create C6J, or tune any intervention.
+
+The active manuscript direction is now a localization-causality audit rather
+than a claim that BiVES B2 learned a valid causal evidence set. Positive top-K
+localization gain did not imply matched target-versus-control necessity on the
+independent C6I data. CheXlocalize remains a possible future validation/test
+protocol and is not authorized by this terminal audit.

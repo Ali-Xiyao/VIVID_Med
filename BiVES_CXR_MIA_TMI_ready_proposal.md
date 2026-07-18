@@ -12,6 +12,8 @@
 
 > **2026-07-17 执行修订（当前生效）**：由于项目不存在且未来也无法获得合格的临床双盲审阅者，专家 U/I 审阅与显式正负人工审计不再作为工程实验启动门。当前 P0 改为可复现的弱标签代理实验：S/C/U 仅来自冻结规则解析，I 仅来自带来源哈希的合成证据移除；所有结果必须标记为 `weak_proxy_unreviewed` 和 `formal_result=false`。该修订允许验证管线可学习性与 BiVES 机制，但不能支持专家一致性、临床 U/I 有效性或专家审定测试集相关声明。文中其余专家审阅设计保留为理想投稿证据和未满足限制，不得报告为已完成。
 
+> **2026-07-19 终局修订（当前最高优先级）**：冻结的 C6I 已排除输入坐标、控制区域连通性和执行错误，并在独立 MS-CXR publisher-test 阳性样本上得到有效的 `FAIL_FINAL_STOP`。因此，BiVES B2 的“定位证据集同时具备局部必要性/充分性”假设不再作为已成立的方法主张，也不再创建 C6J、调整干预算子或扩大到 Qwen3.5-4B/9B。当前可辩护的论文方向改为 **localization–causality audit**：系统审计定位质量、目标/对照区域干预和模型支持分数之间何时一致、何时失配。下文方法设计保留为被检验的冻结假设和审计对象，而不是成功结论。
+
 ---
 
 ## 0. 最终决策
@@ -53,7 +55,7 @@
 - **uncertain**：存在相关证据，但正反证据接近或视觉表现本身模糊；
 - **insufficient**：总视觉证据不足，当前影像无法作出合法判断。
 
-### 0.2 新论文的唯一核心命题
+### 0.2 原方法假设（已被 C6I 终局否定，不再作为主 claim）
 
 > **A clinical statement should be verified from a K-budgeted visual evidence set that is sufficient when retained, necessary when removed, and invariant to matched perturbations of irrelevant context.**
 
@@ -68,6 +70,26 @@
 - 不再用 AUCH 接一个额外回答性头，而是用总证据量表示 insufficiency、用正反证据冲突表示 uncertainty；
 - SAMEQ 仅作为构造“同一陈述、不同影像状态”训练组的采样策略；
 - hard-negative mining 仅作为训练数据策略，不列为方法贡献。
+
+### 0.2A 当前论文主命题：定位与因果证据并不等价
+
+> **A localized evidence set can align with expert regions yet fail to be
+> causally necessary or specifically sufficient under matched interventions;
+> localization and causal evidence therefore require separate validation.**
+
+中文表述：
+
+> 模型选出的区域可以与专家标注有正向定位重合，但仍未必在匹配干预下具有特异的因果必要性或充分性；因此，医学视觉模型的定位质量与因果证据有效性必须分开验证。
+
+当前证据链不把单次负结果包装成新方法成功，而是冻结以下可复核事实：
+
+1. C4 在 VinDr-train protocol-design positives 上通过内部机制门；
+2. C5 在 image-disjoint confirmation 上复现机制门，但 polarity gate 因 Consolidation AUPRC 低于 B0 而终止；
+3. C6I 在独立 MS-CXR publisher test 上修复实际输入几何后，Pleural Effusion 的 masked blur 通过，而 Consolidation 的同一算子呈稳定负 TCIG；
+4. top-K 定位增益在两个 finding 上均为正，但不能替代 target-vs-control 因果门；
+5. 终局只读审计显示算子像素强度差异只能解释部分 local-mean 现象，不能解释 Consolidation blur 的负 TCIG，因此不再以调参方式“修复”结果。
+
+该主线允许讨论的贡献是：一个严格冻结、成对 target/control、跨阶段并包含独立数据的定位—因果失配审计框架。它不允许声称 BiVES B2 已学到临床有效的因果证据，不允许把 post-stop 关联分析解释为因果证明，也不允许从 C6I 选择新阈值或新算子。
 
 ### 0.3 论文是否达到 MIA/TMI 水平的必要条件
 

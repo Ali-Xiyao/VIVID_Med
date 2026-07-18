@@ -1239,3 +1239,26 @@
   intervention survival gate.
 - C6I is terminal `fail_final_stop`. Outcome-driven control/mask/operator
   changes, reruns, C5 reopening, and Qwen3.5-4B/9B scale-up are not justified.
+
+## 2026-07-19 B2 terminal read-only decomposition
+
+- The terminal audit consumed the frozen C5 and C6I artifacts without loading
+  Qwen or computing any new model score. It produced 812 normalized effect rows
+  (754 C5 mechanism cells plus 58 C6I cells) and 58 C6I image-space operator
+  rows.
+- C6I blur separates sharply by finding: Pleural Effusion is target-dominant
+  in 10/14 cases with mean target/control effects `0.027186/0.001122`, whereas
+  Consolidation is target-dominant in only 4/15 and target-sign-reversed in
+  7/15, with mean target/control effects `0.004897/0.020421`.
+- The local-mean operator changes control pixels more strongly than target
+  pixels in both findings, so image-space operator asymmetry contributes to
+  that operator's weak TCIG. Blur changes target pixels more strongly than
+  controls in both findings, yet Consolidation still fails while Pleural
+  Effusion passes. A global perturbation-strength explanation is therefore
+  insufficient.
+- Positive top-K localization gain is not a substitute for causal necessity.
+  Its C6I Spearman association with TCIG is small and inconsistent across the
+  four cells (`-0.020` to `0.196`, `n=14-15`).
+- The defensible paper direction is now a localization-causality audit. B2 is
+  not rescued, C6J does not exist, and CheXlocalize remains behind a separate
+  future validation/test authority.

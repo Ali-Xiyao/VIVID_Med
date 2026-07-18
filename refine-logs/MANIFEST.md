@@ -62,6 +62,7 @@ target-shape matching and does not call the coordinate bins true anatomy.
 | C6I frozen replacement config | `C6I_MS_CXR_QWEN35_2B_REPLACEMENT_CONFIG_20260718.yaml` | none | `f04f16d5cf6e00c95f596ae38d3db541198ad41bf5df132d6a1753e0cd17a29c` | uniform native-to-224 x/y mapping; frozen B2 step-450 exact-K=16, statements, operators, bootstrap, and no 4B/9B |
 | C6I pre-open geometry execution log | `C6I_MS_CXR_PREOPEN_GEOMETRY_EXECUTION_LOG_20260718.md` | none | `74f25bdfd44596df0ec64e381c09e359a4134c8a549e2154e0d7bca0fae900c4` | formal and replay builds pass 29/29; rows/certificates/lock and all masks byte-identical; no model/GPU/score |
 | C6I replacement evaluation result | `C6I_MS_CXR_REPLACEMENT_EVALUATION_RESULT_20260718.md` | none | `6d0652cce5b4700ba76ee1111806a918bdafe640afc43fbd72a8d0446a66556c` | 29/29 local Qwen3.5-2B rows complete; pleural-effusion blur passes but consolidation and aggregate survival fail; terminal no-rerun/no-scale stop |
+| B2 terminal read-only audit result | `BIVES_B2_TERMINAL_READ_ONLY_AUDIT_RESULT_20260719.md` | none | `fb85d1f7fcab4fd5f1fdc91d810ddd9ba5c196e5d025d1a40de2fece947047b3` | frozen C5/C6I score decomposition plus no-model image-space operator audit; no C6J/tuning/rerun/scale-up |
 
 The user accepted this candidate by replying `继续` on 2026-07-18. C001-C005
 are complete-pass. C006/C5 opened the image-disjoint VinDr-train

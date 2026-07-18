@@ -957,3 +957,26 @@ access, VinDr-test reuse, training, or Qwen3.5-4B/9B.
 | The first discovered C6I suite compared the full-boundary transformed coordinate with exact float equality and observed `223.99999999999997` rather than `224.0`. | C6I coordinate-transform unit test | The rasterized geometry is unchanged and the difference is IEEE-754 representation only. Replace exact object equality with per-coordinate `assertAlmostEqual`; do not round or alter the protocol coordinates. |
 | A read-only C6I summary helper guessed `control_audit.selected`, but the frozen v2 certificate names the field `selected_candidate`. | C6I post-geometry summary | The formal build/replay and artifact hashes were already complete and unaffected. Inspect one certificate schema, then use `selected_candidate` for the compact execution-log summary. |
 | The first read-only C6I result summary guessed a nested `patient_bootstrap_95ci` operator key, while the frozen evaluator stores each interval under `per_finding.<finding>.bootstrap_95ci`. | C6I result audit | The terminal metrics file was complete and unchanged. Inspect its schema and rerun only the read-only summary using the existing per-finding key; do not rerun scoring. |
+
+## 2026-07-19 BiVES B2 terminal read-only audit
+
+**Authority:** The reviewed C6I outcome is a valid terminal negative result. This
+stage may read frozen C4/C5/C6I artifacts and decode the already bound C6I images
+for image-space measurements, but it may not load a model, score a row, create a
+C6J identity, tune an operator/control/threshold, reopen C5/C6I, train, or scale
+to Qwen3.5-4B/9B.
+
+| Step | Status | Evidence / boundary |
+| --- | --- | --- |
+| T1 freeze terminal identity | complete | Verified current Git/frozen rows/metrics and recorded C6I as the permanent end of the B2 rescue route. |
+| T2 target-vs-control decomposition | complete | Produced 812 paired effect cells and a fixed threshold-free four-way taxonomy from existing frozen rows only. |
+| T3 descriptive associations | complete | Reported Pearson/Spearman descriptions for frozen geometry/localization features without p-values or causal claims. |
+| T4 image-space operator audit | complete | Reapplied the two frozen operators to 29 bound images/masks and reported 58 target/control L1/RMS/SSIM/edge/contrast rows; no model or score access. |
+| T5 stage synthesis and proposal pivot | complete | Froze the C4/C5/C6I stage table and revised the active claim to a localization-causality audit; CheXlocalize remains a future separately authorized protocol. |
+| T6 validation and Git handoff | complete | Audit replay is byte-deterministic; narrow tests 4/4, full active suite 149/149, CPU smoke, py_compile, and diff check pass. Commit/push only tracked code/docs/tests. |
+
+### Terminal-audit implementation error log
+
+| Error | Attempt | Resolution |
+| --- | --- | --- |
+| The first taxonomy contract classified `target_effect=0, control_effect<0` as `target_dominant_positive`. | First narrow unit test | Tighten the positive-target branch to require `target_effect > 0`; zero target effect now falls into the nonpositive/tied category. No frozen input or experiment artifact was changed. |
