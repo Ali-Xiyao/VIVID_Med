@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import subprocess
 import sys
 from pathlib import Path
 
@@ -108,6 +109,17 @@ def main() -> None:
             / "local_runs/bives_cxr/c6_ms_cxr_postc5/ms_cxr_postc5_dataset_lock.json",
         }
     )
+    if subprocess.run(
+        ["git", "diff", "--quiet", "HEAD", "--"],
+        cwd=ROOT,
+        check=False,
+    ).returncode != 0:
+        raise ValueError("tracked working tree must be clean before C6G geometry")
+    source_commit = subprocess.check_output(
+        ["git", "rev-parse", "HEAD"],
+        cwd=ROOT,
+        text=True,
+    ).strip()
     rows = _read_jsonl(args.manifest)
     geometry_rows, summary = build_c6g_geometry(
         rows,
@@ -124,6 +136,12 @@ def main() -> None:
         protocol_plan_path=args.protocol_plan,
         threshold_path=args.thresholds,
         c6f_hashes=c6f_hashes,
+        implementation_paths={
+            "c6g_geometry_module": ROOT / "bives_cxr/c6g_geometry.py",
+            "c6g_geometry_entrypoint": ROOT
+            / "scripts/prepare_bives_c6g_ms_cxr_geometry.py",
+        },
+        source_commit=source_commit,
     )
     report = {
         "status": summary["status"],

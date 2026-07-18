@@ -815,6 +815,8 @@ def write_c6g_artifacts(
     protocol_plan_path: Path,
     threshold_path: Path,
     c6f_hashes: dict[str, str],
+    implementation_paths: dict[str, Path],
+    source_commit: str,
 ) -> dict[str, Any]:
     output_dir.mkdir(parents=True, exist_ok=True)
     rows_path = output_dir / "c6g_geometry_rows.jsonl"
@@ -843,6 +845,11 @@ def write_c6g_artifacts(
         "geometry_rows_sha256": file_sha256(rows_path),
         "candidate_certificates_sha256": file_sha256(certificate_path),
         "c6f_immutable_sha256": c6f_hashes,
+        "implementation_sha256": {
+            name: file_sha256(path)
+            for name, path in sorted(implementation_paths.items())
+        },
+        "source_commit": str(source_commit),
     }
     lock["canonical_sha256"] = canonical_json_sha256(lock)
     lock_path.write_text(

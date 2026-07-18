@@ -916,3 +916,10 @@ access, VinDr-test reuse, training, or Qwen3.5-4B/9B.
 | C6G.5 v2 generator/tests | pending | Implement one uniform exact-area, disjoint, within-content, one-component deterministic candidate family and boundary/fail-closed/immutability tests. |
 | C6G.6 29-row geometry build | blocked_on_C6G_5 | Run score-free geometry only. A result other than 29/29 is a final MS-CXR stop; 29/29 creates only a geometry lock. |
 | C6H model evaluation | not_authorized | C6G cannot open Qwen or reuse the C6F model authority. A separate explicit C6H authority is required after a C6G pass. |
+
+### C6G implementation error log
+
+| Error | Attempt | Resolution |
+| --- | --- | --- |
+| The first formal command used a 10-second shell timeout and was terminated during CPU candidate search. | First C6G build launch | No result/lock was interpreted. Kept authority, thresholds, denominator, and candidate rules unchanged; reran into a new ignored output directory with a sufficient timeout. |
+| The first complete 29/29 lock bound authority, plan, thresholds, source manifest, candidate certificates, and frozen C6F hashes, but omitted the C6G module/entrypoint hashes and pre-open Git commit. | Post-build provenance audit | Treat the first complete build as a score-free diagnostic. Add identity fields only, commit the unchanged geometry implementation, then rebuild the final C6G lock. |
