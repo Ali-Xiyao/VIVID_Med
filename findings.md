@@ -1056,3 +1056,25 @@
   overlap/missing targets, and explicitly emits
   `model_evaluation_authorized=false`. Passing this metadata tool would still
   not reopen C5.
+
+## 2026-07-18 C6C MS-CXR official-schema findings
+
+- The official PhysioNet v1.1.0 release contains
+  `MS_CXR_Local_Alignment_v1.1.0.json`, the equivalent CSV, and its conversion
+  script. The JSON is COCO-shaped with categories, image metadata, LTWH boxes,
+  sentences, and annotation-level `split`; images must be obtained separately
+  from MIMIC-CXR/JPG.
+- The official patient-level 70:15:15 split contains exactly 15 test
+  Consolidation image-annotation pairs from 15 subjects and 14 test Pleural
+  Effusion pairs from 14 subjects. These counts are frozen as fail-closed
+  package-integrity gates rather than inferred from local data.
+- Access remains a user-side legal boundary: only credentialed PhysioNet users
+  with the required CITI training and signed DUA can access the files. C6C is
+  metadata-only tooling for a package the user may lawfully place locally
+  later; it neither logs in nor accepts terms nor downloads anything.
+- C6C is code-complete. The real ignored prior registry has 1,414 patient and
+  5,008 study hashes, exactly reproduces both C6A set hashes, and contains zero
+  serialized raw identifier matches. Ten narrow tests, all 126 active BiVES
+  tests, and the CPU smoke pass. The MS-CXR package is absent, so the truthful
+  verdict remains `TOOLING_COMPLETE_WAITING_USER_AUTHORIZED_PACKAGE`, not an
+  intake pass and not an experiment authorization.

@@ -873,6 +873,7 @@ access, VinDr-test reuse, training, or Qwen3.5-4B/9B.
 | C6 independent final-data authority | complete_blocked_no_eligible_local_candidate | Bounded local metadata audit found no conjunctive candidate. NIH has 984 patient-linked boxes but no Consolidation box label; MIMIC/CheXpert have patient identity and both findings but no expert regions; VinDr is excluded. `refine-logs/CONNECTED_CONTROL_C6_DATA_AUTHORITY_INVENTORY_20260718.md` freezes the evidence. No C6 experiment is authorized. |
 | C6A official acquisition feasibility | complete_plan_waiting_user_access | `refine-logs/C6A_OFFICIAL_DATA_ACQUISITION_PLAN_20260718.md` ranks CheXlocalize test-only first and MS-CXR official test second, freezes the prior MIMIC patient/study registry, permanently excludes CheXlocalize validation, and requires release/license, prior-overlap, target-coverage, image-binding, patient-lock, and new-authority gates. No download or model action is authorized. |
 | C6B local metadata-only intake tooling | complete_tooling_waiting_data | Added the fail-closed CheXlocalize test-only intake, hashed CheXpert-validation access registry, and seven contract tests. The ignored registry binds 234 images/200 patients/200 studies without raw IDs; 116/116 active tests and CPU smoke pass. Real intake remains blocked because the package is absent. |
+| C6C MS-CXR official-test intake tooling | complete_tooling_waiting_user_authorized_package | Added the fail-closed v1.1.0 COCO test intake, exact MIMIC metadata/image binding, official 15/14 target gates, frozen hashed prior-use registry, and ten contract tests. The ignored registry exactly reproduces 1,414 patients/5,008 studies and both C6A set hashes without raw IDs; 126/126 active tests and CPU smoke pass. Real intake remains blocked because the user-authorized package is absent. |
 
 ## Candidate artifact hashes
 
@@ -881,3 +882,4 @@ access, VinDr-test reuse, training, or Qwen3.5-4B/9B.
 - C1/C2 execution log: `7e1e9c317d1560a5d369fefa034253cd0732f78eb4f82c0f111ff32bc47096c8`.
 - C6A official acquisition plan: `4fd9234f2ba68a6535a5ef410790c2ec6204e1a48f8439b6b845a0cdb414bff3`.
 - C6B metadata intake tooling log: `07c2fdaffd7874d4043ea204f633650b7b4feae61a0a41d098d8dacad9ffeffc`.
+- C6C MS-CXR intake tooling log: `12cdc09dd9517ffbb4207b42f8e3eda2fcb23e9792d40f74a8bd469761182d6a`.
