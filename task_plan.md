@@ -980,3 +980,39 @@ to Qwen3.5-4B/9B.
 | Error | Attempt | Resolution |
 | --- | --- | --- |
 | The first taxonomy contract classified `target_effect=0, control_effect<0` as `target_dominant_positive`. | First narrow unit test | Tighten the positive-target branch to require `target_effect > 0`; zero target effect now falls into the nonpositive/tied category. No frozen input or experiment artifact was changed. |
+
+## 2026-07-19 Formal pivot to localization-causality audit
+
+**New active authority:** `audit/CXR_localization_causality_audit_proposal.md`
+
+**Frozen predecessor:** tag `bives-b2-terminal-8bb1a94` at commit `8bb1a94`.
+The tag and all C4/C5/C6I terminal evidence are immutable. BiVES B2 is retained
+as one audited model/explanation case, not as the paper's successful main method.
+
+| Step | Status | Evidence / boundary |
+| --- | --- | --- |
+| A1 freeze terminal BiVES state | complete | Annotated tag `bives-b2-terminal-8bb1a94` was created at exact commit `8bb1a94` and pushed before any pivot edits. |
+| A2 create independent audit branch | complete | Branch `codex/localization-causality-audit` was created from the tagged terminal commit. |
+| A3 archive old method authority | complete | Moved the unchanged predecessor to `archive/BiVES_CXR_method_proposal_terminal.md`; added a terminal negative-result freeze record and a non-authoritative root compatibility pointer for historical links. |
+| B1 audit proposal and claim boundary | complete | Defined RQ1-RQ3, the three-region audit, localization-causality matrix, operator robustness, strength matching, and explicit no-claim rules. |
+| B2 CheXlocalize development/test protocol | complete_design | Prior repository access is disclosed: validation can never serve as unbiased evidence and is not currently authorized; the official test split remains a one-time locked future evaluation. |
+| B3 novelty matrix and primary endpoints | complete_design | Compared CheXlocalize, image-use causal audits, SHOVIR, and C-Score without a first-in-field claim; froze separate localization and causal endpoint families. |
+| B4 active-surface migration | complete | Updated `AGENTS.md`, root/docs README, findings, and progress so the audit proposal is the only active research authority. |
+| C/D new data and model experiments | not_authorized | No CheXlocalize download, model load, GPU run, threshold selection, or locked-test opening is part of this pivot turn. A separate protocol freeze and explicit execution authority are required. |
+
+### Pivot invariants
+
+- Preserve every frozen C4/C5/C6I artifact, hash, result, and fail-closed rule.
+- Do not create C6J, repair B2, tune operators on C6I, or scale BiVES to 4B/9B.
+- Keep all future execution local; no server, SSH, or Slurm experiment work.
+- Do not equate expert overlap, saliency overlap, or a positive localization
+  score with causal necessity/specificity.
+- Report CheXlocalize validation as protocol development only because of prior
+  repository exposure; it cannot be an unbiased validation result.
+
+### Pivot implementation error log
+
+| Error | Attempt | Resolution |
+| --- | --- | --- |
+| The first planning append used a non-tail paragraph as an `apply_patch` anchor. | First persistent-record update | The patch failed before changing any file. Read exact file tails and reapplied with stable anchors. |
+| The first static-check command used Bash `||` syntax in Windows PowerShell. | First link/stale-authority audit | PowerShell rejected the command before execution. Replaced it with an explicit `$LASTEXITCODE` branch; the rerun found 0 missing links and no stale active-authority phrases. |

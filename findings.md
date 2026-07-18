@@ -1262,3 +1262,30 @@
 - The defensible paper direction is now a localization-causality audit. B2 is
   not rescued, C6J does not exist, and CheXlocalize remains behind a separate
   future validation/test authority.
+
+## 2026-07-19 Formal-pivot findings
+
+- The frozen C6I and terminal read-only audit support a research-object change,
+  not another BiVES rescue. BiVES B2 remains scientifically useful as an audited
+  counterexample/model case, while the paper-level object becomes the relation
+  between localization quality and causal specificity under matched interventions.
+- CheXlocalize established multi-pathology expert-localization benchmarking
+  across saliency methods and CNNs, but localization overlap is not itself a
+  target-vs-control causal audit. Recent image-use audits, SHOVIR, and C-Score
+  cover causal image reliance, region occlusion/shortcut behavior, and
+  explanation consistency respectively. The contribution must be framed as a
+  preregistered localization-causality relationship audit—not as the first
+  causal chest-X-ray explanation study.
+- Stanford publishes 234 CheXlocalize validation images from 200 patients and
+  668 test images from 500 patients with separate ground-truth and benchmark
+  radiologist annotations. This repository previously accessed CheXpert /
+  CheXlocalize validation during C6A-era work, so that split is contaminated for
+  independent validation. It may be used only for protocol development; the
+  official test split must remain unopened until a complete identity/protocol
+  lock and separate execution authorization.
+- Localization and causal behavior must remain separate co-primary families.
+  Required causal contrasts are explanation-region versus matched control and
+  expert-region versus matched control, with operator-specific estimates,
+  cross-operator sign agreement/worst-case summaries, and perturbation-strength
+  diagnostics (area, centroid, perimeter, pixel L1, SSIM, and edge change). No
+  single overlap-causality composite may hide failure in either family.
