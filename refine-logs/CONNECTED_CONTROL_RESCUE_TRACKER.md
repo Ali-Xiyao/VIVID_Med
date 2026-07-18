@@ -13,7 +13,7 @@
 | C004 | C3 | Can the frozen 2B checkpoint be replayed locally within the compute cap? | frozen Qwen3.5-2B B2 / 16 protocol_design images | identity chain and replay tolerance pass; estimated C4 <=4 local GPU h | MUST | COMPLETE_PASS | replay max diff 0; exact-K mismatches 0; estimate 0.2461 h |
 | C005 | C4 | Does target effect exceed connected-control effect under both primary operators? | frozen Qwen3.5-2B B2 / protocol_design positives | positive mean TCIG both findings/operators; >=1 positive CI per finding; high-area nonnegative; >=60% positive-image TCIG | MUST | COMPLETE_PASS | all four mean/CI/high-area/positive-fraction gates pass; rows SHA `268d2cc6...dbdd` |
 | C006 | C5 | Does the frozen result survive one-time internal confirmation? | frozen system / rescue_confirm once | full C4 gate plus no per-finding polarity below B0 | MUST | COMPLETE_FAIL_FINAL_STOP | geometry 377/378 and full mechanism gate pass; consolidation AUPRC B2 0.89381 < B0 0.91174; no rerun |
-| C007 | C6 | Is an independent patient-grouped expert-region final set authorized? | frozen system / new final dataset | separate data authority and patient-level lock | MUST FOR PAPER | BLOCKED_DATA | no current dataset authority |
+| C007 | C6 | Is an independent patient-grouped expert-region final set authorized? | frozen system / new final dataset | separate data authority and patient-level lock | MUST FOR PAPER | BLOCKED_DATA_NO_ELIGIBLE_LOCAL_CANDIDATE | Bounded local inventory found no conjunctive candidate: NIH has patient-linked Effusion boxes but no Consolidation boxes; MIMIC/CheXpert have patient keys and both labels but no expert regions; VinDr is excluded. No experiment authorized. |
 
 ## Immutable boundaries
 

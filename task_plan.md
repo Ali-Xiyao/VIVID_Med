@@ -844,6 +844,7 @@ method mutation, extra seed, Qwen3.5-4B/9B, or server work.
 | The first C2 process probe saw a PID file but no `Get-Process` row or log output and was initially interpreted as an immediate exit; a second foreground launch then failed before execution because the first process held the log files. | C2 full-audit launch monitoring | CIM inspection proved the original PID `39836` and eight workers were active; stdout then advanced to 20/377 with empty stderr. The second command never opened an audit process. Keep and monitor only PID `39836`; do not relaunch. |
 | The first C3 warmup stopped before emitting any score because deterministic cuBLAS matmul requires `CUBLAS_WORKSPACE_CONFIG` to be set before CUDA initialization. | C3 first local timing/replay launch | No C3 row or lock artifact was produced. Set `CUBLAS_WORKSPACE_CONFIG=:4096:8` at module import before `torch`, preserve deterministic algorithms, and rerun the unchanged 16-image gate. |
 | The first C5 process reached 307/756 rows and then Windows denied the atomic `progress.json.tmp -> progress.json` replace while the progress file was being monitored. | C5 one-time confirmation execution | No code, data, operator, metric, threshold, or result rule changed. Resumed the exact committed identity from its 307 completed-row checkpoint, stopped reading progress JSON during execution, and completed the single opening. The resume stderr was empty; the incident and corrected end-to-end compute accounting are frozen in the C5 execution log. |
+| A recursive filename scan over the entire `H:\Xiyao_Wang\000_Public Dataset` tree exceeded 120 seconds before candidate matching completed. | C6 first local data inventory | The command was read-only and changed nothing. It established only the top-level dataset names. Do not repeat a root-wide recursive scan; inspect CheXpert, MIMIC, NIH, and ambiguous top-level folders with bounded shallow queries and dataset-specific metadata checks. |
 
 # 2026-07-18 Coordinate-Zone Connected-Control Candidate
 
@@ -866,9 +867,10 @@ access, VinDr-test reuse, training, or Qwen3.5-4B/9B.
 | C3 local timing/replay | complete_pass | 16 unique 8+8 protocol-design images; replay max diff 0, exact-K mismatches 0, estimated C4 0.2461 h against 4 h cap. |
 | C4 connected-control mechanism gate | complete_pass | All 375 feasible protocol-design positives scored; both co-primary operators pass every finding-level mean/CI/high-area/positive-fraction gate; replay max diff 0. |
 | C5 one-time internal confirmation | complete_fail_final_stop | Geometry passed 377/378 and the complete C4 mechanism gate reproduced, but consolidation B2 AUPRC `0.89381` fell below frozen B0 `0.91174`; no post-outcome changes, reruns, or 4B/9B scale-up. |
+| C6 independent final-data authority | complete_blocked_no_eligible_local_candidate | Bounded local metadata audit found no conjunctive candidate. NIH has 984 patient-linked boxes but no Consolidation box label; MIMIC/CheXpert have patient identity and both findings but no expert regions; VinDr is excluded. `refine-logs/CONNECTED_CONTROL_C6_DATA_AUTHORITY_INVENTORY_20260718.md` freezes the evidence. No C6 experiment is authorized. |
 
 ## Candidate artifact hashes
 
 - Current plan: `647bf9f466d76553d3ba9a849c73f852227577f9214601776e0b31addd1fb12a`.
-- Current tracker: `7dc637a461c40c5ca4beddfac03aa064749cc6cc401d5600d1aa8bf98094d8a6`.
+- Current tracker: `66688af2c3f009d3078412efdb44f834205e8edda04c9e9a852ef3d4ec3435b5`.
 - C1/C2 execution log: `7e1e9c317d1560a5d369fefa034253cd0732f78eb4f82c0f111ff32bc47096c8`.

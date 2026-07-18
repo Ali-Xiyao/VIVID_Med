@@ -981,3 +981,19 @@
   the frozen sparse B2 does not dominate the pooled B0 on every confirmation
   polarity metric. This does not justify a result-driven model repair, extra
   seed, 4B/9B scale-up, or VinDr-test reuse.
+- The local public-data root contains CheXpert-small, multiple MIMIC-CXR trees,
+  NIH Chest X-rays, IU X-ray/OpenI, and the already-used VinDr release, but no
+  top-level CheXlocalize or MS-CXR directory is immediately visible. This is
+  only a shallow inventory; embedded annotation packages still require bounded
+  dataset-specific inspection before C6 can be declared available or absent.
+- The bounded C6 audit closes that uncertainty: no local dataset satisfies the
+  full patient-identity plus expert-region plus two-finding requirement. NIH is
+  the only independent local source with patient-linked boxes (984 rows, 880
+  images, 726 patients), but its eight box labels include Effusion (142
+  patients) and omit Consolidation. MIMIC-CXR and CheXpert expose patient keys
+  and both frozen finding labels but no local expert image-region package.
+- Therefore C6 remains `BLOCKED_DATA_NO_ELIGIBLE_LOCAL_CANDIDATE`. A partial
+  NIH Effusion audit cannot be promoted to the frozen two-finding final, and
+  no pseudo-region or label conversion is permitted. Even a future eligible
+  dataset would not override the C5 final stop without a new reviewed research
+  authority.

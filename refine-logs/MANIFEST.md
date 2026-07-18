@@ -37,11 +37,12 @@ target-shape matching and does not call the coordinate bins true anatomy.
 | Artifact | Versioned file | Fixed alias | SHA-256 | Status |
 | --- | --- | --- | --- | --- |
 | Connected-control plan | `CONNECTED_CONTROL_RESCUE_PLAN_20260718.md` | `CONNECTED_CONTROL_RESCUE_PLAN.md` | `c5100a32d8c5b9f9858d37c73538695849413f80fa37ee45c471703c49ee844e` | byte-identical; stopped at C5 confirmation polarity gate |
-| Connected-control tracker | `CONNECTED_CONTROL_RESCUE_TRACKER_20260718.md` | `CONNECTED_CONTROL_RESCUE_TRACKER.md` | `bca7cf878fbf371432a60755924dea14c274168c4adcda56bbe9cf1694561202` | byte-identical; C001-C005 pass; C006 final-stop fail |
+| Connected-control tracker | `CONNECTED_CONTROL_RESCUE_TRACKER_20260718.md` | `CONNECTED_CONTROL_RESCUE_TRACKER.md` | `66688af2c3f009d3078412efdb44f834205e8edda04c9e9a852ef3d4ec3435b5` | byte-identical; C001-C005 pass; C006 final-stop fail; C007 blocked with no eligible local candidate |
 | C1/C2 execution log | `CONNECTED_CONTROL_C1_C2_EXECUTION_LOG_20260718.md` | none | `7e1e9c317d1560a5d369fefa034253cd0732f78eb4f82c0f111ff32bc47096c8` | 98/98 tests; 375/377 geometry pass; full rows replay identical |
 | C3 execution log | `CONNECTED_CONTROL_C3_EXECUTION_LOG_20260718.md` | none | `ffc59f9872b65e4345dbf05e073b317047c86cd646f69a079ce680b19170bbca` | 101/101 tests; zero replay error; C4 estimate 0.2461 h |
 | C4 execution log | `CONNECTED_CONTROL_C4_EXECUTION_LOG_20260718.md` | none | `4a4dfc4ebf2861ae179ac481ffb578412a61d8185aecdf8934cb62280592d67f` | 106/106 tests; both co-primary operators pass every C4 gate |
 | C5 execution log | `CONNECTED_CONTROL_C5_EXECUTION_LOG_20260718.md` | none | `b1f8d9ca51c822dd674dc6c66bdbb9142962161847650a70873f905c252e6804` | mechanism replicates; consolidation AUPRC below B0; final stop |
+| C6 data-authority inventory | `CONNECTED_CONTROL_C6_DATA_AUTHORITY_INVENTORY_20260718.md` | none | `2453216d654290f6bb32cfc3b32edacc15c78040aa55bf0376295a654768651f` | read-only metadata audit; no eligible local patient-identified two-finding expert-region candidate; no run authorized |
 
 The user accepted this candidate by replying `继续` on 2026-07-18. C001-C005
 are complete-pass. C006/C5 opened the image-disjoint VinDr-train
@@ -49,3 +50,10 @@ are complete-pass. C006/C5 opened the image-disjoint VinDr-train
 gate because consolidation B2 AUPRC fell below B0. This route is final-stopped;
 VinDr test, training, result-driven tuning/reruns, scale-up, and later rows
 remain blocked.
+
+C007/C6 was subsequently inspected as a read-only local data-authority gate.
+NIH supplies patient-linked Effusion boxes but no Consolidation boxes;
+MIMIC-CXR and CheXpert supply patient keys and both finding labels but no local
+expert-region annotations. VinDr remains excluded. C007 therefore stays
+`BLOCKED_DATA_NO_ELIGIBLE_LOCAL_CANDIDATE`, and this bookkeeping does not
+reopen the C5 final stop.
