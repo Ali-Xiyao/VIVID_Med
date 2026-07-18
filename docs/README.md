@@ -255,3 +255,11 @@ geometry rows, candidate certificates, geometry lock, and all 29 mask files
 are byte-identical; canonical geometry-lock SHA-256 is
 `f6e6c8e6a4e7499376d8b316d588197fb1e57ae18a68b6c529dd31e60e531a0e`.
 No model, GPU, or score was accessed while producing this lock.
+
+The subsequently authorized one-time C6I replacement evaluation completed all
+29 rows on local Qwen3.5-2B and terminated as `fail_final_stop`. Masked Gaussian
+blur passes every pleural-effusion condition but has negative consolidation
+TCIG with a wholly negative 95% CI; local mean also fails the complete frozen
+per-finding/high-area gate. Positive localization gain is secondary and does
+not rescue the paired intervention claim. C6I is terminal: no rerun, outcome-
+driven tuning, C5 reopening, or Qwen3.5-4B/9B scale-up is authorized.

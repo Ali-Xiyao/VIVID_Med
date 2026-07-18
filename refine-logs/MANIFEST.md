@@ -61,6 +61,7 @@ target-shape matching and does not call the coordinate bins true anatomy.
 | C6I actual-input recovery authority | `C6I_MS_CXR_ACTUAL_INPUT_RECOVERY_AUTHORITY_20260718.md` | none | `5c9d221e93af7f478d4d89800b0967a6cc5b341793efeb5cda7f926743980672` | user-confirmed access and separate authority for score-free actual-input geometry plus one replacement local Qwen3.5-2B opening after a 29/29 pass |
 | C6I frozen replacement config | `C6I_MS_CXR_QWEN35_2B_REPLACEMENT_CONFIG_20260718.yaml` | none | `f04f16d5cf6e00c95f596ae38d3db541198ad41bf5df132d6a1753e0cd17a29c` | uniform native-to-224 x/y mapping; frozen B2 step-450 exact-K=16, statements, operators, bootstrap, and no 4B/9B |
 | C6I pre-open geometry execution log | `C6I_MS_CXR_PREOPEN_GEOMETRY_EXECUTION_LOG_20260718.md` | none | `74f25bdfd44596df0ec64e381c09e359a4134c8a549e2154e0d7bca0fae900c4` | formal and replay builds pass 29/29; rows/certificates/lock and all masks byte-identical; no model/GPU/score |
+| C6I replacement evaluation result | `C6I_MS_CXR_REPLACEMENT_EVALUATION_RESULT_20260718.md` | none | `6d0652cce5b4700ba76ee1111806a918bdafe640afc43fbd72a8d0446a66556c` | 29/29 local Qwen3.5-2B rows complete; pleural-effusion blur passes but consolidation and aggregate survival fail; terminal no-rerun/no-scale stop |
 
 The user accepted this candidate by replying `继续` on 2026-07-18. C001-C005
 are complete-pass. C006/C5 opened the image-disjoint VinDr-train
@@ -146,3 +147,9 @@ same native-to-bound-JPG x/y scaling before the unchanged 448x448 input
 transform and continuous connected-control search. It must pass its complete
 score-free 29-row gate before one replacement local Qwen3.5-2B opening; C6F,
 C6G, and failed C6H remain immutable.
+
+The C6I score-free gate passed and the replacement opening completed 29/29,
+but the frozen intervention survival gate failed. Pleural-effusion Gaussian
+blur passed; consolidation had no operator with a positive CI lower bound and
+several high-area/fraction conditions failed. The route is terminal and does
+not authorize rerun, tuning, C5 reopening, or 4B/9B scale-up.

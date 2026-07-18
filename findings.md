@@ -1223,3 +1223,19 @@
 - C6F, C6G, and failed C6H are immutable historical evidence. C6I must use new
   masks, rows, lock, config, output namespace, opening marker, and terminal
   identity; it may not overwrite or relaunch C6H.
+
+## 2026-07-18 C6I terminal result
+
+- The actual-input repair is operationally successful: all 29 score-free rows
+  and the deterministic replay pass, and the replacement evaluator completes
+  29/29 without a runtime error. The earlier C6H alignment defect is therefore
+  resolved rather than bypassed.
+- The mechanism gate still fails. Masked Gaussian blur is positive and
+  CI-separated for pleural effusion (`mean TCIG=0.026064`, CI lower
+  `0.003831`) but negative for consolidation (`mean TCIG=-0.015523`, CI upper
+  `-0.004813`). Local mean has no positive-CI finding and fails high-area gates.
+- Mean top-K localization gain remains positive for both findings, but this is
+  secondary and cannot substitute for the paired target-versus-control
+  intervention survival gate.
+- C6I is terminal `fail_final_stop`. Outcome-driven control/mask/operator
+  changes, reruns, C5 reopening, and Qwen3.5-4B/9B scale-up are not justified.
