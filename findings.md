@@ -1131,3 +1131,26 @@
 - The data candidate is now intake-complete, not experiment-authorized. C5
   remains a final stop until a separately reviewed post-C5 authority explicitly
   defines and approves a new MS-CXR evaluation.
+
+## 2026-07-18 C6F independent MS-CXR post-C5 evaluation
+
+- The user supplied the missing independent model-evaluation authority. It is
+  recorded in a new post-C5 file as `model_evaluation_authorized=true`; the
+  frozen C6E intake JSON remains unchanged at false because intake and research
+  authorization are deliberately separate artifacts.
+- MS-CXR provides only positive expert-box pairs for the two target findings.
+  It cannot support the C5 B2-versus-B0 AUROC/AUPRC claim. C6F therefore freezes
+  a positive-only mechanism question using the unchanged local-mean, masked
+  Gaussian, and coordinate-zone connected-control definitions.
+- The ignored manifest passes the complete 29-patient official-test boundary:
+  15/14 rows, 25/20 boxes, exact image hashes, canonical query statements, and
+  zero reuse of the prior MIMIC patient/study registry.
+- The score-free geometry audit fails 1/29. Hashed Consolidation sample
+  `ms_cxr_338b...8df7` has a 25,050-pixel target (14.99% of letterboxed content)
+  and no exact-area, target-disjoint, one-component control in the same
+  coordinate zone. The dataset lock is `fail_geometry`, so no legal
+  denominator-preserving opening exists under the frozen C6F protocol.
+- The JPG evaluator independently refuses the failed lock before creating its
+  opening marker, decoding a JPG, loading Qwen/checkpoint, using CUDA, or
+  emitting a score. Changing the control definition or dropping the row would
+  require a new reviewed authority and cannot be treated as a C6F repair.

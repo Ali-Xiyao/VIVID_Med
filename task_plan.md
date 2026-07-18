@@ -885,3 +885,22 @@ access, VinDr-test reuse, training, or Qwen3.5-4B/9B.
 - C6C MS-CXR intake tooling log: `12cdc09dd9517ffbb4207b42f8e3eda2fcb23e9792d40f74a8bd469761182d6a`.
 - C6D real-package structure preflight log: `f252ab3d9f46d6d88d5828fb4995c9b3b250a5472a2111906ce4fad684f2fb5d`.
 - C6E strict intake log: `0cf2813122b2621908ec193c9b651a8619fcef11c72a4334775f7851afe5d360`.
+
+## C6F independent MS-CXR post-C5 evaluation
+
+| Phase | Status | Gate |
+| --- | --- | --- |
+| C6F.1 independent authority | complete_authorized_preopen | User explicitly authorized a separate `model_evaluation_authorized=true` record. Frozen C6E intake remains unchanged and false because it is not a model protocol. |
+| C6F.2 patient manifest and lock | complete_fail_geometry | Ignored manifest passes 29 patients/studies/images, 15/14 rows, 25/20 boxes, and frozen release/overlap identities. Geometry is 28/29; one hashed Consolidation row has no legal connected control, so the dataset lock is `fail_geometry` and closed. |
+| C6F.3 JPG evaluator and tests | complete_fail_closed | Implemented the local-only Qwen3.5-2B JPG evaluator using unchanged C4/C5 operators/gates. Its preflight was exercised and correctly rejected the failed geometry lock before model/GPU access. |
+| C6F.4 pre-open commit | complete_ready_for_git_handoff | C6F tests 4/4, full active suite 133/133, CPU smoke, py_compile, diff check, and ignored-artifact boundary pass. Commit/push the authority, implementation, and truthful no-run handoff; do not start a model run. |
+| C6F.5 one-time local evaluation | not_run_preopen_geometry_fail | The authorized 2B opening was never created. No JPG decode, model/checkpoint load, GPU, or score occurred; 4B/9B remain blocked. |
+
+### C6F implementation error log
+
+| Error | Attempt | Resolution |
+| --- | --- | --- |
+| The first bundled identity read guessed a nonexistent file named `C5_CONNECTED_CONTROL_CONFIRMATION_EXECUTION_LOG_20260718.md`. | C6F source orientation | The read-only command changed nothing. `rg --files refine-logs` located the actual authority record `CONNECTED_CONTROL_C5_EXECUTION_LOG_20260718.md`; all C5 identity facts were reread from that exact path. |
+| The first real C6F score-free geometry build stopped on the first row whose expert-box mask had no exact-area connected control in the same coordinate zone. | C6F pre-open geometry | No model, image decode, GPU, or score was opened. Preserve the frozen control rule; changed only the audit reporting so all 29 rows are checked in parallel and a complete pass/fail geometry lock is written before the process exits nonzero. |
+| The first full 133-test regression rejected the new config's descriptive mode name `local_one_time_evaluation`, which was outside the repository's frozen mode enum. | C6F full regression | No runtime behavior was exercised by the failed assertion. Changed only the config metadata to the existing legal `local_diagnostic` value and rebuilt the dataset lock so its config binding remains exact. |
+| The second full regression correctly treated every `configs/bives_cxr/*.yaml` file as a training config and rejected the evaluation-only protocol because it intentionally has no training loss/sampler fields. | C6F config placement | Do not fabricate irrelevant training fields. Moved the frozen evaluation YAML to `refine-logs/C6F_MS_CXR_QWEN35_2B_EVAL_CONFIG_20260718.yaml`, updated both entrypoints, and rebuilt the exact data/config lock. |

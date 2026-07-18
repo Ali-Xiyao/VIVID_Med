@@ -48,6 +48,9 @@ target-shape matching and does not call the coordinate bins true anatomy.
 | C6C MS-CXR intake tooling log | `C6C_MS_CXR_INTAKE_TOOLING_LOG_20260718.md` | none | `12cdc09dd9517ffbb4207b42f8e3eda2fcb23e9792d40f74a8bd469761182d6a` | fail-closed official-test COCO intake ready; strict hashed MIMIC registry reproduced; 126/126 tests; real package absent |
 | C6D MS-CXR real-package preflight log | `C6D_MS_CXR_REAL_PACKAGE_PREFLIGHT_LOG_20260718.md` | none | `f252ab3d9f46d6d88d5828fb4995c9b3b250a5472a2111906ce4fad684f2fb5d` | real package checksums pass; 15/14 pairs and 25/20 boxes; 29/29 images bound; zero prior overlap; license/model authority remain false |
 | C6E MS-CXR strict intake log | `C6E_MS_CXR_STRICT_INTAKE_LOG_20260718.md` | none | `0cf2813122b2621908ec193c9b651a8619fcef11c72a4334775f7851afe5d360` | explicit user access confirmation; exact package binding; strict intake pass; model authority remains false |
+| C6F MS-CXR post-C5 authority | `C6F_MS_CXR_POST_C5_EVALUATION_AUTHORITY_20260718.md` | none | `6599212f1c9b4177379196435a65deffd278440e94f4574f3057d4b107bc207c` | separate user authorization; positive-only 2B mechanism protocol; frozen C6E intake remains unchanged |
+| C6F frozen evaluation config | `C6F_MS_CXR_QWEN35_2B_EVAL_CONFIG_20260718.yaml` | none | `5bfd243c7c3a42a113e5e5b50b171d988cecb4a1d6a1426b4c94ad7a8e1ffb5a` | Qwen3.5-2B only; unchanged C4/C5 operators and gates; classification metrics and 4B/9B forbidden |
+| C6F pre-open geometry log | `C6F_MS_CXR_PREOPEN_GEOMETRY_EXECUTION_LOG_20260718.md` | none | `acbe78ac76d08b7ef9d4acd62d1c4d861299ab094631afc77a17985552bb82cd` | 29-patient manifest passes; connected-control geometry 28/29; 133/133 tests; model/GPU/score never opened |
 
 The user accepted this candidate by replying `继续` on 2026-07-18. C001-C005
 are complete-pass. C006/C5 opened the image-disjoint VinDr-train
@@ -88,6 +91,14 @@ C6D records the subsequently supplied real v1.1.0 package without rewriting
 the historical C6C tooling log. Publisher hashes pass; the repaired audit
 distinguishes 29 unique image-text pairs from 45 component boxes, binds all 29
 images, and finds zero prior patient/study overlap. The structure preflight is
+followed by the strict C6E licensed intake.
+
+C6F is a new, independent post-C5 protocol authorized by the user; it does not
+rewrite C5 or C6E. The positive-only MS-CXR question is limited to the frozen
+expert-box mechanism gate. Its score-free connected-control audit fails one of
+29 rows, so the dataset lock remains closed and the evaluator correctly stops
+before any model, GPU, JPG decode, or score. No result-driven row exclusion,
+control change, rerun, or Qwen3.5-4B/9B scale-up is authorized.
 not a license attestation or research authority and cannot authorize a score,
 annotation visualization, model evaluation, or C5 reopening.
 

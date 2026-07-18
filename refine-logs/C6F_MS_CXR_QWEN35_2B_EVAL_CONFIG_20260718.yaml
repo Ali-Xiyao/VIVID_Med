@@ -1,0 +1,56 @@
+experiment:
+  id: bives_cxr_ms_cxr_postc5_qwen35_2b
+  route: BiVES-CXR
+  phase: c6f_independent_external_mechanism
+  mode: local_diagnostic
+model:
+  family: Qwen3.5
+  scale: 2B
+  path: H:/Xiyao_Wang/001_models/Qwen3.5-2B
+  snapshot_sha256: 6b57c58ceb3c97d4199d4e8e32b54f6ff11d0cf3a8bde3a4e940d5775ae12120
+  dtype: bf16
+  device: cuda:1
+checkpoint:
+  path: local_runs/bives_cxr/qwen35_2b_sc_b2_sparse_k16_seed17/best.pt
+  sha256: 09c2f77313027ca313f4b03c5553f90d3d7d57436e960888466d2712e9705480
+  variant: B2_sparse_exact_k
+  step: 450
+  topk: 16
+training_cache_lock:
+  path: local_runs/bives_cxr/qwen35_2b_weak_sc_cache/cache_lock.json
+  sha256: 503ead96a0de948b56361b8097bd14cc1ba0942878b56cb3aa0ba2e39d3ec0f2
+training_config:
+  path: configs/bives_cxr/qwen35_2b_sc_b2_sparse_k16.yaml
+  sha256: 248d57d9a62e77acf36c6c0809428e17c1a3b37bb00741383b94db51ab4d395f
+data:
+  dataset: MS-CXR
+  release_version: 1.1.0
+  source_split: publisher_test_only
+  expected_rows: 29
+  expected_boxes: 45
+  expected_findings:
+    consolidation: 15
+    pleural_effusion: 14
+  strict_intake_canonical_sha256: 0027358c2998773e73dbd19da02a37dac27c060150bf42e59469d218fb24b4ed
+statements:
+  consolidation: Focal air-space consolidation is present.
+  pleural_effusion: Pleural effusion is present.
+intervention:
+  image_size: 448
+  control_version: bives_coordinate_zone_connected_control_v1
+  local_mean_ring_width: 8
+  masked_gaussian_sigma: 8.0
+  masked_gaussian_truncate: 3.0
+  dilation_fraction: 0.0
+evaluation:
+  bootstrap_replicates: 2000
+  bootstrap_seed: 17
+  require_mean_tcig_positive: true
+  minimum_positive_fraction: 0.60
+  require_highest_area_quartile_nonnegative: true
+  require_at_least_one_operator_ci_lower_positive_per_finding: true
+  localization_is_secondary_only: true
+  allow_classification_metrics: false
+scale:
+  qwen35_4b_authorized: false
+  qwen35_9b_authorized: false
