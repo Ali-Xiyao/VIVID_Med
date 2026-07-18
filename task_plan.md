@@ -868,9 +868,11 @@ access, VinDr-test reuse, training, or Qwen3.5-4B/9B.
 | C4 connected-control mechanism gate | complete_pass | All 375 feasible protocol-design positives scored; both co-primary operators pass every finding-level mean/CI/high-area/positive-fraction gate; replay max diff 0. |
 | C5 one-time internal confirmation | complete_fail_final_stop | Geometry passed 377/378 and the complete C4 mechanism gate reproduced, but consolidation B2 AUPRC `0.89381` fell below frozen B0 `0.91174`; no post-outcome changes, reruns, or 4B/9B scale-up. |
 | C6 independent final-data authority | complete_blocked_no_eligible_local_candidate | Bounded local metadata audit found no conjunctive candidate. NIH has 984 patient-linked boxes but no Consolidation box label; MIMIC/CheXpert have patient identity and both findings but no expert regions; VinDr is excluded. `refine-logs/CONNECTED_CONTROL_C6_DATA_AUTHORITY_INVENTORY_20260718.md` freezes the evidence. No C6 experiment is authorized. |
+| C6A official acquisition feasibility | complete_plan_waiting_user_access | `refine-logs/C6A_OFFICIAL_DATA_ACQUISITION_PLAN_20260718.md` ranks CheXlocalize test-only first and MS-CXR official test second, freezes the prior MIMIC patient/study registry, permanently excludes CheXlocalize validation, and requires release/license, prior-overlap, target-coverage, image-binding, patient-lock, and new-authority gates. No download or model action is authorized. |
 
 ## Candidate artifact hashes
 
 - Current plan: `647bf9f466d76553d3ba9a849c73f852227577f9214601776e0b31addd1fb12a`.
 - Current tracker: `66688af2c3f009d3078412efdb44f834205e8edda04c9e9a852ef3d4ec3435b5`.
 - C1/C2 execution log: `7e1e9c317d1560a5d369fefa034253cd0732f78eb4f82c0f111ff32bc47096c8`.
+- C6A official acquisition plan: `4fd9234f2ba68a6535a5ef410790c2ec6204e1a48f8439b6b845a0cdb414bff3`.

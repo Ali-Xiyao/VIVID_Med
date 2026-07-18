@@ -997,3 +997,35 @@
   no pseudo-region or label conversion is permitted. Even a future eligible
   dataset would not override the C5 final stop without a new reviewed research
   authority.
+- Official-source review identifies MS-CXR v1.1.0 as the strongest structural
+  acquisition candidate: PhysioNet reports 1,162 radiologist-verified
+  image-sentence box pairs over 851 subjects, including 117 Consolidation pairs
+  from 109 subjects and 96 Pleural Effusion pairs from 95 subjects. Its
+  recommended 70:15:15 split is patient-level, and the released annotations
+  include a split field. Images must be joined from MIMIC-CXR/JPG.
+- MS-CXR is not anonymously downloadable. PhysioNet requires a credentialed
+  user, CITI Data or Specimens Only Research training, acceptance of the
+  Credentialed Health Data License 1.5.0, and a signed project DUA. The current
+  task has not established those user-side authorizations, so no download is
+  attempted.
+- CheXlocalize is also structurally relevant: Stanford AIMI documents
+  radiologist pixel segmentations for Consolidation and Pleural Effusion over
+  CheXpert validation/test (234 images/200 validation patients and 668
+  images/500 test patients). Because it is derived from CheXpert evaluation
+  surfaces already present locally, it cannot be called independent until the
+  prior-access and patient-overlap boundary is explicitly audited.
+- Historical repository evidence establishes prior CheXpert-validation access,
+  so CheXlocalize validation is permanently excluded from a project-wide final.
+  CheXlocalize test-only is the preferred practical candidate, subject to an
+  exact release/license record, no prior annotation access, and a patient-level
+  lock made before any score or annotation visualization.
+- The strict prior MIMIC registry contains 1,414 patients and 5,008 studies.
+  Sorted identifier-set SHA-256 values are
+  `106e13b9500ff5ad9c7e67a168861c04a0f2486a9786ebc8850bf5000e207950`
+  and `76e8ae65bc0d740908d064fff5748ddec390eb121c456a8f75f42020c472cd86`;
+  raw IDs remain local and uncommitted. Any MS-CXR subject/study overlap fails
+  closed before a lock can be issued.
+- `refine-logs/C6A_OFFICIAL_DATA_ACQUISITION_PLAN_20260718.md` freezes the full
+  acquisition order and keeps the current verdict at
+  `PLAN_COMPLETE_WAITING_USER_ACCESS`. It does not reopen C5, authorize a
+  download, or permit an experiment.

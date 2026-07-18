@@ -43,6 +43,7 @@ target-shape matching and does not call the coordinate bins true anatomy.
 | C4 execution log | `CONNECTED_CONTROL_C4_EXECUTION_LOG_20260718.md` | none | `4a4dfc4ebf2861ae179ac481ffb578412a61d8185aecdf8934cb62280592d67f` | 106/106 tests; both co-primary operators pass every C4 gate |
 | C5 execution log | `CONNECTED_CONTROL_C5_EXECUTION_LOG_20260718.md` | none | `b1f8d9ca51c822dd674dc6c66bdbb9142962161847650a70873f905c252e6804` | mechanism replicates; consolidation AUPRC below B0; final stop |
 | C6 data-authority inventory | `CONNECTED_CONTROL_C6_DATA_AUTHORITY_INVENTORY_20260718.md` | none | `2453216d654290f6bb32cfc3b32edacc15c78040aa55bf0376295a654768651f` | read-only metadata audit; no eligible local patient-identified two-finding expert-region candidate; no run authorized |
+| C6A official acquisition plan | `C6A_OFFICIAL_DATA_ACQUISITION_PLAN_20260718.md` | none | `4fd9234f2ba68a6535a5ef410790c2ec6204e1a48f8439b6b845a0cdb414bff3` | CheXlocalize test-only preferred; MS-CXR official test conditional; waiting on user-side access; no download/run authorized |
 
 The user accepted this candidate by replying `继续` on 2026-07-18. C001-C005
 are complete-pass. C006/C5 opened the image-disjoint VinDr-train
@@ -57,3 +58,10 @@ MIMIC-CXR and CheXpert supply patient keys and both finding labels but no local
 expert-region annotations. VinDr remains excluded. C007 therefore stays
 `BLOCKED_DATA_NO_ELIGIBLE_LOCAL_CANDIDATE`, and this bookkeeping does not
 reopen the C5 final stop.
+
+C6A then freezes a lawful acquisition route without changing C007. It ranks
+CheXlocalize test-only as the preferred practical intake, permanently excludes
+CheXlocalize validation because of prior project access, and keeps MS-CXR
+official test conditional on PhysioNet authorization plus zero overlap with
+the local prior-use MIMIC registry. User-side access and a later reviewed
+research authority remain mandatory; no download or experiment is authorized.
