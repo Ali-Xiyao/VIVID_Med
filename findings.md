@@ -1208,3 +1208,18 @@
 - The failed opening created only `EVALUATION_OPENED.json`. It loaded the frozen
   2B model, then stopped on the first image before `score_original`; no progress,
   row, score, or final metrics artifact exists and GPU1 returned to idle.
+
+## 2026-07-18 C6I recovery authorization
+
+- The user explicitly confirmed approved PhysioNet credential/CITI/DUA status
+  and authorized a new C6I recovery identity. This permits a score-free uniform
+  actual-input-space geometry rebuild and, only after a 29/29 gate, one
+  replacement local Qwen3.5-2B opening.
+- The only justified coordinate repair is outcome-independent: map every
+  released x coordinate by `actual_width/native_columns` and every y coordinate
+  by `actual_height/native_rows`, rasterize on the exact hash-bound JPG, and
+  then apply the existing deterministic Qwen 448x448 input transform. This
+  preserves the released box semantics under the actual resized image bytes.
+- C6F, C6G, and failed C6H are immutable historical evidence. C6I must use new
+  masks, rows, lock, config, output namespace, opening marker, and terminal
+  identity; it may not overwrite or relaunch C6H.

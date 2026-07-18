@@ -58,6 +58,8 @@ target-shape matching and does not call the coordinate bins true anatomy.
 | C6H frozen evaluation config | `C6H_MS_CXR_QWEN35_2B_EVAL_CONFIG_20260718.yaml` | none | `25e298a5b975ee0cba2c8549401511038b9b11d4a50db17008c3e914ac8a9449` | C6G v2 masks; frozen B2 step-450 exact-K=16, statements, operators, bootstrap, thresholds |
 | C6H pre-open execution log | `C6H_MS_CXR_PREOPEN_EXECUTION_LOG_20260718.md` | none | `59a05c4690d721b51d3629bf8c286828825e8b235adbe5c553fb664674ab01a9` | real score-free 29-row rehearsal; 141/141 tests; model snapshot rehash matches; no model loaded yet |
 | C6H pre-score pixel-alignment failure | `C6H_MS_CXR_PRE_SCORE_PIXEL_ALIGNMENT_FAILURE_20260718.md` | none | `d017e423b8bf34b16ab1d9f606aa8b5c2a0a7894e37d974e3feb97254690b7fc` | model/checkpoint opened on GPU1 but zero forwards/scores; 29/29 JPGs are 224x224 and incompatible with native-letterbox C6G masks; no result |
+| C6I actual-input recovery authority | `C6I_MS_CXR_ACTUAL_INPUT_RECOVERY_AUTHORITY_20260718.md` | none | `5c9d221e93af7f478d4d89800b0967a6cc5b341793efeb5cda7f926743980672` | user-confirmed access and separate authority for score-free actual-input geometry plus one replacement local Qwen3.5-2B opening after a 29/29 pass |
+| C6I frozen replacement config | `C6I_MS_CXR_QWEN35_2B_REPLACEMENT_CONFIG_20260718.yaml` | none | `f04f16d5cf6e00c95f596ae38d3db541198ad41bf5df132d6a1753e0cd17a29c` | uniform native-to-224 x/y mapping; frozen B2 step-450 exact-K=16, statements, operators, bootstrap, and no 4B/9B |
 
 The user accepted this candidate by replying `继续` on 2026-07-18. C001-C005
 are complete-pass. C006/C5 opened the image-disjoint VinDr-train
@@ -136,3 +138,10 @@ vision forward or score because every bound JPG is 224x224 while the frozen
 C6G masks use the declared native-resolution letterbox coordinate system. It
 has no result. Any actual-input-space geometry rebuild and replacement opening
 must use a new authority and identity rather than editing or rerunning C6H.
+
+C6I is that separately authorized recovery identity. It changes only the
+coordinate surface on which released boxes are rasterized: all rows use the
+same native-to-bound-JPG x/y scaling before the unchanged 448x448 input
+transform and continuous connected-control search. It must pass its complete
+score-free 29-row gate before one replacement local Qwen3.5-2B opening; C6F,
+C6G, and failed C6H remain immutable.

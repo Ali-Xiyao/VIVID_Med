@@ -935,6 +935,16 @@ access, VinDr-test reuse, training, or Qwen3.5-4B/9B.
 | C6H.5 one-time local evaluation | complete_fail_pre_score_no_result | Pre-open commit/lock and GPU1 opening passed, but the evaluator stopped before the first forward/score because all 29 bound JPGs are 224x224 while C6G masks use declared native-resolution letterbox geometry. No progress/rows/metrics exist; GPU1 is idle. |
 | C6I input-space geometry recovery | not_authorized | Requires a new score-free authority to regenerate all 29 masks in actual 224x224 input space, followed by a separately authorized replacement one-time model opening. Must not rewrite C6F/C6G/C6H. |
 
+## C6I actual-input-space geometry recovery and replacement opening
+
+| Step | Status | Evidence / boundary |
+| --- | --- | --- |
+| C6I.1 independent recovery authority | complete_authorized | On 2026-07-18 the user explicitly confirmed approved PhysioNet/CITI/DUA access and authorized the C6I actual-input-space geometry rebuild plus one replacement local Qwen3.5-2B opening after a 29/29 score-free pass. C6F/C6G/C6H remain immutable. |
+| C6I.2 uniform pixel-coordinate transform | complete_implementation | For every row, independently scale released MS-CXR x coordinates by `actual_width/native_columns` and y coordinates by `actual_height/native_rows`, rasterize on the hash-bound actual JPG, then map that actual-image mask into the frozen 448x448 Qwen input canvas. No row-specific repair or score access is allowed. |
+| C6I.3 score-free 29-row geometry gate | pending_clean_commit | Require 29/29 exact-area, target-disjoint, within-content, one-connected control masks; actual image sizes and bytes, transformed-box audit, rows/certificates/masks, immutable C6F/C6G/C6H hashes, and deterministic replay must pass before model access. |
+| C6I.4 implementation/tests/pre-open identity | complete_pending_commit | New C6I authority/config/module/entrypoints/tests only; frozen predecessor files remain byte-unchanged. New contracts pass 4/4, the full active suite 145/145, CPU smoke, py_compile, and diff check pass. Commit/push before creating the ignored replacement lock. |
+| C6I.5 replacement one-time local evaluation | pending_gate | If and only if C6I.3/C6I.4 pass, recheck local GPU availability and run one Qwen3.5-2B positive-only mechanism evaluation. No training, tuning, rerun, classification claim, server action, or 4B/9B scale-up. |
+
 ### C6H implementation error log
 
 | Error | Attempt | Resolution |
@@ -943,3 +953,5 @@ access, VinDr-test reuse, training, or Qwen3.5-4B/9B.
 | A combined helper-import plus Qwen3.5-2B snapshot rehash exceeded the 30-second command window. | C6H identity preflight | No model was loaded and no artifact changed. Keep the frozen snapshot identity and rerun hashing alone with a larger timeout during C6H preflight. |
 | The first real score-free C6H lock dry-run rejected the C6G canonical identity because it assumed a single-stage canonical hash. | C6H real 29-row lock rehearsal | C6G intentionally records a geometry-summary canonical identity before extending the final lock and hashing that extended payload. Reproduce and verify this two-stage frozen construction exactly; do not rewrite C6G. |
 | The authorized opening loaded Qwen3.5-2B but stopped before the first forward/score because the bound JPG is 224x224 while the MS-CXR annotation metadata and C6G masks use 3056x2544 native geometry. | C6H one-time local evaluation | Zero progress rows and no metrics were written; GPU1 was released. Do not bypass the check or apply C6G masks to misaligned pixels. Freeze the pre-score failure, search locally for coordinate-matched full-resolution JPGs, and require a separately bound recovery identity before any new model load. |
+| `python -m unittest tests.test_bives_c6i_input_geometry -v` could not import the new test because this repository's `tests/` directory is not a Python package. | C6I first contract-test invocation | No code/model/data action occurred. Use the repository's documented discovery form `python -m unittest discover -s tests -p "test_bives_c6i_input_geometry.py" -v`. |
+| The first discovered C6I suite compared the full-boundary transformed coordinate with exact float equality and observed `223.99999999999997` rather than `224.0`. | C6I coordinate-transform unit test | The rasterized geometry is unchanged and the difference is IEEE-754 representation only. Replace exact object equality with per-coordinate `assertAlmostEqual`; do not round or alter the protocol coordinates. |

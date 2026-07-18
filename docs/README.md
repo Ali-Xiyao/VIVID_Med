@@ -237,3 +237,15 @@ MS-CXR-declared native-resolution letterbox space. No progress, evaluation row,
 or metric exists, and GPU1 was released. C6H is frozen as
 `FAIL_PRE_SCORE_PIXEL_ALIGNMENT_NO_RESULT`; applying the masks despite the
 mismatch or relaunching under the same identity is forbidden.
+
+## C6I actual-input recovery status
+
+The user separately authorized C6I after confirming the applicable
+PhysioNet/CITI/DUA access. C6I does not edit or rerun C6H. It maps every
+released MS-CXR box from declared native coordinates into the exact hash-bound
+224x224 JPG coordinates using independent x/y scale factors, then applies the
+existing deterministic 448x448 Qwen input transform. All 29 rows must pass a
+new score-free exact-area, target-disjoint, within-content, one-connected
+control gate before the new Qwen3.5-2B replacement opening can exist. The
+replacement remains positive-only and nonformal; training, tuning,
+classification claims, server execution, and Qwen3.5-4B/9B are forbidden.
