@@ -54,6 +54,9 @@ target-shape matching and does not call the coordinate bins true anatomy.
 | C6G geometry-only authority | `C6G_MS_CXR_GEOMETRY_ONLY_AUTHORITY_20260718.md` | none | `17305e6887491b179a672d6f67ea1186f06acb8236feef5e0a4f3f6cf62355e0` | new score-free control family; model/GPU/image-decode/score authorization false |
 | C6G frozen geometry thresholds | `C6G_MS_CXR_GEOMETRY_THRESHOLDS_20260718.json` | none | `69a3bedeb43b65065eab41d28fdefe4870214babebbfa7872f5c5e8146ecb5ab` | maxima from 752 accepted frozen C4/C5 geometry rows only |
 | C6G geometry execution log | `C6G_MS_CXR_GEOMETRY_EXECUTION_LOG_20260718.md` | none | `da2b9026575aacda75fed137ce82fdde48a67beeda0d2458623ffb60ad80b6e1` | 29/29 geometry pass; three byte-identical geometry replays; final lock bound to `db3c033`; 137/137 tests; no model/GPU/score |
+| C6H one-time evaluation authority | `C6H_MS_CXR_ONE_TIME_EVALUATION_AUTHORITY_20260718.md` | none | `1eb5088ff4f71802e112c2579d086ed57eb739406c10a18c5c8c3f21e06c5302` | separate user authorization for one local Qwen3.5-2B positive-only mechanism evaluation; terminal after pass/fail; no 4B/9B |
+| C6H frozen evaluation config | `C6H_MS_CXR_QWEN35_2B_EVAL_CONFIG_20260718.yaml` | none | `25e298a5b975ee0cba2c8549401511038b9b11d4a50db17008c3e914ac8a9449` | C6G v2 masks; frozen B2 step-450 exact-K=16, statements, operators, bootstrap, thresholds |
+| C6H pre-open execution log | `C6H_MS_CXR_PREOPEN_EXECUTION_LOG_20260718.md` | none | `59a05c4690d721b51d3629bf8c286828825e8b235adbe5c553fb664674ab01a9` | real score-free 29-row rehearsal; 141/141 tests; model snapshot rehash matches; no model loaded yet |
 
 The user accepted this candidate by replying `继续` on 2026-07-18. C001-C005
 are complete-pass. C006/C5 opened the image-disjoint VinDr-train
@@ -118,5 +121,11 @@ C6F. It replaces the categorical same-zone gate with frozen continuous
 centroid/perimeter limits derived only from accepted C4/C5 geometry and expands
 the deterministic connected candidate family uniformly for all 29 rows. The
 final score-free build passes 29/29 and freezes masks plus a geometry lock, but
-keeps model, GPU, image-decode, and score authorization false. C6H remains a
-separate, not-yet-authorized decision.
+keeps model, GPU, image-decode, and score authorization false. C6H therefore
+requires the separate decision recorded below rather than inheriting C6G.
+
+C6H is the subsequently and separately authorized one-time local Qwen3.5-2B
+mechanism evaluation. It may consume the frozen C6G v2 masks only after a clean
+pre-open lock binds the committed source and every model/checkpoint/data
+identity. It permits no training, tuning, classification claim, rerun, control
+change, server action, or 4B/9B scale-up and terminates after pass or fail.

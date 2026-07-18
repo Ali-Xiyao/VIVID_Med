@@ -923,3 +923,21 @@ access, VinDr-test reuse, training, or Qwen3.5-4B/9B.
 | --- | --- | --- |
 | The first formal command used a 10-second shell timeout, so the wrapper lost control while the worker pool continued in the background. | First C6G build launch | Did not treat that uncontrolled build as final. It later completed with byte-identical rows, certificates, and masks, providing a third deterministic replay; the controlled diagnostic and final runs used fresh ignored output directories with unchanged rules. |
 | The first complete 29/29 lock bound authority, plan, thresholds, source manifest, candidate certificates, and frozen C6F hashes, but omitted the C6G module/entrypoint hashes and pre-open Git commit. | Post-build provenance audit | Treat the first complete build as a score-free diagnostic. Add identity fields only, commit the unchanged geometry implementation, then rebuild the final C6G lock. |
+
+## C6H one-time local Qwen3.5-2B evaluation
+
+| Step | Status | Evidence / boundary |
+| --- | --- | --- |
+| C6H.1 independent authority | complete_authorized | On 2026-07-18 the user explicitly approved C6H and instructed execution after preparation. Local-only Qwen3.5-2B; no training, tuning, 4B/9B, server, or C6F/C6G rewrite. |
+| C6H.2 immutable input/config lock | implementation_complete_pending_clean_commit | Authority/config and fail-closed lock builder bind the final C6G lock, 29 masks/rows, C6E/C6F identities, Qwen3.5-2B snapshot, B2 step-450 checkpoint, canonical statements, operators, thresholds, and clean source commit. Real dry rehearsal passes. |
+| C6H.3 evaluator/preflight/tests | complete_preopen | New C6H entrypoint/output namespace imports frozen C6F scoring/summary helpers read-only and consumes C6G v2 masks. New tests 4/4, full suite 141/141, CPU smoke, py_compile, and diff check pass. |
+| C6H.4 pre-open commit | ready_for_commit | Commit/push the exact authority/config/implementation/tests and planning record. Generate the ignored lock only from that clean committed identity. |
+| C6H.5 one-time local evaluation | pending | Bind GPU1 if still free, execute once, monitor to terminal pass/fail, and stop this rescue route regardless of outcome. |
+
+### C6H implementation error log
+
+| Error | Attempt | Resolution |
+| --- | --- | --- |
+| Initial source inspection guessed nonexistent `scripts/evaluate_bives_ms_cxr_postc5.py`. | C6H source orientation | No model or file mutation occurred. Repository inventory identified the actual frozen evaluator as `scripts/evaluate_bives_c6_ms_cxr.py`; continue from that exact path. |
+| A combined helper-import plus Qwen3.5-2B snapshot rehash exceeded the 30-second command window. | C6H identity preflight | No model was loaded and no artifact changed. Keep the frozen snapshot identity and rerun hashing alone with a larger timeout during C6H preflight. |
+| The first real score-free C6H lock dry-run rejected the C6G canonical identity because it assumed a single-stage canonical hash. | C6H real 29-row lock rehearsal | C6G intentionally records a geometry-summary canonical identity before extending the final lock and hashing that extended payload. Reproduce and verify this two-stage frozen construction exactly; do not rewrite C6G. |

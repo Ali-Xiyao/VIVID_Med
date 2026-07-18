@@ -1185,3 +1185,17 @@
   C6F remains byte-identical.
 - C6G establishes geometry feasibility only. It does not authorize a Qwen
   load, JPG decode, GPU, score, C6H, or 4B/9B scale-up.
+
+## 2026-07-18 C6H one-time evaluation design findings
+
+- The user supplied the separate post-C6G authorization required by the C6G
+  plan. The only newly opened variable is model score access under C6H; C6F,
+  C6G, model snapshot, checkpoint, statements, operators, thresholds, and the
+  29-row denominator remain frozen.
+- The C6F evaluator and metric module are themselves hash-bound C6F evidence
+  and must not be edited. C6H therefore needs a new entrypoint and lock that
+  import the frozen scoring/summary helpers read-only while consuming C6G v2
+  rows and masks from the final geometry lock.
+- GPU1 is the preferred local device because the fresh preflight reported 13
+  MiB used versus 599 MiB on GPU0. Availability must be checked again at the
+  opening boundary.

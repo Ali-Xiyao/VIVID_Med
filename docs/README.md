@@ -217,5 +217,16 @@ deterministic connected-control v2 search. The final local CPU build passes
 29/29 MS-CXR rows with zero exclusions or invariant failures. Its ignored lock
 canonical SHA-256 is
 `6271ba51e8442baad92126473513b0b901619403a4e22c353e455395ec801752`.
-This is a geometry lock only: no JPG was decoded, no Qwen/checkpoint or GPU was
-opened, no score was produced, and C6H remains unauthorized.
+This C6G artifact is a geometry lock only: no JPG was decoded, no
+Qwen/checkpoint or GPU was opened, no score was produced, and it does not by
+itself authorize C6H. The separately authorized next phase is recorded below.
+
+## C6H one-time local evaluation status
+
+The user has separately authorized one C6H Qwen3.5-2B positive-only mechanism
+evaluation after the C6G 29/29 pass. C6H has its own authority, config, lock,
+entrypoint, output directory, and terminal stop rule. It freezes the same B2
+step-450 exact-K=16 checkpoint, statements, operators, bootstrap, and survival
+thresholds while replacing only the failed C6F v1 controls with the frozen C6G
+v2 controls. It is not classification or clinical validation, and it does not
+authorize training, tuning, reruns, or Qwen3.5-4B/9B.
