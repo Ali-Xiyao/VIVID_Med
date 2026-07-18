@@ -1154,3 +1154,22 @@
   opening marker, decoding a JPG, loading Qwen/checkpoint, using CUDA, or
   emitting a score. Changing the control definition or dropping the row would
   require a new reviewed authority and cannot be treated as a C6F repair.
+
+## 2026-07-18 C6G geometry-only protocol findings
+
+- The C6F failure wording was too broad: the frozen v1 search proves only that
+  its deterministic candidate family found no same-zone candidate, not that no
+  mathematically legal connected mask exists.
+- The 752 accepted frozen C4/C5 controls give outcome-independent maxima
+  `d_loc=0.30062962749991123` and
+  `abs(log(P_control/P_target))=0.9737778227918367`; these values are frozen as
+  C6G thresholds before any MS-CXR model score exists.
+- Replaying the old v1 candidate family on the C6F failure row produced 266
+  exact-area connected candidates and zero same-zone candidates. Its nearest
+  candidate has `d_loc=0.3162849153282864`, slightly above the frozen location
+  maximum, so merely deleting the categorical-zone equality is insufficient.
+- A uniform target-boundary connected-growth candidate reaches
+  `d_loc=0.11571155133241748` and perimeter mismatch
+  `0.6512731080888864` on that row while preserving exact area, disjointness,
+  content containment, and one 4-connected component. This supports a new
+  geometry-only v2 search, not a C6F rerun or model opening.

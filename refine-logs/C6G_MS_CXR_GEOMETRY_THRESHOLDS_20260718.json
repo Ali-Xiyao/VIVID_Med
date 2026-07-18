@@ -1,0 +1,20 @@
+{
+  "accepted_rows": 752,
+  "control_version": "bives_continuous_location_connected_control_v2",
+  "format_version": "bives_c6g_geometry_thresholds_v1",
+  "log_perimeter_ratio_weight": 0.1,
+  "max_location_distance": 0.30062962749991123,
+  "max_log_perimeter_ratio": 0.9737778227918367,
+  "source_rows": [
+    {
+      "accepted_rows": 375,
+      "name": "frozen_c4_protocol_design_geometry",
+      "rows_sha256": "b94b77bc528033ea44681fce33f868b87c2806d19450a66ff023628fc2e039d9"
+    },
+    {
+      "accepted_rows": 377,
+      "name": "frozen_c5_confirmation_geometry",
+      "rows_sha256": "58b10019306e63b9ef1d08b94cd01e9540f3591155b3981762bc9657ccf0be41"
+    }
+  ]
+}

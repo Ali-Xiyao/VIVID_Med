@@ -904,3 +904,15 @@ access, VinDr-test reuse, training, or Qwen3.5-4B/9B.
 | The first real C6F score-free geometry build stopped on the first row whose expert-box mask had no exact-area connected control in the same coordinate zone. | C6F pre-open geometry | No model, image decode, GPU, or score was opened. Preserve the frozen control rule; changed only the audit reporting so all 29 rows are checked in parallel and a complete pass/fail geometry lock is written before the process exits nonzero. |
 | The first full 133-test regression rejected the new config's descriptive mode name `local_one_time_evaluation`, which was outside the repository's frozen mode enum. | C6F full regression | No runtime behavior was exercised by the failed assertion. Changed only the config metadata to the existing legal `local_diagnostic` value and rebuilt the dataset lock so its config binding remains exact. |
 | The second full regression correctly treated every `configs/bives_cxr/*.yaml` file as a training config and rejected the evaluation-only protocol because it intentionally has no training loss/sampler fields. | C6F config placement | Do not fabricate irrelevant training fields. Moved the frozen evaluation YAML to `refine-logs/C6F_MS_CXR_QWEN35_2B_EVAL_CONFIG_20260718.yaml`, updated both entrypoints, and rebuilt the exact data/config lock. |
+
+## C6G MS-CXR score-free geometry protocol
+
+| Step | Status | Evidence / boundary |
+| --- | --- | --- |
+| C6G.1 freeze C6F | complete | C6F remains `FAIL_PREOPEN_GEOMETRY_NO_MODEL_ACCESS`; its authority, config, log, manifest, geometry rows, geometry lock, and dataset lock hashes are frozen and may not be rewritten. |
+| C6G.2 geometry-only authority | complete_authorized | `BiVES_C6G_MS_CXR_geometry_protocol_plan.md` and `refine-logs/C6G_MS_CXR_GEOMETRY_ONLY_AUTHORITY_20260718.md` authorize CPU geometry only. Model, GPU, JPG decode, score access, and opening markers remain forbidden. |
+| C6G.3 frozen thresholds | complete | Derived only from 375 accepted C4 plus 377 accepted C5 controls: `max_location_distance=0.30062962749991123`, `max_log_perimeter_ratio=0.9737778227918367`. |
+| C6G.4 v1 failure certificate | in_progress | Record candidate counts and nearest rejected control for all 29 rows, including the C6F failure row, without model/image-score access. |
+| C6G.5 v2 generator/tests | pending | Implement one uniform exact-area, disjoint, within-content, one-component deterministic candidate family and boundary/fail-closed/immutability tests. |
+| C6G.6 29-row geometry build | blocked_on_C6G_5 | Run score-free geometry only. A result other than 29/29 is a final MS-CXR stop; 29/29 creates only a geometry lock. |
+| C6H model evaluation | not_authorized | C6G cannot open Qwen or reuse the C6F model authority. A separate explicit C6H authority is required after a C6G pass. |
