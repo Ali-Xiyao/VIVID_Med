@@ -46,6 +46,7 @@ target-shape matching and does not call the coordinate bins true anatomy.
 | C6A official acquisition plan | `C6A_OFFICIAL_DATA_ACQUISITION_PLAN_20260718.md` | none | `4fd9234f2ba68a6535a5ef410790c2ec6204e1a48f8439b6b845a0cdb414bff3` | CheXlocalize test-only preferred; MS-CXR official test conditional; waiting on user-side access; no download/run authorized |
 | C6B metadata intake tooling log | `C6B_METADATA_INTAKE_TOOLING_LOG_20260718.md` | none | `07c2fdaffd7874d4043ea204f633650b7b4feae61a0a41d098d8dacad9ffeffc` | fail-closed test-only intake ready; hashed validation registry ready; 116/116 tests; real package absent |
 | C6C MS-CXR intake tooling log | `C6C_MS_CXR_INTAKE_TOOLING_LOG_20260718.md` | none | `12cdc09dd9517ffbb4207b42f8e3eda2fcb23e9792d40f74a8bd469761182d6a` | fail-closed official-test COCO intake ready; strict hashed MIMIC registry reproduced; 126/126 tests; real package absent |
+| C6D MS-CXR real-package preflight log | `C6D_MS_CXR_REAL_PACKAGE_PREFLIGHT_LOG_20260718.md` | none | `f252ab3d9f46d6d88d5828fb4995c9b3b250a5472a2111906ce4fad684f2fb5d` | real package checksums pass; 15/14 pairs and 25/20 boxes; 29/29 images bound; zero prior overlap; license/model authority remain false |
 
 The user accepted this candidate by replying `继续` on 2026-07-18. C001-C005
 are complete-pass. C006/C5 opened the image-disjoint VinDr-train
@@ -81,3 +82,10 @@ with the frozen prior-use registry, and hashes image bytes without decoding.
 The ignored registry reproduces 1,414 patients and 5,008 studies with the
 frozen C6A set hashes and no raw identifiers. The restricted package is absent,
 so no real intake result, model authority, or C5 reopening exists.
+
+C6D records the subsequently supplied real v1.1.0 package without rewriting
+the historical C6C tooling log. Publisher hashes pass; the repaired audit
+distinguishes 29 unique image-text pairs from 45 component boxes, binds all 29
+images, and finds zero prior patient/study overlap. The structure preflight is
+not a license attestation or research authority and cannot authorize a score,
+annotation visualization, model evaluation, or C5 reopening.

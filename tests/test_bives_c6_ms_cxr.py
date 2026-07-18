@@ -10,6 +10,7 @@ import unittest
 from bives_cxr.c6_ms_cxr import (
     audit_ms_cxr_test_release,
     build_mimic_prior_access_registry,
+    preflight_ms_cxr_test_release,
 )
 
 
@@ -55,8 +56,20 @@ class C6MsCxrTests(unittest.TestCase):
                 {"id": 2, "name": "Pleural Effusion"},
             ],
             "images": [
-                {"id": 11, "file_name": f"{DICOM_ONE}.jpg", "width": 100, "height": 80},
-                {"id": 12, "file_name": f"{DICOM_TWO}.jpg", "width": 120, "height": 90},
+                {
+                    "id": 11,
+                    "file_name": f"{DICOM_ONE}.jpg",
+                    "path": f"files/p10/p10000001/s50000001/{DICOM_ONE}.jpg",
+                    "width": 100,
+                    "height": 80,
+                },
+                {
+                    "id": 12,
+                    "file_name": f"{DICOM_TWO}.jpg",
+                    "path": f"files/p10/p10000002/s50000002/{DICOM_TWO}.jpg",
+                    "width": 120,
+                    "height": 90,
+                },
             ],
             "annotations": [
                 {
@@ -64,7 +77,15 @@ class C6MsCxrTests(unittest.TestCase):
                     "image_id": 11,
                     "category_id": 1,
                     "bbox": [10, 10, 20, 20],
-                    "sentence": "Consolidation.",
+                    "label_text": "Consolidation.",
+                    "split": "test",
+                },
+                {
+                    "id": 23,
+                    "image_id": 11,
+                    "category_id": 1,
+                    "bbox": [40, 10, 15, 15],
+                    "label_text": "Consolidation.",
                     "split": "test",
                 },
                 {
@@ -72,7 +93,7 @@ class C6MsCxrTests(unittest.TestCase):
                     "image_id": 12,
                     "category_id": 2,
                     "bbox": [110, 10, 20, 20] if invalid_box else [30, 20, 25, 25],
-                    "sentence": "Pleural effusion.",
+                    "label_text": "Pleural effusion.",
                     "split": second_split,
                 },
             ],
@@ -164,6 +185,7 @@ class C6MsCxrTests(unittest.TestCase):
             payload = self._audit(self._fixture(Path(directory)))
             self.assertEqual(payload["status"], "metadata_intake_ready_no_model_authority")
             self.assertEqual(payload["counts"]["target_test_pairs"], 2)
+            self.assertEqual(payload["counts"]["target_test_boxes"], 3)
             self.assertEqual(payload["targets"]["Consolidation"]["patients"], 1)
             self.assertEqual(payload["targets"]["Pleural Effusion"]["patients"], 1)
             self.assertFalse(payload["model_evaluation_authorized"])
@@ -203,6 +225,56 @@ class C6MsCxrTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "credentialed_access_confirmed"):
                 self._audit(self._fixture(Path(directory), license_ok=False))
 
+    def test_preflight_does_not_claim_license_or_model_authority(self) -> None:
+        with TemporaryDirectory() as directory:
+            fixture = self._fixture(Path(directory))
+            package = fixture[0] / "ms-cxr-release.zip"
+            package.write_bytes(b"publisher package")
+            payload = preflight_ms_cxr_test_release(
+                fixture[0],
+                mimic_metadata=fixture[1],
+                mimic_images_root=fixture[2],
+                package_archive=package,
+                prior_registry=fixture[4],
+                expected_test_pairs={"Consolidation": 1, "Pleural Effusion": 1},
+                expected_test_subjects={
+                    "Consolidation": 1,
+                    "Pleural Effusion": 1,
+                },
+                enforce_frozen_prior_identity=False,
+            )
+            self.assertEqual(
+                payload["status"],
+                "structure_preflight_passed_license_attestation_pending",
+            )
+            self.assertFalse(payload["license_gate_passed"])
+            self.assertFalse(payload["model_evaluation_authorized"])
+            self.assertIsNone(payload["release"]["license_record_sha256"])
+
+    def test_strict_audit_rejects_package_hash_mismatch(self) -> None:
+        with TemporaryDirectory() as directory:
+            fixture = self._fixture(Path(directory))
+            package = fixture[0] / "ms-cxr-release.zip"
+            package.write_bytes(b"publisher package")
+            with self.assertRaisesRegex(ValueError, "package SHA-256 disagrees"):
+                audit_ms_cxr_test_release(
+                    fixture[0],
+                    mimic_metadata=fixture[1],
+                    mimic_images_root=fixture[2],
+                    license_record=fixture[3],
+                    package_archive=package,
+                    prior_registry=fixture[4],
+                    expected_test_pairs={
+                        "Consolidation": 1,
+                        "Pleural Effusion": 1,
+                    },
+                    expected_test_subjects={
+                        "Consolidation": 1,
+                        "Pleural Effusion": 1,
+                    },
+                    enforce_frozen_prior_identity=False,
+                )
+
     def test_rejects_unknown_category_reference(self) -> None:
         with TemporaryDirectory() as directory:
             fixture = self._fixture(Path(directory))
@@ -211,6 +283,18 @@ class C6MsCxrTests(unittest.TestCase):
             payload["annotations"][0]["category_id"] = 999
             annotations.write_text(json.dumps(payload), encoding="utf-8")
             with self.assertRaisesRegex(ValueError, "unknown category"):
+                self._audit(fixture)
+
+    def test_rejects_release_path_that_disagrees_with_metadata(self) -> None:
+        with TemporaryDirectory() as directory:
+            fixture = self._fixture(Path(directory))
+            annotations = fixture[0] / "MS_CXR_Local_Alignment_v1.1.0.json"
+            payload = json.loads(annotations.read_text(encoding="utf-8"))
+            payload["images"][0]["path"] = (
+                f"files/p10/p10000099/s50000001/{DICOM_ONE}.jpg"
+            )
+            annotations.write_text(json.dumps(payload), encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "path does not match"):
                 self._audit(fixture)
 
     def test_default_audit_rejects_nonfrozen_registry(self) -> None:

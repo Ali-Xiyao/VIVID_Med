@@ -1078,3 +1078,37 @@
   tests, and the CPU smoke pass. The MS-CXR package is absent, so the truthful
   verdict remains `TOOLING_COMPLETE_WAITING_USER_AUTHORIZED_PACKAGE`, not an
   intake pass and not an experiment authorization.
+
+## 2026-07-18 C6C acquired-package schema correction
+
+- The user-supplied v1.1.0 ZIP is now under the public-data boundary at
+  `H:\Xiyao_Wang\000_Public Dataset\MS-CXR`; ZIP SHA-256 is
+  `62c829d307eb99a07fba82a3ee8346fd32dfcc5a226cfc00129049f684781bd9`.
+  LICENSE, CSV, JSON, and conversion-script hashes all match the publisher's
+  `SHA256SUMS.txt`; no data entered the Git repository.
+- The real release has 1,120 images and 1,448 COCO box annotations. For the
+  official test targets, raw box-annotation counts are 25 Consolidation and 20
+  Pleural Effusion, because one image-sentence pair may have multiple boxes.
+  The frozen 15/14 integrity gate therefore applies to unique
+  `(dicom/image, category, label_text)` pairs, while every component box must
+  still pass LTWH bounds validation.
+
+## 2026-07-18 C6D real-package structure preflight
+
+- The repaired intake groups box rows into the official image-text pairs and
+  retains a separate raw-box count. Synthetic contracts pass 13/13, including
+  multi-box pair counting, release/MIMIC path mismatch rejection, prior
+  overlap rejection, and a preflight that cannot claim license/model authority.
+- The real v1.1.0 preflight passes all data-side structural checks: 15/14 pairs,
+  25/20 boxes, 29 patients/studies/images, 29 metadata bindings, 29 local JPGs,
+  zero release-path mismatch, and zero overlap with the frozen prior MIMIC
+  patient/study registry. No raw identifier is serialized.
+- The ignored artifact has canonical SHA-256
+  `89d2b1c17541dfc6da9cf2567e428a24f11128125cec70a08504442dfbe98e50`
+  and explicitly records `license_gate_passed=false` and
+  `model_evaluation_authorized=false`. Possession of the package is not treated
+  as proof of credentialed access, CITI training, or a signed DUA.
+- Therefore C6D closes the package/schema/image/independence uncertainty but
+  does not create a formal intake lock and does not reopen C5. The remaining
+  strict-intake input is a truthful user-authored local access attestation;
+  model evaluation would additionally require a new reviewed research authority.

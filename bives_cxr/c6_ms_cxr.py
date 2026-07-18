@@ -239,12 +239,13 @@ def _validate_ltwh_box(annotation: dict[str, Any], image: dict[str, Any]) -> Non
         raise ValueError("MS-CXR annotation bbox is out of image bounds")
 
 
-def audit_ms_cxr_test_release(
+def _inspect_ms_cxr_test_release(
     dataset_root: Path,
     *,
     mimic_metadata: Path,
     mimic_images_root: Path,
-    license_record: Path,
+    license_record: Path | None,
+    package_archive: Path | None,
     prior_registry: Path,
     expected_test_pairs: dict[str, int] | None = None,
     expected_test_subjects: dict[str, int] | None = None,
@@ -254,14 +255,38 @@ def audit_ms_cxr_test_release(
     expected_subjects = expected_test_subjects or EXPECTED_TEST_SUBJECTS
     root = dataset_root.resolve()
     annotations_path = root / "MS_CXR_Local_Alignment_v1.1.0.json"
-    for path in (annotations_path, mimic_metadata, license_record, prior_registry):
+    required_files = [annotations_path, mimic_metadata, prior_registry]
+    if license_record is not None:
+        required_files.append(license_record)
+    if package_archive is not None:
+        required_files.append(package_archive)
+    if license_record is None and package_archive is None:
+        raise ValueError(
+            "MS-CXR inspection requires either a license record or package archive"
+        )
+    for path in required_files:
         if not path.is_file():
             raise FileNotFoundError(path)
     image_root = mimic_images_root.resolve()
     if not image_root.is_dir():
         raise FileNotFoundError(image_root)
 
-    license_payload = validate_ms_cxr_license_record(license_record)
+    if license_record is not None:
+        license_payload = validate_ms_cxr_license_record(license_record)
+        package_sha256 = str(license_payload["package_sha256"]).lower()
+        if package_archive is not None:
+            actual_package_sha256 = file_sha256(package_archive)
+            if actual_package_sha256 != package_sha256:
+                raise ValueError(
+                    "MS-CXR package SHA-256 disagrees with license record"
+                )
+        license_record_sha256: str | None = file_sha256(license_record)
+        license_gate_passed = True
+    else:
+        assert package_archive is not None
+        package_sha256 = file_sha256(package_archive)
+        license_record_sha256 = None
+        license_gate_passed = False
     prior = validate_mimic_prior_access_registry(prior_registry)
     if enforce_frozen_prior_identity:
         _assert_frozen_prior_registry(prior)
@@ -296,7 +321,7 @@ def audit_ms_cxr_test_release(
         images[image_id] = row
         dicom_by_image[image_id] = dicom_id
 
-    target_annotations: list[tuple[str, int, dict[str, Any]]] = []
+    target_annotations: list[tuple[str, int, str, dict[str, Any]]] = []
     annotation_ids: set[int] = set()
     for row in release.get("annotations", []):
         annotation_id = int(row["id"])
@@ -314,14 +339,21 @@ def audit_ms_cxr_test_release(
             raise ValueError(f"MS-CXR annotation references unknown category: {category_id}")
         finding = categories[category_id]
         if finding in TARGET_FINDINGS and split == "test":
-            if not str(row.get("sentence", "")).strip():
-                raise ValueError("MS-CXR target test annotation is missing its sentence")
+            label_text = str(row.get("label_text", "")).strip()
+            if not label_text:
+                raise ValueError("MS-CXR target test annotation is missing label_text")
             _validate_ltwh_box(row, images[image_id])
-            target_annotations.append((finding, image_id, row))
+            target_annotations.append((finding, image_id, label_text, row))
     if not target_annotations:
         raise ValueError("MS-CXR release contains no target test annotations")
 
-    required_dicom_ids = {dicom_by_image[image_id] for _, image_id, _ in target_annotations}
+    pair_keys = {
+        (finding, image_id, label_text)
+        for finding, image_id, label_text, _ in target_annotations
+    }
+    required_dicom_ids = {
+        dicom_by_image[image_id] for _, image_id, _ in pair_keys
+    }
     metadata = _read_mimic_metadata(mimic_metadata, required_dicom_ids)
     finding_pairs: dict[str, int] = defaultdict(int)
     finding_patients: dict[str, set[str]] = defaultdict(set)
@@ -329,19 +361,27 @@ def audit_ms_cxr_test_release(
     image_hash_pairs: list[tuple[str, str]] = []
     hashed_images: set[str] = set()
     identities: list[dict[str, str]] = []
-    for finding, image_id, _ in target_annotations:
+    for finding, image_id, _ in sorted(pair_keys):
         dicom_id = dicom_by_image[image_id]
         identity = metadata[dicom_id]
+        patient = identity["patient"]
+        study = identity["study"]
+        expected_relative = Path(
+            "files", patient[:3], patient, study, f"{dicom_id}.jpg"
+        )
+        release_relative = Path(str(images[image_id].get("path", "")))
+        if release_relative != expected_relative:
+            raise ValueError(
+                "MS-CXR image path does not match MIMIC metadata binding"
+            )
         finding_pairs[finding] += 1
         finding_patients[finding].add(identity["patient"])
         finding_studies[finding].add(identity["study"])
         identities.append(identity)
         if dicom_id in hashed_images:
             continue
-        patient = identity["patient"]
-        study = identity["study"]
         image_path = (
-            image_root / "files" / patient[:3] / patient / study / f"{dicom_id}.jpg"
+            image_root / expected_relative
         ).resolve()
         if image_root not in image_path.parents:
             raise ValueError("resolved MIMIC image path escapes image root")
@@ -383,20 +423,26 @@ def audit_ms_cxr_test_release(
     }
     payload: dict[str, Any] = {
         "format_version": FORMAT_VERSION,
-        "status": "metadata_intake_ready_no_model_authority",
+        "status": (
+            "metadata_intake_ready_no_model_authority"
+            if license_gate_passed
+            else "structure_preflight_passed_license_attestation_pending"
+        ),
         "formal_result": False,
         "model_evaluation_authorized": False,
+        "license_gate_passed": license_gate_passed,
         "source_split": "publisher_test_only",
         "dataset_root": str(root),
         "release": {
-            "license_record_sha256": file_sha256(license_record),
-            "package_sha256": str(license_payload["package_sha256"]).lower(),
+            "license_record_sha256": license_record_sha256,
+            "package_sha256": package_sha256,
             "annotations_sha256": file_sha256(annotations_path),
             "mimic_metadata_sha256": file_sha256(mimic_metadata),
             "test_image_payload_sha256": canonical_json_sha256(sorted(image_hash_pairs)),
         },
         "counts": {
-            "target_test_pairs": len(target_annotations),
+            "target_test_pairs": len(pair_keys),
+            "target_test_boxes": len(target_annotations),
             "target_test_images": len(required_dicom_ids),
             "target_test_patients": len({row["patient"] for row in identities}),
             "target_test_studies": len({row["study"] for row in identities}),
@@ -413,8 +459,66 @@ def audit_ms_cxr_test_release(
         "prior_registry_sha256": file_sha256(prior_registry),
         "prior_overlap_counts": overlap,
         "raw_identifiers_emitted": False,
-        "claim_boundary": "metadata-only intake; C5 remains final stop",
+        "claim_boundary": (
+            "metadata-only intake; C5 remains final stop"
+            if license_gate_passed
+            else "structure-only preflight; credential/CITI/DUA attestation pending; "
+            "C5 remains final stop"
+        ),
         "intake_module_sha256": file_sha256(Path(__file__)),
     }
     payload["canonical_artifact_sha256"] = canonical_json_sha256(payload)
     return payload
+
+
+def audit_ms_cxr_test_release(
+    dataset_root: Path,
+    *,
+    mimic_metadata: Path,
+    mimic_images_root: Path,
+    license_record: Path,
+    package_archive: Path | None = None,
+    prior_registry: Path,
+    expected_test_pairs: dict[str, int] | None = None,
+    expected_test_subjects: dict[str, int] | None = None,
+    enforce_frozen_prior_identity: bool = True,
+) -> dict[str, Any]:
+    """Run the strict intake audit after user access attestations exist."""
+
+    return _inspect_ms_cxr_test_release(
+        dataset_root,
+        mimic_metadata=mimic_metadata,
+        mimic_images_root=mimic_images_root,
+        license_record=license_record,
+        package_archive=package_archive,
+        prior_registry=prior_registry,
+        expected_test_pairs=expected_test_pairs,
+        expected_test_subjects=expected_test_subjects,
+        enforce_frozen_prior_identity=enforce_frozen_prior_identity,
+    )
+
+
+def preflight_ms_cxr_test_release(
+    dataset_root: Path,
+    *,
+    mimic_metadata: Path,
+    mimic_images_root: Path,
+    package_archive: Path,
+    prior_registry: Path,
+    expected_test_pairs: dict[str, int] | None = None,
+    expected_test_subjects: dict[str, int] | None = None,
+    enforce_frozen_prior_identity: bool = True,
+) -> dict[str, Any]:
+    """Inspect acquired files without fabricating credential/CITI/DUA claims."""
+
+    return _inspect_ms_cxr_test_release(
+        dataset_root,
+        mimic_metadata=mimic_metadata,
+        mimic_images_root=mimic_images_root,
+        license_record=None,
+        package_archive=package_archive,
+        prior_registry=prior_registry,
+        expected_test_pairs=expected_test_pairs,
+        expected_test_subjects=expected_test_subjects,
+        enforce_frozen_prior_identity=enforce_frozen_prior_identity,
+    )

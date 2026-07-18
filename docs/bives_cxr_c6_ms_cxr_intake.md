@@ -4,16 +4,41 @@ This is a local, metadata-only, fail-closed intake. It does not download data,
 accept terms, decode or render images, load a model, access scores, or reopen
 the C5 final stop.
 
-## User-side prerequisites
+## Local package placement
 
-The user must personally satisfy the PhysioNet requirements for MS-CXR v1.1.0
-(credentialed access, required CITI training, and signed DUA) and place the
-lawfully obtained release outside the repository:
+The acquired v1.1.0 release stays outside the repository:
 
 ```text
 H:\Xiyao_Wang\000_Public Dataset\MS-CXR\
   MS_CXR_Local_Alignment_v1.1.0.json
+  MS_CXR_Local_Alignment_v1.1.0.csv
+  ms-cxr-making-the-most-of-text-semantics-to-improve-biomedical-vision-language-processing-1.1.0.zip
 ```
+
+The ZIP SHA-256 is
+`62c829d307eb99a07fba82a3ee8346fd32dfcc5a226cfc00129049f684781bd9`.
+All four files named by the publisher `SHA256SUMS.txt` have been verified.
+
+## Structure-only preflight
+
+The structure preflight does not assert credentialed access, CITI training, or
+DUA status and therefore cannot authorize model evaluation:
+
+```powershell
+python scripts\audit_bives_c6_ms_cxr.py preflight-test-release
+```
+
+The real release passes this preflight: 25/20 boxes collapse to the official
+15/14 unique `(image, category, label_text)` pairs, all 29 target images bind
+to local MIMIC metadata/JPG files, and patient/study overlap with the frozen
+prior-use registry is zero. The ignored output explicitly records
+`license_gate_passed=false` and `model_evaluation_authorized=false`.
+
+## User-side access attestation
+
+The user must personally confirm the PhysioNet requirements for MS-CXR v1.1.0
+(credentialed access, required CITI training, and signed DUA). The tool never
+infers those facts merely from possession of the package.
 
 Do not paste credentials, cookies, tokens, or private download URLs into chat,
 the repository, or the license record.
@@ -49,10 +74,11 @@ python scripts\audit_bives_c6_ms_cxr.py audit-test-release `
   --license-record "H:\Xiyao_Wang\000_Public Dataset\MS-CXR\license_record.json"
 ```
 
-The audit uses the local MIMIC metadata and image tree by default. It accepts
-only official `test` annotations, requires exactly 15 Consolidation and 14
-Pleural Effusion pairs/subjects, validates LTWH boxes and image-file hashes,
-and rejects any patient/study overlap with the frozen prior-use registry.
+The strict audit uses the local MIMIC metadata and image tree by default. It
+accepts only official `test` annotations, requires exactly 15 Consolidation
+and 14 Pleural Effusion unique image-text pairs/subjects, validates all 25/20
+LTWH boxes and image-file hashes, and rejects any patient/study overlap with
+the frozen prior-use registry.
 
 Outputs stay under ignored `local_runs/bives_cxr/c6_ms_cxr_intake/`. They must
 not be committed. A successful metadata audit still records
