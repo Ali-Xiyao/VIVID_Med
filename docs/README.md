@@ -59,6 +59,7 @@ BiVES-CXR is the only active paper and code mainline.
 | Draft coordinate-zone connected-control rescue authority | `../refine-logs/CONNECTED_CONTROL_RESCUE_PLAN.md`, `../refine-logs/CONNECTED_CONTROL_RESCUE_TRACKER.md` |
 | Connected-control C1/C2 execution record | `../scripts/audit_bives_vindr_connected_control_geometry.py`, `../refine-logs/CONNECTED_CONTROL_C1_C2_EXECUTION_LOG_20260718.md` |
 | Connected-control C3 timing/replay gate | `../scripts/audit_bives_connected_control_timing_replay.py`, `../refine-logs/CONNECTED_CONTROL_C3_EXECUTION_LOG_20260718.md` |
+| Connected-control C4 mechanism gate | `../scripts/evaluate_bives_connected_control_mechanism.py`, `../refine-logs/CONNECTED_CONTROL_C4_EXECUTION_LOG_20260718.md` |
 | P0 data-source and audit boundary | `bives_cxr_p0_data_readiness.md` |
 
 ## Active model boundary

@@ -863,7 +863,8 @@ access, VinDr-test reuse, training, or Qwen3.5-4B/9B.
 | C1 connected-control contracts | complete_pass | New API satisfies exact-area/disjoint/single-connected/zone/replay/fail-closed contracts; 98/98 active tests and synthetic smoke passed. Old translation contracts remain green. |
 | C2 score-free geometry audit | complete_pass | 375/377 overall; every per-finding and finding-area gate passes; 0 invariant failures; full replay rows byte-identical at SHA-256 `b94b77bc...e039d9`. |
 | C3 local timing/replay | complete_pass | 16 unique 8+8 protocol-design images; replay max diff 0, exact-K mismatches 0, estimated C4 0.2461 h against 4 h cap. |
-| C4 connected-control mechanism gate | in_progress | Frozen Qwen3.5-2B B2 and 375 feasible protocol-design positives; local mean and masked Gaussian blur co-primary; confirmation/test remain blocked. |
+| C4 connected-control mechanism gate | complete_pass | All 375 feasible protocol-design positives scored; both co-primary operators pass every finding-level mean/CI/high-area/positive-fraction gate; replay max diff 0. |
+| C5 one-time internal confirmation | in_progress | C4 code/operators/results are frozen. Open image-disjoint `rescue_confirm` once, require the complete C4 gate and no per-finding B2 polarity AUROC/AUPRC below frozen B0; no post-outcome changes or reruns. |
 
 ## Candidate artifact hashes
 

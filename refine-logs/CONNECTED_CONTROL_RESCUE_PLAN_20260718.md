@@ -238,9 +238,13 @@ Every execution record must include:
 
 ## Current verdict
 
-`ACCEPTED_C4_IN_PROGRESS`. C1 passed active tests and synthetic smoke. C2
+`ACCEPTED_C5_IN_PROGRESS`. C1 passed active tests and synthetic smoke. C2
 passed at 375/377 overall with every per-finding/quartile gate green and a
 byte-identical full rows replay. C3 passed with zero score replay error, zero
 exact-K mismatch, and a conservative C4 estimate of 0.2461 local GPU hours
-against the 4-hour cap. C4 is now authorized on protocol-design only;
-`rescue_confirm`, VinDr test, training, and model scaling remain blocked.
+against the 4-hour cap. C4 passed on all 375 feasible protocol-design positives
+under both co-primary operators: every per-finding mean TCIG and highest-area
+quartile is positive, every positive-image fraction exceeds 0.60, and all four
+bootstrap CI lower bounds exceed zero. C5 is now authorized as a single frozen
+opening of `rescue_confirm`; VinDr test, training, tuning, reruns after observing
+confirmation, and model scaling remain blocked.

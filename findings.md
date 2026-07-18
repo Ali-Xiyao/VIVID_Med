@@ -953,3 +953,16 @@
   C4 estimate including a 1.25 multiplier and the full C2 geometry wall time is
   `0.2461` local GPU hours, far below the 4-hour cap. This authorizes C4 only;
   it does not authorize confirmation, test reuse, training, or scale-up.
+- C4 shows that the prior zero-fill/scattered-control failure was not stable
+  under the preregistered connected-control, distribution-preserving protocol.
+  Across all 375 feasible protocol-design positives, mean TCIG is positive for
+  both findings under local-mean replacement and masked Gaussian blur; all four
+  image-bootstrap CI lower bounds are above zero, positive-image fractions are
+  0.70-0.92, and every highest-area quartile remains positive.
+- The effect is not only a small-lesion artifact. Highest-area-quartile TCIG is
+  0.0551/0.0831 under local mean and 0.0236/0.0125 under masked blur for
+  consolidation/pleural effusion. This clears C4 without changing the frozen
+  checkpoint, decoder, selector, K, model, split, or control geometry.
+- C4 remains internal development evidence. The one-time image-disjoint
+  confirmation gate is now the only authorized next experiment; VinDr test,
+  training, post-confirmation tuning/reruns, and Qwen3.5-4B/9B stay prohibited.

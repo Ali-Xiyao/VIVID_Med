@@ -9,6 +9,12 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from PIL import Image
+from scipy import ndimage
+
+
+LOCAL_MEAN_RING_WIDTH = 8
+MASKED_GAUSSIAN_SIGMA = 8.0
+MASKED_GAUSSIAN_TRUNCATE = 3.0
 
 
 def union_box_mask(
@@ -132,6 +138,78 @@ def retain_pixels(image: Image.Image, mask: np.ndarray) -> Image.Image:
     if mask.shape != array.shape[:2]:
         raise ValueError("retention mask must match image geometry")
     array[~mask] = 0
+    return Image.fromarray(array, mode="RGB")
+
+
+def replace_with_local_ring_mean(
+    image: Image.Image,
+    mask: np.ndarray,
+    content_mask: np.ndarray,
+    *,
+    ring_width: int = LOCAL_MEAN_RING_WIDTH,
+) -> Image.Image:
+    """Replace masked pixels by the fixed exterior-ring RGB mean."""
+
+    array = np.asarray(image.convert("RGB")).copy()
+    if mask.shape != array.shape[:2] or content_mask.shape != mask.shape:
+        raise ValueError("local-mean masks must match image geometry")
+    target = mask.astype(bool)
+    content = content_mask.astype(bool)
+    if ring_width <= 0 or not target.any() or bool((target & ~content).any()):
+        raise ValueError("local-mean mask must be non-empty, contained, and use a positive ring")
+    ring = (
+        ndimage.binary_dilation(target, iterations=int(ring_width))
+        & content
+        & ~target
+    )
+    if not ring.any():
+        raise ValueError("local-mean exterior ring is empty")
+    mean_rgb = np.rint(array[ring].astype(np.float64).mean(axis=0)).astype(np.uint8)
+    array[target] = mean_rgb
+    return Image.fromarray(array, mode="RGB")
+
+
+def replace_with_masked_gaussian_blur(
+    image: Image.Image,
+    mask: np.ndarray,
+    content_mask: np.ndarray,
+    *,
+    sigma: float = MASKED_GAUSSIAN_SIGMA,
+    truncate: float = MASKED_GAUSSIAN_TRUNCATE,
+) -> Image.Image:
+    """Replace masked pixels by a content-normalized deterministic Gaussian blur."""
+
+    array = np.asarray(image.convert("RGB")).copy()
+    if mask.shape != array.shape[:2] or content_mask.shape != mask.shape:
+        raise ValueError("Gaussian-blur masks must match image geometry")
+    target = mask.astype(bool)
+    content = content_mask.astype(bool)
+    if sigma <= 0 or truncate <= 0 or not target.any() or bool((target & ~content).any()):
+        raise ValueError("Gaussian-blur mask must be non-empty and contained")
+    weights = ndimage.gaussian_filter(
+        content.astype(np.float64),
+        sigma=float(sigma),
+        mode="constant",
+        cval=0.0,
+        truncate=float(truncate),
+    )
+    if bool((weights[target] <= 0).any()):
+        raise ValueError("Gaussian normalization has zero support inside intervention mask")
+    blurred = np.empty_like(array)
+    for channel in range(3):
+        numerator = ndimage.gaussian_filter(
+            array[:, :, channel].astype(np.float64) * content,
+            sigma=float(sigma),
+            mode="constant",
+            cval=0.0,
+            truncate=float(truncate),
+        )
+        blurred[:, :, channel] = np.clip(
+            np.rint(numerator / np.maximum(weights, np.finfo(np.float64).tiny)),
+            0,
+            255,
+        ).astype(np.uint8)
+    array[target] = blurred[target]
     return Image.fromarray(array, mode="RGB")
 
 
