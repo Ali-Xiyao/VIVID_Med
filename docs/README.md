@@ -249,3 +249,9 @@ new score-free exact-area, target-disjoint, within-content, one-connected
 control gate before the new Qwen3.5-2B replacement opening can exist. The
 replacement remains positive-only and nonformal; training, tuning,
 classification claims, server execution, and Qwen3.5-4B/9B are forbidden.
+
+The score-free C6I build and independent replay now both pass 29/29. Their
+geometry rows, candidate certificates, geometry lock, and all 29 mask files
+are byte-identical; canonical geometry-lock SHA-256 is
+`f6e6c8e6a4e7499376d8b316d588197fb1e57ae18a68b6c529dd31e60e531a0e`.
+No model, GPU, or score was accessed while producing this lock.

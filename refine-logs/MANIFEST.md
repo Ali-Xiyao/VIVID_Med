@@ -60,6 +60,7 @@ target-shape matching and does not call the coordinate bins true anatomy.
 | C6H pre-score pixel-alignment failure | `C6H_MS_CXR_PRE_SCORE_PIXEL_ALIGNMENT_FAILURE_20260718.md` | none | `d017e423b8bf34b16ab1d9f606aa8b5c2a0a7894e37d974e3feb97254690b7fc` | model/checkpoint opened on GPU1 but zero forwards/scores; 29/29 JPGs are 224x224 and incompatible with native-letterbox C6G masks; no result |
 | C6I actual-input recovery authority | `C6I_MS_CXR_ACTUAL_INPUT_RECOVERY_AUTHORITY_20260718.md` | none | `5c9d221e93af7f478d4d89800b0967a6cc5b341793efeb5cda7f926743980672` | user-confirmed access and separate authority for score-free actual-input geometry plus one replacement local Qwen3.5-2B opening after a 29/29 pass |
 | C6I frozen replacement config | `C6I_MS_CXR_QWEN35_2B_REPLACEMENT_CONFIG_20260718.yaml` | none | `f04f16d5cf6e00c95f596ae38d3db541198ad41bf5df132d6a1753e0cd17a29c` | uniform native-to-224 x/y mapping; frozen B2 step-450 exact-K=16, statements, operators, bootstrap, and no 4B/9B |
+| C6I pre-open geometry execution log | `C6I_MS_CXR_PREOPEN_GEOMETRY_EXECUTION_LOG_20260718.md` | none | `74f25bdfd44596df0ec64e381c09e359a4134c8a549e2154e0d7bca0fae900c4` | formal and replay builds pass 29/29; rows/certificates/lock and all masks byte-identical; no model/GPU/score |
 
 The user accepted this candidate by replying `继续` on 2026-07-18. C001-C005
 are complete-pass. C006/C5 opened the image-disjoint VinDr-train
