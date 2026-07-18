@@ -966,3 +966,18 @@
 - C4 remains internal development evidence. The one-time image-disjoint
   confirmation gate is now the only authorized next experiment; VinDr test,
   training, post-confirmation tuning/reruns, and Qwen3.5-4B/9B stay prohibited.
+- C5 confirms that the connected-control mechanism result itself is stable:
+  geometry passes at 377/378 and all four confirm TCIG means, CI lower bounds,
+  positive-image fractions, and highest-area quartiles clear the complete C4
+  gate. The protocol repair therefore survives an image-disjoint internal
+  split without changing the frozen model or operators.
+- The route nevertheless fails its conjunctive confirmation gate. On balanced
+  consolidation S/C rows, B2 AUROC improves over B0 (`0.93077` vs `0.90003`),
+  but B2 AUPRC is lower (`0.89381` vs `0.91174`). Pleural-effusion B2 improves
+  both AUROC and AUPRC. The preregistered rule does not allow trading the failed
+  consolidation AUPRC for gains elsewhere, so C5 is a final stop.
+- The appropriate conclusion is narrow: distribution-preserving connected
+  controls repair and replicate the causal target-vs-control comparison, but
+  the frozen sparse B2 does not dominate the pooled B0 on every confirmation
+  polarity metric. This does not justify a result-driven model repair, extra
+  seed, 4B/9B scale-up, or VinDr-test reuse.

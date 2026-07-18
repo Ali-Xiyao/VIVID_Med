@@ -36,14 +36,16 @@ target-shape matching and does not call the coordinate bins true anatomy.
 
 | Artifact | Versioned file | Fixed alias | SHA-256 | Status |
 | --- | --- | --- | --- | --- |
-| Connected-control plan | `CONNECTED_CONTROL_RESCUE_PLAN_20260718.md` | `CONNECTED_CONTROL_RESCUE_PLAN.md` | `d04a0b3809a23828ce82eed669ed56aa18bc3e6c09c718bd708f6810b4380a70` | byte-identical; C1-C4 pass; C5 in progress |
-| Connected-control tracker | `CONNECTED_CONTROL_RESCUE_TRACKER_20260718.md` | `CONNECTED_CONTROL_RESCUE_TRACKER.md` | `04887e6681e23dd8a7bd99120fa647ccd6194773cf565a4d1b7f6f62fc30e05f` | byte-identical; C001-C005 pass; C006 in progress |
+| Connected-control plan | `CONNECTED_CONTROL_RESCUE_PLAN_20260718.md` | `CONNECTED_CONTROL_RESCUE_PLAN.md` | `c5100a32d8c5b9f9858d37c73538695849413f80fa37ee45c471703c49ee844e` | byte-identical; stopped at C5 confirmation polarity gate |
+| Connected-control tracker | `CONNECTED_CONTROL_RESCUE_TRACKER_20260718.md` | `CONNECTED_CONTROL_RESCUE_TRACKER.md` | `bca7cf878fbf371432a60755924dea14c274168c4adcda56bbe9cf1694561202` | byte-identical; C001-C005 pass; C006 final-stop fail |
 | C1/C2 execution log | `CONNECTED_CONTROL_C1_C2_EXECUTION_LOG_20260718.md` | none | `7e1e9c317d1560a5d369fefa034253cd0732f78eb4f82c0f111ff32bc47096c8` | 98/98 tests; 375/377 geometry pass; full rows replay identical |
 | C3 execution log | `CONNECTED_CONTROL_C3_EXECUTION_LOG_20260718.md` | none | `ffc59f9872b65e4345dbf05e073b317047c86cd646f69a079ce680b19170bbca` | 101/101 tests; zero replay error; C4 estimate 0.2461 h |
 | C4 execution log | `CONNECTED_CONTROL_C4_EXECUTION_LOG_20260718.md` | none | `4a4dfc4ebf2861ae179ac481ffb578412a61d8185aecdf8934cb62280592d67f` | 106/106 tests; both co-primary operators pass every C4 gate |
+| C5 execution log | `CONNECTED_CONTROL_C5_EXECUTION_LOG_20260718.md` | none | `b1f8d9ca51c822dd674dc6c66bdbb9142962161847650a70873f905c252e6804` | mechanism replicates; consolidation AUPRC below B0; final stop |
 
 The user accepted this candidate by replying `继续` on 2026-07-18. C001-C005
-are complete-pass. C006/C5 is authorized exactly once on the frozen
-Qwen3.5-2B B2 and image-disjoint VinDr-train `rescue_confirm` surface. VinDr
-test, training, tuning after confirmation, reruns, scale-up, and later rows
+are complete-pass. C006/C5 opened the image-disjoint VinDr-train
+`rescue_confirm` surface exactly once and failed its frozen per-finding polarity
+gate because consolidation B2 AUPRC fell below B0. This route is final-stopped;
+VinDr test, training, result-driven tuning/reruns, scale-up, and later rows
 remain blocked.

@@ -843,6 +843,7 @@ method mutation, extra seed, Qwen3.5-4B/9B, or server work.
 | `python -m unittest tests.test_bives_rescue_protocol -v` could not import the test because this repository's `tests/` directory is not a Python package. | C1 first narrow test invocation | Compilation had passed and no test body ran. Do not repeat module import; use the repository's `unittest discover -s tests -p "test_bives_rescue_protocol.py" -v` convention. |
 | The first C2 process probe saw a PID file but no `Get-Process` row or log output and was initially interpreted as an immediate exit; a second foreground launch then failed before execution because the first process held the log files. | C2 full-audit launch monitoring | CIM inspection proved the original PID `39836` and eight workers were active; stdout then advanced to 20/377 with empty stderr. The second command never opened an audit process. Keep and monitor only PID `39836`; do not relaunch. |
 | The first C3 warmup stopped before emitting any score because deterministic cuBLAS matmul requires `CUBLAS_WORKSPACE_CONFIG` to be set before CUDA initialization. | C3 first local timing/replay launch | No C3 row or lock artifact was produced. Set `CUBLAS_WORKSPACE_CONFIG=:4096:8` at module import before `torch`, preserve deterministic algorithms, and rerun the unchanged 16-image gate. |
+| The first C5 process reached 307/756 rows and then Windows denied the atomic `progress.json.tmp -> progress.json` replace while the progress file was being monitored. | C5 one-time confirmation execution | No code, data, operator, metric, threshold, or result rule changed. Resumed the exact committed identity from its 307 completed-row checkpoint, stopped reading progress JSON during execution, and completed the single opening. The resume stderr was empty; the incident and corrected end-to-end compute accounting are frozen in the C5 execution log. |
 
 # 2026-07-18 Coordinate-Zone Connected-Control Candidate
 
@@ -864,7 +865,7 @@ access, VinDr-test reuse, training, or Qwen3.5-4B/9B.
 | C2 score-free geometry audit | complete_pass | 375/377 overall; every per-finding and finding-area gate passes; 0 invariant failures; full replay rows byte-identical at SHA-256 `b94b77bc...e039d9`. |
 | C3 local timing/replay | complete_pass | 16 unique 8+8 protocol-design images; replay max diff 0, exact-K mismatches 0, estimated C4 0.2461 h against 4 h cap. |
 | C4 connected-control mechanism gate | complete_pass | All 375 feasible protocol-design positives scored; both co-primary operators pass every finding-level mean/CI/high-area/positive-fraction gate; replay max diff 0. |
-| C5 one-time internal confirmation | in_progress | C4 code/operators/results are frozen. Open image-disjoint `rescue_confirm` once, require the complete C4 gate and no per-finding B2 polarity AUROC/AUPRC below frozen B0; no post-outcome changes or reruns. |
+| C5 one-time internal confirmation | complete_fail_final_stop | Geometry passed 377/378 and the complete C4 mechanism gate reproduced, but consolidation B2 AUPRC `0.89381` fell below frozen B0 `0.91174`; no post-outcome changes, reruns, or 4B/9B scale-up. |
 
 ## Candidate artifact hashes
 

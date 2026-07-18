@@ -238,13 +238,18 @@ Every execution record must include:
 
 ## Current verdict
 
-`ACCEPTED_C5_IN_PROGRESS`. C1 passed active tests and synthetic smoke. C2
+`STOPPED_C5_CONFIRMATION_POLARITY_FAIL`. C1 passed active tests and synthetic smoke. C2
 passed at 375/377 overall with every per-finding/quartile gate green and a
 byte-identical full rows replay. C3 passed with zero score replay error, zero
 exact-K mismatch, and a conservative C4 estimate of 0.2461 local GPU hours
 against the 4-hour cap. C4 passed on all 375 feasible protocol-design positives
 under both co-primary operators: every per-finding mean TCIG and highest-area
 quartile is positive, every positive-image fraction exceeds 0.60, and all four
-bootstrap CI lower bounds exceed zero. C5 is now authorized as a single frozen
+bootstrap CI lower bounds exceed zero. C5 was authorized as a single frozen
 opening of `rescue_confirm`; VinDr test, training, tuning, reruns after observing
-confirmation, and model scaling remain blocked.
+confirmation, and model scaling remained blocked. C5 then opened the image-disjoint
+confirmation split exactly once. Geometry passed at 377/378 and the complete C4
+mechanism gate reproduced, but consolidation B2 AUPRC was 0.89381 versus frozen
+B0 0.91174. Because the preregistered gate forbids any per-finding AUROC/AUPRC
+decrease, C5 is a final stop. No result-driven change, rerun, or 4B/9B scale-up
+is permitted; C6 remains blocked on a new patient-identified final authority.

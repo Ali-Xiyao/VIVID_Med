@@ -1,6 +1,6 @@
 # BiVES-CXR Coordinate-Zone Connected-Control Rescue Tracker
 
-**Status:** C5_IN_PROGRESS
+**Status:** STOPPED_C5_CONFIRMATION_POLARITY_FAIL
 **Authority:** `CONNECTED_CONTROL_RESCUE_PLAN.md`
 **Predecessor status:** `EXPERIMENT_TRACKER.md` remains
 `STOPPED_R002_GEOMETRY_FAIL`
@@ -12,7 +12,7 @@
 | C003 | C2 | Is geometry feasible without selective exclusions? | no model / protocol_design positives | >=95% overall and per finding; >=90% every finding-area quartile; zero invariant failures | MUST | COMPLETE_PASS | 375/377 overall; 62/62 consolidation; 313/315 effusion; lowest quartile 76/78; rows replay byte-identical |
 | C004 | C3 | Can the frozen 2B checkpoint be replayed locally within the compute cap? | frozen Qwen3.5-2B B2 / 16 protocol_design images | identity chain and replay tolerance pass; estimated C4 <=4 local GPU h | MUST | COMPLETE_PASS | replay max diff 0; exact-K mismatches 0; estimate 0.2461 h |
 | C005 | C4 | Does target effect exceed connected-control effect under both primary operators? | frozen Qwen3.5-2B B2 / protocol_design positives | positive mean TCIG both findings/operators; >=1 positive CI per finding; high-area nonnegative; >=60% positive-image TCIG | MUST | COMPLETE_PASS | all four mean/CI/high-area/positive-fraction gates pass; rows SHA `268d2cc6...dbdd` |
-| C006 | C5 | Does the frozen result survive one-time internal confirmation? | frozen system / rescue_confirm once | full C4 gate plus no per-finding polarity below B0 | MUST | IN_PROGRESS | one opening only; no post-confirmation changes or reruns |
+| C006 | C5 | Does the frozen result survive one-time internal confirmation? | frozen system / rescue_confirm once | full C4 gate plus no per-finding polarity below B0 | MUST | COMPLETE_FAIL_FINAL_STOP | geometry 377/378 and full mechanism gate pass; consolidation AUPRC B2 0.89381 < B0 0.91174; no rerun |
 | C007 | C6 | Is an independent patient-grouped expert-region final set authorized? | frozen system / new final dataset | separate data authority and patient-level lock | MUST FOR PAPER | BLOCKED_DATA | no current dataset authority |
 
 ## Immutable boundaries
