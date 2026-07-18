@@ -1112,3 +1112,22 @@
   does not create a formal intake lock and does not reopen C5. The remaining
   strict-intake input is a truthful user-authored local access attestation;
   model evaluation would additionally require a new reviewed research authority.
+
+## 2026-07-18 C6E strict MS-CXR intake
+
+- The user explicitly confirmed approved credentialed access, required CITI
+  training, and signed DUA. A non-secret local attestation was created under
+  the public-data boundary; it is outside Git and its SHA-256 is
+  `037bfea3c0ae112ccd188cb715f405bf696f820347f6a991348f47f25dee9ac7`.
+- The strict audit independently matched the attested package SHA-256 to the
+  actual ZIP, then reproduced every C6D structural result: 15/14 pairs, 25/20
+  boxes, 29 images/patients/studies, exact MIMIC path binding, all image hashes,
+  and zero patient/study overlap with the frozen prior-use registry.
+- The ignored strict artifact has canonical SHA-256
+  `0027358c2998773e73dbd19da02a37dac27c060150bf42e59469d218fb24b4ed`,
+  contains zero raw-identifier regex matches, records
+  `license_gate_passed=true`, and still records
+  `model_evaluation_authorized=false` plus `formal_result=false`.
+- The data candidate is now intake-complete, not experiment-authorized. C5
+  remains a final stop until a separately reviewed post-C5 authority explicitly
+  defines and approves a new MS-CXR evaluation.

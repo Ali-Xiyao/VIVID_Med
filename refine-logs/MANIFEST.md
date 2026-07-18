@@ -47,6 +47,7 @@ target-shape matching and does not call the coordinate bins true anatomy.
 | C6B metadata intake tooling log | `C6B_METADATA_INTAKE_TOOLING_LOG_20260718.md` | none | `07c2fdaffd7874d4043ea204f633650b7b4feae61a0a41d098d8dacad9ffeffc` | fail-closed test-only intake ready; hashed validation registry ready; 116/116 tests; real package absent |
 | C6C MS-CXR intake tooling log | `C6C_MS_CXR_INTAKE_TOOLING_LOG_20260718.md` | none | `12cdc09dd9517ffbb4207b42f8e3eda2fcb23e9792d40f74a8bd469761182d6a` | fail-closed official-test COCO intake ready; strict hashed MIMIC registry reproduced; 126/126 tests; real package absent |
 | C6D MS-CXR real-package preflight log | `C6D_MS_CXR_REAL_PACKAGE_PREFLIGHT_LOG_20260718.md` | none | `f252ab3d9f46d6d88d5828fb4995c9b3b250a5472a2111906ce4fad684f2fb5d` | real package checksums pass; 15/14 pairs and 25/20 boxes; 29/29 images bound; zero prior overlap; license/model authority remain false |
+| C6E MS-CXR strict intake log | `C6E_MS_CXR_STRICT_INTAKE_LOG_20260718.md` | none | `0cf2813122b2621908ec193c9b651a8619fcef11c72a4334775f7851afe5d360` | explicit user access confirmation; exact package binding; strict intake pass; model authority remains false |
 
 The user accepted this candidate by replying `继续` on 2026-07-18. C001-C005
 are complete-pass. C006/C5 opened the image-disjoint VinDr-train
@@ -89,3 +90,10 @@ distinguishes 29 unique image-text pairs from 45 component boxes, binds all 29
 images, and finds zero prior patient/study overlap. The structure preflight is
 not a license attestation or research authority and cannot authorize a score,
 annotation visualization, model evaluation, or C5 reopening.
+
+C6E records the strict intake after explicit user confirmation of credentialed
+access, required CITI training, and signed DUA. The local attestation and
+ignored intake artifact remain outside Git. Package hash, official pair/box
+counts, MIMIC binding, image hashes, and zero prior overlap pass. The result is
+still nonformal and explicitly carries no model-evaluation authority; C5 is
+unchanged pending a new reviewed research authority.

@@ -80,6 +80,10 @@ and 14 Pleural Effusion unique image-text pairs/subjects, validates all 25/20
 LTWH boxes and image-file hashes, and rejects any patient/study overlap with
 the frozen prior-use registry.
 
+The 2026-07-18 strict local intake passed after explicit user access
+confirmation. Its ignored artifact reports `license_gate_passed=true`, zero
+prior patient/study overlap, and `model_evaluation_authorized=false`.
+
 Outputs stay under ignored `local_runs/bives_cxr/c6_ms_cxr_intake/`. They must
 not be committed. A successful metadata audit still records
 `model_evaluation_authorized=false`; a new reviewed post-C5 authority would be
