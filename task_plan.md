@@ -1030,7 +1030,7 @@ or authorize a real model/GPU evaluation before its complete identity lock.
 | C2 implement model-agnostic audit core | complete | Deterministic geometry/localization, score contrasts, intervention-strength diagnostics, patient-cluster bootstrap, cross-operator worst case, and fail-closed validation are implemented. |
 | C3 add manifest/CLI and fail-closed lock surface | complete | The precomputed-row CLI accepts development/synthetic rows only, rejects test-like identities, and writes a hash-bound nonformal development lock. |
 | C4 synthetic development smoke and contracts | complete | Model-free positive/inverse synthetic cases pass; after the user's separate opening, Qwen3.5-2B real-model synthetic gates pass on GPU0/GPU1 with identical normalized rows/explanations. No patient/test data was opened. |
-| C5 Git handoff | in_progress | Refresh manifest/result/docs, run the full regression, commit only source/docs/tests, and push the audit branch. |
+| C5 Git handoff | complete | Phase-C implementation commit `1bd5314` passed 157/157 contracts and was pushed to `origin/codex/localization-causality-audit`; ignored runtime outputs and the unrelated untracked PIPM document were excluded. |
 
 ### Phase C invariants
 
