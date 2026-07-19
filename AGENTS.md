@@ -18,11 +18,14 @@ Qwen3.5-4B/9B.
 
 ## Current execution boundary
 
-The repository is in protocol-design phase only. No CheXlocalize download,
-test opening, model load, GPU run, threshold selection, new score, or new
-experiment is authorized by the active documents. Future execution requires a
-separately frozen development protocol, data/model/explanation/operator lock,
-and explicit user authorization.
+The repository is in development-tooling phase. Model-free synthetic smokes,
+unit tests, and precomputed-row audits may run locally. On 2026-07-19 the user
+also explicitly opened local Qwen3.5-2B model/GPU development gates on both
+workstation GPUs. This opening covers synthetic interface and determinism
+gates only; it does not open CheXlocalize download/test, real-patient scoring,
+or outcome-driven threshold selection. Future real-data execution still
+requires a separately frozen data/model/explanation/operator lock and explicit
+data/test opening.
 
 All future validation and evaluation run on this workstation. Do not
 synchronize active experiments to the server or submit SSH/Slurm jobs.
@@ -66,8 +69,10 @@ new experiment:
 ```bash
 pip install -r requirements.txt
 python scripts/smoke_bives_cxr.py
+python scripts/smoke_localization_causality_audit.py
 python -m unittest discover -s tests -p "test_bives_*.py" -v
 python scripts/audit_bives_b2_terminal.py --help
+python scripts/audit_cxr_localization_causality.py --help
 ```
 
 ## Coding style

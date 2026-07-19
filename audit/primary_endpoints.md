@@ -7,11 +7,12 @@
 For image `i`, pathology `p`, model `m`, explanation `e`, and operator `o`:
 
 - `s0`: original model support score;
-- `sX`, `sE`, `sC`: score after expert-, explanation-, and control-region
-  intervention;
-- `dX = s0 - sX`, `dE = s0 - sE`, `dC = s0 - sC`;
-- `CS_X = dX - dC`: expert-region causal specificity;
-- `CS_E = dE - dC`: explanation-region causal specificity;
+- `sX`, `sE`: score after expert- and explanation-region intervention;
+- `sCX`, `sCE`: score after the target-specific expert/explanation controls;
+- `dX = s0 - sX`, `dCX = s0 - sCX`;
+- `dE = s0 - sE`, `dCE = s0 - sCE`;
+- `CS_X = dX - dCX`: expert-region causal specificity;
+- `CS_E = dE - dCE`: explanation-region causal specificity;
 - `L`: localization quality of the continuous/thresholded explanation against
   the expert annotation.
 
@@ -49,7 +50,7 @@ high/low visualization thresholds are frozen during development.
 
 ## 3. Perturbation-strength diagnostics
 
-For both target and matched control, report:
+For each target/control pair (`X`/`C_X` and `E`/`C_E`), report:
 
 - area, centroid distance, perimeter ratio, connected components;
 - normalized pixel L1/RMS change;

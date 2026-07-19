@@ -18,6 +18,10 @@ causal evidence set.
   [`audit/primary_endpoints.md`](audit/primary_endpoints.md)
 - Novelty matrix:
   [`audit/novelty_matrix.md`](audit/novelty_matrix.md)
+- Development row schema:
+  [`audit/development_row_schema.md`](audit/development_row_schema.md)
+- Phase-C synthetic result:
+  [`audit/phase_c_synthetic_development_result.md`](audit/phase_c_synthetic_development_result.md)
 - Handoff index: [`docs/README.md`](docs/README.md)
 
 ## Frozen BiVES predecessor
@@ -55,9 +59,15 @@ diagnostics. A composite score cannot hide failure in either family.
 
 ## Current status
 
-`PROTOCOL_DESIGN_ONLY_NO_EXPERIMENT_AUTHORITY`
+`LOCAL_QWEN35_SYNTHETIC_DEVELOPMENT_COMPLETE`
 
-No CheXlocalize data/model/GPU experiment has been opened by this pivot.
+Model-free synthetic tooling and a real Qwen3.5-2B synthetic-image interface
+gate have run locally. The model gate was repeated on both RTX 3090 GPUs and
+produced byte-equivalent normalized rows/explanations. It is nonformal and
+contains no patient data.
+
+No CheXlocalize package or real-patient experiment has been opened by this
+pivot.
 CheXlocalize validation is development-only because this repository has prior
 exposure to it. The official test split remains reserved for one-time local
 evaluation after the complete protocol and identity package is frozen and the
@@ -73,8 +83,10 @@ healthy; they do not authorize new research runs:
 
 ```powershell
 python scripts/smoke_bives_cxr.py
+python scripts/smoke_localization_causality_audit.py
 python -m unittest discover -s tests -p "test_bives_*.py" -v
 python scripts/audit_bives_b2_terminal.py --help
+python scripts/audit_cxr_localization_causality.py --help
 ```
 
 ## Repository layout
@@ -85,7 +97,7 @@ archive/            Frozen BiVES proposal and terminal negative-result report
 bives_cxr/          Preserved BiVES and reusable audit/evidence utilities
 configs/bives_cxr/  Frozen BiVES experiment identities
 refine-logs/        Immutable C4/C5/C6I authorities and execution evidence
-scripts/            Preserved tools; new audit implementation is not opened yet
+scripts/            Preserved tools and local audit development entrypoints
 tests/              Contract tests
 docs/               Handoff, schemas, and historical implementation records
 legacy/             Pre-BiVES archived code and proposals

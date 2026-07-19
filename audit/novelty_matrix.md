@@ -19,7 +19,7 @@ The intended contribution is not a new saliency map or a new perturbation
 operator. It is a locked, multi-factor audit of the *relationship* between
 localization validity and causal specificity, with:
 
-- separate expert, explanation, and matched-control regions;
+- separate expert, explanation, and target-specific matched-control regions;
 - separate localization and causal endpoint families;
 - patient-level interaction analysis across model/explanation/pathology/operator;
 - perturbation-strength matching and diagnostics;

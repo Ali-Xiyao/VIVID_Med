@@ -39,11 +39,16 @@ separately identified regions:
 1. **Expert region (`X`)** — the released pathology localization annotation.
 2. **Explanation region (`E`)** — a preregistered, deterministic region derived
    from the model explanation without using test labels to tune its threshold.
-3. **Matched control (`C`)** — a disjoint in-content region matched to the
-   intervention target on area and prespecified geometry/strength constraints.
+3. **Matched control role (`C_T`)** — a disjoint in-content region matched to
+   the current intervention target on area and prespecified geometry/strength
+   constraints. Expert and explanation targets receive separate controls:
+   `C_X` for `X` and `C_E` for `E`.
 
 The audit evaluates the same frozen model score before and after intervention
-on `X`, `E`, and `C`. It never treats overlap alone as causal evidence.
+on `X`, `C_X`, `E`, and `C_E`. The conceptual design still has three region
+roles (expert, explanation, control), but it never reuses one mask as the
+comparator for differently shaped targets. It never treats overlap alone as
+causal evidence.
 
 ## 4. Localization-causality matrix
 
@@ -170,19 +175,23 @@ position remains provisional until a submission-date literature search.
 - archive the old method proposal and negative result;
 - prohibit C6J, B2 repair, and 4B/9B BiVES scaling.
 
-### Phase B — protocol design (current)
+### Phase B — protocol design (complete)
 
 - freeze research questions, data roles, study matrix, endpoints, and no-claims;
 - document prior CheXlocalize validation exposure;
 - perform no model/data experiment.
 
-### Phase C — development-only implementation (future authority required)
+### Phase C — development-only implementation (current)
 
 - verify data rights and local package identity;
 - implement deterministic annotations, explanation maps, controls, operators,
   and tests on the development split;
 - freeze all model/checkpoint/explanation/operator identities and feasibility
   exclusions before any test opening.
+
+The user's 2026-07-19 opening authorizes local Qwen3.5-2B synthetic model/GPU
+interface and cross-device determinism gates. It does not authorize a
+CheXlocalize download, real-patient development result, or test opening.
 
 ### Phase D — one-time locked test (future authority required)
 

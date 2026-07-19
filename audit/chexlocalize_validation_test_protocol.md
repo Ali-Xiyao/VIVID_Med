@@ -28,7 +28,7 @@ Only the development split may be used to establish:
 - explanation extraction layers/baselines/steps/patch sizes;
 - deterministic continuous-map normalization;
 - region thresholding or exact-area rules;
-- expert/explanation/control geometry construction;
+- expert/explanation geometry plus separate `C_X`/`C_E` control construction;
 - operator definitions and perturbation-strength tolerances;
 - handling of multiple expert polygons/boxes and multiple annotations;
 - missing/ineligible-row rules;
@@ -78,8 +78,9 @@ patient identifier. Each row records:
 
 - expert annotation source and union/consensus rule;
 - continuous explanation map plus deterministic region;
-- disjoint matched control region;
-- original, expert-region, explanation-region, and control-region model scores;
+- separate disjoint matched controls `C_X` and `C_E`;
+- original, expert-region, expert-control, explanation-region, and
+  explanation-control model scores;
 - localization metrics and all intervention-strength diagnostics;
 - exact source/model/operator identities and row-level failure status.
 

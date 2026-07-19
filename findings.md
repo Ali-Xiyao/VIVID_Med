@@ -1289,3 +1289,33 @@
   cross-operator sign agreement/worst-case summaries, and perturbation-strength
   diagnostics (area, centroid, perimeter, pixel L1, SSIM, and edge change). No
   single overlap-causality composite may hide failure in either family.
+
+## 2026-07-19 Phase-C design findings
+
+- A single shared control mask is not a valid comparator for both expert and
+  explanation regions unless those targets are forced to have identical
+  geometry. Because explanation area/shape must not be chosen from test expert
+  annotations, the audit requires two target-specific controls: `C_X` matched
+  to expert region `X` and `C_E` matched to explanation region `E`.
+- The reusable implementation surface already contains deterministic pixel
+  operators, mask geometry helpers, image-space L1/RMS/SSIM/edge diagnostics,
+  and patient/bootstrap patterns. The new audit core should compose these
+  without modifying the terminal-audit or C4/C5/C6I modules.
+- The smallest valid working version is a model-agnostic precomputed-score row:
+  one patient/image/pathology/model/explanation/operator identity, five scores
+  (`s0`, `sX`, `sCX`, `sE`, `sCE`), expert/explanation/control masks, and
+  perturbation-strength diagnostics.
+- The separately authorized Qwen3.5-2B development adapter is feasible on one
+  RTX 3090: the full model uses about 6.53 GB peak allocated CUDA memory for
+  the synthetic audit gate. The fixed first-token Yes/No probability, 4x4
+  occlusion map, target-specific controls, and both intervention operators run
+  without changing the frozen BiVES route.
+- GPU0 and GPU1 produced identical normalized Qwen3.5 synthetic rows and
+  explanation arrays. Their device-independent canonical SHA-256 is
+  `4c7931088e96a5a6fa1fb619d7366bc30130063960da58d475e0754a767c1cf4`.
+  This validates interface determinism only; the negative synthetic `CS_X` and
+  `CS_E` values have no medical or performance interpretation.
+- No CheXlocalize package is present under the local public-data root. Model
+  authorization does not cure that data-identity gap and does not open the
+  test split. A real-data run remains blocked until a separately frozen data
+  package and development/test opening exist.

@@ -1,0 +1,24 @@
+{
+  "schema_version": "cxr_localization_local_model_development_opening_v1",
+  "authorization_date": "2026-07-19",
+  "authorization_source": "user explicitly allowed local model loading and both workstation GPUs",
+  "authorized": true,
+  "formal_result_authorized": false,
+  "real_patient_data_authorized": false,
+  "chexlocalize_download_authorized": false,
+  "chexlocalize_test_opened": false,
+  "server_or_slurm_authorized": false,
+  "scope": [
+    "Qwen3.5-2B local full-model load",
+    "synthetic-image statement-score interface gate",
+    "synthetic occlusion explanation and matched intervention gate",
+    "cross-GPU determinism check on local RTX 3090 GPU0 and GPU1"
+  ],
+  "model": {
+    "family": "Qwen3.5",
+    "scale": "2B",
+    "path": "H:/Xiyao_Wang/001_models/Qwen3.5-2B",
+    "snapshot_sha256": "6b57c58ceb3c97d4199d4e8e32b54f6ff11d0cf3a8bde3a4e940d5775ae12120"
+  },
+  "execution_boundary": "synthetic development only; no medical or test claim"
+}

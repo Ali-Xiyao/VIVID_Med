@@ -14,8 +14,10 @@
 | Durable findings | `../findings.md` |
 | Chronological progress | `../progress.md` |
 
-The active state is `PROTOCOL_DESIGN_ONLY_NO_EXPERIMENT_AUTHORITY`. No new
-dataset, model, GPU, score, test opening, server, or Slurm action is authorized.
+The active state is `LOCAL_QWEN35_SYNTHETIC_DEVELOPMENT_COMPLETE`.
+Model-free synthetic tooling and one explicitly authorized Qwen3.5-2B
+synthetic-image gate have completed locally on both GPUs. No real dataset,
+patient score, CheXlocalize test opening, server, or Slurm action is authorized.
 
 ## Frozen predecessor
 
@@ -42,6 +44,11 @@ same-test repair, rerun, operator tuning, or 4B/9B scale-up.
 | Frozen configs | `../configs/bives_cxr/` |
 | Terminal audit module | `../bives_cxr/terminal_audit.py` |
 | Terminal audit entrypoint | `../scripts/audit_bives_b2_terminal.py` |
+| Localization-causality core | `../bives_cxr/localization_causality.py` |
+| Qwen3.5 audit adapter | `../bives_cxr/qwen35_localization_audit.py` |
+| Precomputed-row audit CLI | `../scripts/audit_cxr_localization_causality.py` |
+| Model-free audit smoke | `../scripts/smoke_localization_causality_audit.py` |
+| Real-model synthetic gate | `../scripts/smoke_qwen35_localization_causality.py` |
 | BiVES synthetic smoke | `../scripts/smoke_bives_cxr.py` |
 | Active contract tests | `../tests/test_bives_*.py` |
 | Implementation contract | `bives_cxr_implementation.md` |

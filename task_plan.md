@@ -1016,3 +1016,38 @@ as one audited model/explanation case, not as the paper's successful main method
 | --- | --- | --- |
 | The first planning append used a non-tail paragraph as an `apply_patch` anchor. | First persistent-record update | The patch failed before changing any file. Read exact file tails and reapplied with stable anchors. |
 | The first static-check command used Bash `||` syntax in Windows PowerShell. | First link/stale-authority audit | PowerShell rejected the command before execution. Replaced it with an explicit `$LASTEXITCODE` branch; the rerun found 0 missing links and no stale active-authority phrases. |
+
+## 2026-07-19 Phase C development-only audit implementation
+
+**Authorization:** The user explicitly asked to continue and allowed required
+local runs. This opens local synthetic/development tooling validation only. It
+does not open CheXlocalize test, reactivate CheXlocalize validation as evidence,
+or authorize a real model/GPU evaluation before its complete identity lock.
+
+| Step | Status | Evidence / boundary |
+| --- | --- | --- |
+| C1 resolve target/control contract | complete | Expert and explanation regions can differ in area/shape, so each has its own matched control (`C_X`, `C_E`). The protocol, endpoints, and schema use target-specific contrasts. |
+| C2 implement model-agnostic audit core | complete | Deterministic geometry/localization, score contrasts, intervention-strength diagnostics, patient-cluster bootstrap, cross-operator worst case, and fail-closed validation are implemented. |
+| C3 add manifest/CLI and fail-closed lock surface | complete | The precomputed-row CLI accepts development/synthetic rows only, rejects test-like identities, and writes a hash-bound nonformal development lock. |
+| C4 synthetic development smoke and contracts | complete | Model-free positive/inverse synthetic cases pass; after the user's separate opening, Qwen3.5-2B real-model synthetic gates pass on GPU0/GPU1 with identical normalized rows/explanations. No patient/test data was opened. |
+| C5 Git handoff | in_progress | Refresh manifest/result/docs, run the full regression, commit only source/docs/tests, and push the audit branch. |
+
+### Phase C invariants
+
+- Use target-specific matched controls: `C_X` for expert region `X` and `C_E`
+  for explanation region `E`.
+- Do not inspect/download CheXlocalize or create a real-patient/locked-test
+  score. The 2026-07-19 model opening is limited to Qwen3.5-2B synthetic GPU
+  interface/determinism gates on this workstation.
+- Do not edit or regenerate frozen C4/C5/C6I evidence.
+- The first working version is synthetic and deterministic; add one protocol
+  factor at a time after its contracts pass.
+
+### Phase C implementation error log
+
+| Error | Attempt | Resolution |
+| --- | --- | --- |
+| A combined tracked-plus-ignored hash search scanned old evidence trees for too long. | First Qwen lock lookup | Terminated the broad read-only search and repeated it only over tracked configs/refine logs; no experiment process was affected. |
+| `python -m unittest tests.test_qwen35_localization_audit -v` could not import from the non-package `tests/` directory. | First new Qwen adapter unit-test invocation | Used repository-standard discovery; the exact suite passed 2/2. |
+| One documentation patch looked for a novelty sentence in the proposal file. | First `C_X`/`C_E` protocol amendment | The patch failed before changes; split the patch by exact file/anchor and applied the amendment correctly. |
+| The first staged diff check found two trailing spaces on the Phase-C result date line. | First Phase-C commit preflight | No commit occurred. Removed the trailing whitespace, recomputed the result hash in the manifest, and reran staged validation. |

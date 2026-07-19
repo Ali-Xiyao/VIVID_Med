@@ -9,14 +9,20 @@ is retained under `../archive/` and in its original tracked execution records.
 2. [`chexlocalize_validation_test_protocol.md`](chexlocalize_validation_test_protocol.md)
 3. [`primary_endpoints.md`](primary_endpoints.md)
 4. [`novelty_matrix.md`](novelty_matrix.md)
-5. [`MANIFEST.md`](MANIFEST.md)
-6. [`../archive/BiVES_B2_terminal_negative_report.md`](../archive/BiVES_B2_terminal_negative_report.md)
+5. [`development_row_schema.md`](development_row_schema.md)
+6. [`phase_c_synthetic_development_result.md`](phase_c_synthetic_development_result.md)
+7. [`local_model_development_opening_20260719.json`](local_model_development_opening_20260719.json)
+8. [`MANIFEST.md`](MANIFEST.md)
+9. [`../archive/BiVES_B2_terminal_negative_report.md`](../archive/BiVES_B2_terminal_negative_report.md)
 
 ## Current execution status
 
-`PROTOCOL_DESIGN_ONLY_NO_EXPERIMENT_AUTHORITY`
+`LOCAL_QWEN35_SYNTHETIC_DEVELOPMENT_COMPLETE`
 
-No CheXlocalize download, test opening, model load, GPU run, threshold tuning,
-or new score is authorized by these documents. Future execution remains local
-and requires a separately frozen protocol, data identity, model/explanation
-manifest, and explicit user authorization.
+Local model-free synthetic tooling/tests and the separately opened
+Qwen3.5-2B synthetic-image GPU gate are complete. The same frozen gate produced
+identical normalized rows/explanations on both workstation RTX 3090 GPUs. No
+CheXlocalize package, patient data, real-data score, or test split was opened.
+Future real-data execution remains local and requires a separately frozen
+protocol, data identity, model/explanation/operator manifest, and explicit
+data/test opening lock.
