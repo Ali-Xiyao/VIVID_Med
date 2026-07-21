@@ -1204,4 +1204,4 @@ medical images, local runtime evidence, model weights, credentials, or caches.
 | --- | --- | --- |
 | R1 publication-scope inventory | complete | 40 tracked/untracked source and document files reviewed. `.gitignore` excludes `outputs/` and `local_runs/`; no data, model, credential, or generated runtime file is staged. |
 | R2 validation | complete | BiVES smoke, localization-causality smoke, `test_bives_*.py`, compilation, audit CLI help, and `git diff --check` pass. |
-| R3 stage, commit, and push | commit_complete_push_pending | Commit `9485e12` (`Record localization causality development`) contains all 40 reviewed files. Push only to the already tracked audit branch. |
+| R3 stage, commit, and push | complete | Commit `dfe0966` (`Record localization causality development`) contains all 40 reviewed files and is pushed to `origin/codex/localization-causality-audit`. |

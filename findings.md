@@ -1426,6 +1426,7 @@
   publication scope. BiVES smoke, localization-causality smoke, the active
   `test_bives_*.py` suite, Python compilation, audit CLI checks, and
   `git diff --check` pass.
-- 2026-07-21 Committed the reviewed 40-file publication package as `9485e12`
-  (`Record localization causality development`). The commit contains only the
+- 2026-07-21 Committed and pushed the reviewed 40-file publication package as
+  `dfe0966` (`Record localization causality development`) to
+  `origin/codex/localization-causality-audit`. The commit contains only the
   reviewed source, protocol, audit summary, test, and documentation surfaces.

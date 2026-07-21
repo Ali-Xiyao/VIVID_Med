@@ -517,6 +517,6 @@
   excluding ignored data and runtime surfaces. Pre-commit checks pass: BiVES
   smoke, localization-causality smoke, active `test_bives_*.py`, Python
   compilation, audit CLI help, and `git diff --check`.
-- 2026-07-21 Committed all 40 reviewed publishable files as `9485e12`
-  (`Record localization causality development`); push to the tracked audit
-  branch is pending.
+- 2026-07-21 Committed and pushed all 40 reviewed publishable files as
+  `dfe0966` (`Record localization causality development`) to the tracked audit
+  branch.
