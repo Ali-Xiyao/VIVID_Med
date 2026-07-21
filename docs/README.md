@@ -9,15 +9,24 @@
 | Primary endpoints | `../audit/primary_endpoints.md` |
 | Novelty matrix | `../audit/novelty_matrix.md` |
 | Audit directory status | `../audit/README.md` |
+| Frozen existing-data retrospective | `../audit/phase_e_frozen_existing_data_retrospective_result.md` |
+| VinDr Qwen3.5 development result | `../audit/phase_f_vindr_qwen35_development_result.md` |
+| CheXlocalize Qwen3.5 development result | `../audit/phase_h_chexlocalize_qwen35_development_result.md` |
 | Repository overview | `../README.md` |
 | Persistent task plan | `../task_plan.md` |
 | Durable findings | `../findings.md` |
 | Chronological progress | `../progress.md` |
 
-The active state is `LOCAL_QWEN35_SYNTHETIC_DEVELOPMENT_COMPLETE`.
+The active state is `LOCAL_CHEXLOCALIZE_QWEN35_DEVELOPMENT_COMPLETE`.
 Model-free synthetic tooling and one explicitly authorized Qwen3.5-2B
-synthetic-image gate have completed locally on both GPUs. No real dataset,
-patient score, CheXlocalize test opening, server, or Slurm action is authorized.
+synthetic-image gate have completed locally on both GPUs. Phase E then reused
+immutable VinDr C5 and MS-CXR C6I scores in an aggregate-only retrospective;
+it loaded no model and computed no new score. A separately locked four-image
+VinDr-train Qwen3.5-2B development gate then completed locally. The approved
+CheXlocalize validation-only release was subsequently downloaded, fully
+MD5-verified, and used for a frozen 100-pair/70-patient Qwen3.5-2B development
+matrix. This validation result is prior-exposed and nonconfirmatory. No
+CheXlocalize test opening, server, or Slurm action is authorized.
 
 ## Frozen predecessor
 

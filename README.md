@@ -22,6 +22,8 @@ causal evidence set.
   [`audit/development_row_schema.md`](audit/development_row_schema.md)
 - Phase-C synthetic result:
   [`audit/phase_c_synthetic_development_result.md`](audit/phase_c_synthetic_development_result.md)
+- CheXlocalize Qwen3.5 development result:
+  [`audit/phase_h_chexlocalize_qwen35_development_result.md`](audit/phase_h_chexlocalize_qwen35_development_result.md)
 - Handoff index: [`docs/README.md`](docs/README.md)
 
 ## Frozen BiVES predecessor
@@ -59,19 +61,21 @@ diagnostics. A composite score cannot hide failure in either family.
 
 ## Current status
 
-`LOCAL_QWEN35_SYNTHETIC_DEVELOPMENT_COMPLETE`
+`LOCAL_CHEXLOCALIZE_QWEN35_DEVELOPMENT_COMPLETE`
 
 Model-free synthetic tooling and a real Qwen3.5-2B synthetic-image interface
 gate have run locally. The model gate was repeated on both RTX 3090 GPUs and
 produced byte-equivalent normalized rows/explanations. It is nonformal and
 contains no patient data.
 
-No CheXlocalize package or real-patient experiment has been opened by this
-pivot.
-CheXlocalize validation is development-only because this repository has prior
-exposure to it. The official test split remains reserved for one-time local
-evaluation after the complete protocol and identity package is frozen and the
-user separately authorizes execution.
+The approved CheXlocalize validation-only release has now been downloaded and
+MD5-verified, and a frozen Qwen3.5-2B development matrix completed over 100
+image-finding pairs from 70 patients. It remains nonformal because this
+repository has prior exposure to the validation split. The result shows modest
+expert overlap and little positive association between overlap and causal
+specificity, despite positive mean explanation-region specificity under both
+frozen operators. The official test split was not downloaded or opened and
+remains reserved for a separately frozen one-time local evaluation.
 
 All future experiment execution is local to this workstation. Do not sync
 active experiments to the server or submit SSH/Slurm jobs.

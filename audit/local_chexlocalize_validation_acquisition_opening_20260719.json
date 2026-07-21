@@ -1,0 +1,50 @@
+{
+  "schema_version": "chexlocalize-validation-acquisition-opening-v1",
+  "opened_at_local_date": "2026-07-19",
+  "authorization": {
+    "access_approved_by_user": true,
+    "requested_action": "download and use CheXlocalize development data locally",
+    "credential_material_recorded": false
+  },
+  "dataset": {
+    "publisher": "Stanford AIMI",
+    "redivis_page": "https://stanford.redivis.com/datasets/efx9-5nspnbb4b",
+    "qualified_reference": "aimi.chexlocalize:efx9:v1_0",
+    "version": "1.0",
+    "reported_file_count": 2349,
+    "reported_total_bytes": 3887430508
+  },
+  "allowed_validation_assets": {
+    "exact_paths": [
+      "gt_annotations_val.json",
+      "gt_segmentations_val.json",
+      "gradcam_segmentations_val.json"
+    ],
+    "path_prefixes": [
+      "gradcam_maps_val/"
+    ],
+    "expected_file_count": 2343,
+    "expected_total_bytes": 3849154259
+  },
+  "forbidden_assets": {
+    "path_terms": [
+      "test"
+    ],
+    "known_exact_paths": [
+      "gt_annotations_test.json",
+      "gt_segmentations_test.json",
+      "hb_annotations_test.json",
+      "hb_salient_pt_test.json",
+      "hb_segmentations_test.json"
+    ]
+  },
+  "local_destination": "H:/Xiyao_Wang/000_Public Dataset/CheXlocalize/redivis_v1_0/validation",
+  "execution_boundary": {
+    "development_only": true,
+    "confirmatory_evidence": false,
+    "test_opened": false,
+    "model_load_authorized_by_this_file": false,
+    "gpu_run_authorized_by_this_file": false,
+    "server_execution": false
+  }
+}

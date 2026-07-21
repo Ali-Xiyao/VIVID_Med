@@ -1319,3 +1319,113 @@
   authorization does not cure that data-identity gap and does not open the
   test split. A real-data run remains blocked until a separately frozen data
   package and development/test opening exist.
+
+## 2026-07-19 CheXlocalize acquisition opening
+
+- Stanford AIMI lists CheXlocalize and routes the current download through the
+  Stanford Redivis dataset `efx9-5nspnbb4b`.
+- No CheXlocalize package was found in the known local public-dataset, project,
+  Downloads, or `H:\2018b` roots.
+- The user's authorization is interpreted narrowly: obtain and freeze the
+  validation/development split for local protocol development. The test split
+  remains sealed for the later one-time locked evaluation.
+- GPU0 and GPU1 are currently occupied by unrelated `022_tooth9` processes;
+  acquisition and lock construction may proceed, but those processes must not
+  be terminated or displaced.
+- The installed Redivis client had a stale credential and opened a fresh OAuth
+  authorization page. Public HTML is reachable, but the dataset API returns
+  `401 invalid_token` without a valid Redivis login. Download therefore cannot
+  begin until the user completes the prepared login page.
+- The official CheXlocalize repository lists validation and test assets as
+  separate paths. Phase D will request only `CheXpert/val`, `val_labels.csv`,
+  and the validation-suffixed CheXlocalize assets; all `_test`/`test/` paths
+  remain excluded.
+
+## 2026-07-19 Existing-data fallback
+
+- The active proposal already assigns MS-CXR the role `frozen external
+  evidence / sensitivity analysis`, with reuse permitted only under its frozen
+  prior identities and without B2 tuning or post-stop selection.
+- Local MS-CXR is present together with the immutable 29-row C6I geometry and
+  evaluation artifacts. These are sufficient for a read-only retrospective
+  localization-causality bridge without model/GPU access.
+- Local CheXpert validation images and labels are useful for image/score
+  plumbing, but they do not supply the radiologist localization annotations
+  required for the expert-region component of the complete audit.
+- Therefore CheXlocalize approval is not required to continue engineering and
+  frozen sensitivity analysis; it remains required for the broader 10-finding
+  development matrix and later one-time primary test.
+
+## 2026-07-19 Authorized local-data role classification
+
+- The user authorized use of all already-local datasets. This permits local
+  data handling but does not open a new model/GPU evaluation or override the
+  active proposal's dataset roles.
+- VinDr-CXR C5 contributes 756 frozen operator rows from 378 image units. It is
+  supplemental, previously exposed, and explicitly records
+  `patient_level_claim=false`.
+- MS-CXR C6I contributes 29 patient-disjoint positive-only samples and 58
+  operator rows. It remains frozen external sensitivity evidence with terminal
+  status `fail_final_stop`.
+- CheXpert, NIH, and general MIMIC-CXR labels/reports may support later
+  preprocessing, score, or cohort robustness work, but they do not provide an
+  interchangeable expert localization target for this endpoint.
+- AMOS, KiTS, LIDC, CAMELYON, and other non-CXR assets are outside the active
+  chest-X-ray audit and are not admitted merely because they are available.
+- C5/C6I predate the active three-region design and lack separately identified
+  `X/C_X` and `E/C_E` interventions. Their combined analysis therefore uses a
+  separate frozen retrospective format, never
+  `cxr_localization_causality_audit_v1`.
+
+## 2026-07-19 CheXlocalize validation release and binding
+
+- The authenticated Redivis release is `aimi.chexlocalize:efx9:v1_0`, version
+  1.0. It contains 2,349 files / 3,887,430,508 bytes. The development-only
+  allowlist is 2,340 `gradcam_maps_val/` files plus
+  `gt_annotations_val.json`, `gt_segmentations_val.json`, and
+  `gradcam_segmentations_val.json`; all five test JSON files are excluded.
+- The validation ground-truth annotation file contains 187 annotated images
+  from 170 patients, whereas the full CheXpert validation CSV contains 234
+  images from 200 patients. The annotation identities are a strict subset of
+  the CSV identities; the 47 remaining validation images simply have no
+  released positive expert region.
+- The two frozen targets provide 33 Consolidation and 67 Pleural Effusion
+  image-finding pairs. Because some images contain both findings, the 100 pairs
+  span 73 images and 70 patients.
+- Redivis polygon coordinates use the original CheXpert geometry, while the
+  local authorized images are the official CheXpert-small downsample. Every
+  mask therefore records explicit x/y scale factors and is rejected when the
+  original/local aspect-ratio delta exceeds 0.01.
+
+## 2026-07-19 CheXlocalize validation development result
+
+- The complete frozen matrix contains 99 eligible image-finding pairs and 198
+  operator rows over 70 patients. One pleural-effusion pair was excluded before
+  scoring because no exact-area connected control occupied the required
+  coordinate zone; the control algorithm was not repaired post hoc.
+- Explanation-region specificity is positive across both findings and both
+  operators. Patient-cluster 95% CI lower bounds for mean `CS_E` are `0.0289`
+  and `0.0003` for consolidation, and `0.0693` and `0.0305` for pleural
+  effusion under local mean and blur respectively.
+- Localization is modest (mean IoU `0.1651` for consolidation and `0.0844` for
+  pleural effusion), and localization--`CS_E` Spearman is small or negative in
+  every cell except a weak `0.1189` consolidation/local-mean association. This
+  is direct development evidence that spatial overlap is not a reliable proxy
+  for causal model reliance.
+- Expert-region specificity is positive for consolidation but centered near
+  zero for pleural effusion. The region role and the operator therefore remain
+  mandatory report factors; neither localization nor one aggregate causal
+  number can substitute for the complete audit matrix.
+- CheXlocalize validation is prior-exposed development only. All test files
+  remain absent and unopened; no threshold, operator, model, or explanation
+  choice is promoted from this result.
+- 2026-07-21 Release preflight found 40 publishable code, protocol, audit,
+  test, and documentation changes on `codex/localization-causality-audit`.
+  The ignored `outputs/` and `local_runs/` trees remain excluded; no data,
+  image, model-weight, runtime-row, cache, or credential file is in the
+  publication scope. BiVES smoke, localization-causality smoke, the active
+  `test_bives_*.py` suite, Python compilation, audit CLI checks, and
+  `git diff --check` pass.
+- 2026-07-21 Committed the reviewed 40-file publication package as `9485e12`
+  (`Record localization causality development`). The commit contains only the
+  reviewed source, protocol, audit summary, test, and documentation surfaces.

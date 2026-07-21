@@ -1,6 +1,6 @@
 # CheXlocalize development and one-time test protocol
 
-**Status:** design freeze candidate; no data/model execution authority
+**Status:** validation/development acquisition authorized; test remains unopened
 
 **Primary rule:** development exposure and test evaluation are strictly separated
 
@@ -18,6 +18,12 @@ This repository has prior CheXpert/CheXlocalize validation exposure. Therefore:
 - all choices made with it are disclosed as protocol development;
 - no performance on it is described as locked, unbiased, or confirmatory;
 - the official test split is the sole candidate for one-time primary evidence.
+
+On 2026-07-19 the user confirmed approved Redivis access and explicitly
+authorized local download/use of the development data. The frozen acquisition
+opening is `local_chexlocalize_validation_acquisition_opening_20260719.json`.
+It permits only the official `*_val` assets and `gradcam_maps_val/`; every
+`*_test` asset remains excluded from acquisition and inspection.
 
 ## 2. Development-allowed decisions
 

@@ -1051,3 +1051,157 @@ or authorize a real model/GPU evaluation before its complete identity lock.
 | `python -m unittest tests.test_qwen35_localization_audit -v` could not import from the non-package `tests/` directory. | First new Qwen adapter unit-test invocation | Used repository-standard discovery; the exact suite passed 2/2. |
 | One documentation patch looked for a novelty sentence in the proposal file. | First `C_X`/`C_E` protocol amendment | The patch failed before changes; split the patch by exact file/anchor and applied the amendment correctly. |
 | The first staged diff check found two trailing spaces on the Phase-C result date line. | First Phase-C commit preflight | No commit occurred. Removed the trailing whitespace, recomputed the result hash in the manifest, and reran staged validation. |
+
+---
+
+## 2026-07-19 Phase D CheXlocalize development acquisition
+
+**Authorization:** The user explicitly authorized obtaining CheXlocalize and
+continuing local execution. This opens acquisition and protocol-development use
+of the CheXlocalize validation/development split only. CheXlocalize test remains
+sealed and must not be downloaded, previewed, decoded, scored, or used for
+threshold selection in this phase.
+
+| Step | Status | Evidence / boundary |
+| --- | --- | --- |
+| D1 official-source and local inventory | complete | Stanford AIMI points to the Redivis CheXlocalize dataset; targeted searches of `H:\Xiyao_Wang\000_Public Dataset`, project `data/`, Downloads, and `H:\2018b` found no local CheXlocalize package. |
+| D2 Redivis access preflight | access_approved_by_user | On 2026-07-19 the user explicitly confirmed approval for the Stanford Redivis CheXlocalize dataset `efx9-5nspnbb4b`; the public dataset page resolves as CheXlocalize. This records authorization but does not bypass login or open any split. |
+| D3 validation-only acquisition | pending_separate_score_free_lock | Validation/development acquisition may proceed after authenticated access is available and a package/split/hash lock is frozen. CheXlocalize test remains sealed and must not be previewed or downloaded as part of development. |
+| D4 package identity and development lock | pending | Record source reference/version, file list, byte sizes and hashes; bind a validation-only development identity. |
+| D5 real-data development preflight/run | pending | Launch only after D3-D4 and all fail-closed contracts pass. Both GPUs are currently occupied by unrelated `022_tooth9` jobs and must not be interrupted. |
+
+### Phase D error log
+
+| Error | Attempt | Resolution |
+| --- | --- | --- |
+| A whole-drive recursive CheXlocalize search exceeded the bounded inspection window. | First local inventory | Terminated the read-only scan and repeated it over the known dataset/project/download roots; no data or experiment process was changed. |
+| Redivis `current_user()`/dataset metadata calls exceeded 40 seconds while using the stale credential. | First API access preflight | The client removed the stale credential and opened a new OAuth login page; no dataset content was accessed. |
+| Automated navigation from the Redivis OAuth page to Google sign-in repeatedly timed out. | Browser-assisted login attempt | Left the existing Redivis OAuth page open for the user to complete the account login manually; did not request or expose credentials. |
+
+---
+
+## 2026-07-19 Phase E existing-data retrospective audit bridge
+
+**Authorization and boundary:** The user authorized use of all already-local
+datasets while CheXlocalize approval is pending. Dataset availability does not
+erase the active proposal's roles. This phase is a read-only, nonformal,
+precomputed-row audit of the frozen VinDr C5 and MS-CXR C6I identities. It does
+not rerun either stage, load a model, use a GPU, tune operators, repair BiVES,
+or create independent confirmation evidence.
+
+| Step | Status | Evidence / boundary |
+| --- | --- | --- |
+| E1 local evidence inventory | complete | VinDr C5 and MS-CXR C6I contain frozen expert-target/control score rows; CheXpert/NIH/general MIMIC lack an equivalent expert-region endpoint, non-CXR datasets are out of scope, and CheXlocalize is absent. |
+| E2 define fail-closed frozen retrospective format | complete | Use separate `frozen_existing_data_retrospective_v1`; legacy target/control TCIG is not mislabeled as the new `X/C_X/E/C_E` primary schema. |
+| E3 contracts and deterministic replay | in_progress | Reject identity/count/operator/hash mismatches; run twice and require byte-identical aggregate rows and summary. |
+| E4 retrospective result and handoff | pending | Report VinDr as supplemental/image-level and MS-CXR as 29-patient frozen external sensitivity, never as CheXlocalize development or independent validation. |
+
+### Phase E invariants
+
+- Do not modify or regenerate any C5/C6I geometry, mask, lock, score, or evidence.
+- Do not launch Qwen3.5 or any GPU process for this bridge.
+- Preserve C5's `patient_level_claim=false` and C6I's two-finding/29-patient
+  denominator; disclose both limitations.
+- Frozen C5/C6I lack separate explanation-region and expert-region controls;
+  do not serialize them as `cxr_localization_causality_audit_v1`.
+- CheXpert validation labels without expert localization do not replace the
+  missing CheXlocalize localization annotations.
+
+### Phase E error log
+
+| Error | Attempt | Resolution |
+| --- | --- | --- |
+| A combined recursive/top-level inventory over the public-dataset and ignored evidence roots exceeded 30 seconds. | First multi-dataset inventory | Terminated the read-only query and switched to explicit known dataset/manifests plus frozen C4/C5/C6I paths; no data or experiment process was changed. |
+| An optional source search included a nonexistent `bives_cxr/bives_b2_terminal_audit.py` path and returned exit code 1 after printing the useful matches. | First bridge-schema inspection | Used the actual tracked entrypoint `scripts/audit_bives_b2_terminal.py`; no edit or execution was affected. |
+
+---
+
+## 2026-07-19 Phase F local VinDr Qwen3.5 development gate
+
+**Authorization and boundary:** The user explicitly authorized every local
+dataset and both workstation GPUs. Phase F uses only four deterministic
+VinDr-train protocol-design positives and frozen Qwen3.5-2B. It is supplemental,
+prior-exposed, nonformal, and image-level because VinDr does not release patient
+identifiers. VinDr test and CheXlocalize remain closed.
+
+| Step | Status | Evidence / boundary |
+| --- | --- | --- |
+| F1 opening and implementation | complete | Opening freezes Qwen3.5-2B, 4x4 local-mean occlusion top-1 explanation, separate `C_X/C_E`, and two fixed operators. |
+| F2 score-free data/model lock | complete | Four unique train images cover two findings and area quartiles 1/4; DICOM/image/mask/model/source hashes pass. Lock canonical SHA-256 is `11a02e1d57f85d970e2eafb9e7217f2ee58f1b47a15945d3b8f156c819c05f45`. |
+| F3 two-GPU local execution | complete | Two samples per GPU completed with zero exclusions and 6,526,417,920-byte peak model allocation per shard; unrelated GPU processes were not interrupted. |
+| F4 merge, deterministic validation, and bounded result | complete | Eight rows merged under SHA-256 `df3faf90...25a65`; result canonical SHA-256 `261a02fa...ce5f`; 165/165 active tests, CPU smoke, py_compile, link/manifest checks, and diff check pass. Report is image-level only. |
+
+### Phase F invariants
+
+- No BiVES checkpoint, C5/C6I replay, VinDr test, CheXlocalize, server, or Slurm.
+- Qwen3.5-2B base snapshot only; no 4B/9B scale-up or training.
+- Patient IDs are unavailable, so every cluster unit is explicitly an image
+  unit and `patient_level_claim=false`.
+- Four score-free selected identities and expert masks are hash-bound before
+  model loading. Geometry or strength failure produces an exclusion, not a
+  result-driven repair.
+
+---
+
+## 2026-07-19 Phase G expanded VinDr Qwen3.5 development matrix
+
+**Goal:** Test whether the small Phase-F operator-sensitive pattern survives a
+larger, result-blind development sample without changing the model,
+explanation, controls, operators, prompts, or thresholds.
+
+| Step | Status | Evidence / boundary |
+| --- | --- | --- |
+| G1 freeze expanded authority and selection rule | complete | Froze 32 new VinDr-train protocol-design positives: 2 findings x 4 area quartiles x 4 images, 3-of-3 preferred then lexical; all four Phase-F pilot identities are excluded. |
+| G2 score-free image/mask/model lock | complete | Reverified all DICOMs, expert masks, model snapshot, source hashes, exact 4-per-stratum coverage, and zero pilot overlap. Manifest SHA-256 `27dfc313ba89f4c226533bed422a22019947bc2b8237ea29f1a66730363616e2`; lock canonical SHA-256 `78214651ad3aa8664d41cabda9ef0b8320f8e333cd8a936b0c0aaea799dbff64`. |
+| G3 dual-GPU execution | superseded_before_launch | The user requested that approved CheXlocalize development data be downloaded and used instead of continuing the VinDr surrogate. No Phase-G model process was launched; the score-free lock is preserved for provenance only. |
+| G4 merge and image-level analysis | pending | Require 64 unique rows minus fail-closed exclusions; report continuous IoU, CS_X, CS_E, sign agreement, and image-cluster intervals. |
+| G5 closure validation and handoff | pending | Full tests, smoke, manifest/link/hash/diff checks, bounded tracked result. |
+
+### Phase G invariants
+
+- Phase F source files and runtime artifacts remain immutable.
+- No Phase-F outcome is used for sample selection or parameter choice.
+- VinDr train only; VinDr test and CheXlocalize remain closed.
+
+## 2026-07-19 Phase H CheXlocalize validation acquisition
+
+**Authorization:** The user explicitly confirmed approved access to Redivis
+dataset `efx9-5nspnbb4b` and requested local download/use instead of continuing
+the VinDr surrogate. Validation is development-only; test remains sealed.
+
+| Step | Status | Evidence / next action |
+| --- | --- | --- |
+| H1 authenticated release inventory | complete | Redivis client authenticated as the user's account and resolved `aimi.chexlocalize:efx9:v1_0`: 2,349 files / 3,887,430,508 bytes. |
+| H2 validation-only acquisition opening | complete | Allow exactly 2,343 files / 3,849,154,259 bytes: 2,340 `gradcam_maps_val/` files plus three `*_val.json` files. Reject all five `*_test.json` files and `chexlocalize_tasks.json`. |
+| H3 local validation download | complete | Downloaded and verified all 2,343 validation allowlist files / 3,849,154,259 bytes under `H:/Xiyao_Wang/000_Public Dataset/CheXlocalize/redivis_v1_0/validation`. Every Redivis MD5 matches; download-lock canonical SHA-256 `c1d4ccf0cff7493b064574d5c3dd7c85fc0a6b994ba962bee11534cf7d164aea`; no test file is present or opened. |
+| H4 image/annotation binding lock | complete | Bound all 234 local CheXpert validation images/200 patients; expert annotations are a strict valid.csv subset of 187 images/170 patients. The two target findings yield 100 pairs over 73 images/70 patients. Original-resolution polygons are explicitly scaled to the official CheXpert-small JPEG geometry with aspect-ratio fail-closed checks. Data-lock canonical SHA-256 `a36d5c6f8e98095ec318fa7c7c09347c28f6681d91dbbff06264616ee7fe4a41`. |
+| H5 Qwen3.5 development matrix | complete_nonformal_development | Both patient-disjoint shards completed sequentially on GPU0 while the unrelated GPU1 job was left untouched. Of 100 pairs, 99 yielded 198 rows over 70 patients; one pleural-effusion pair failed closed on control geometry. Merged rows SHA-256 `66dfa63556ab53657cef67341f43626ffadb234ef23cf0ebf8526b98af7970ed`; result canonical SHA-256 `49e29e887def84bbc3b855b2d58e8a99093782ca4f3b8151559199fa565175ca`. Both findings have positive mean `CS_E` under both operators, while localization--`CS_E` correlations are small or negative. Test remains sealed. |
+
+### Phase H execution notes
+
+- The first verifier invocation was terminated by the terminal's short outer
+  command timeout before producing a lock. It was rerun with a long task
+  window and verified 2,343/2,343 files successfully.
+- The first experiment-lock attempt correctly failed because its new freezer
+  hashed tokenizer/documentation/downloader metadata while the preregistered
+  Qwen3.5 identity uses config + safetensors index + weight payloads. The
+  freezer now uses the established stable payload scope; a regression contract
+  proves unrelated metadata changes cannot alter the model identity, and the
+  current model rehashes to the frozen `6b57c58c...12120` value.
+- `patient_level_claim=false`; all resampling/reporting units are images.
+- This is a larger supplemental development matrix, not independent primary
+  evidence and not a BiVES repair.
+
+---
+
+## 2026-07-21 Repository publication
+
+**Goal:** Publish the complete reviewed source, protocol, audit, test, and
+documentation package on `codex/localization-causality-audit` without exposing
+medical images, local runtime evidence, model weights, credentials, or caches.
+
+| Step | Status | Evidence / boundary |
+| --- | --- | --- |
+| R1 publication-scope inventory | complete | 40 tracked/untracked source and document files reviewed. `.gitignore` excludes `outputs/` and `local_runs/`; no data, model, credential, or generated runtime file is staged. |
+| R2 validation | complete | BiVES smoke, localization-causality smoke, `test_bives_*.py`, compilation, audit CLI help, and `git diff --check` pass. |
+| R3 stage, commit, and push | commit_complete_push_pending | Commit `9485e12` (`Record localization causality development`) contains all 40 reviewed files. Push only to the already tracked audit branch. |

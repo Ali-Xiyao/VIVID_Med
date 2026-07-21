@@ -1,0 +1,48 @@
+{
+  "schema_version": "cxr_localization_vindr_qwen35_development_opening_v1",
+  "authorization_date": "2026-07-19",
+  "authorization_source": "user explicitly authorized all already-local datasets and both workstation GPUs",
+  "authorized": true,
+  "local_execution_only": true,
+  "real_data_authorized": true,
+  "both_local_gpus_authorized": true,
+  "formal_result_authorized": false,
+  "patient_level_claim": false,
+  "chexlocalize_opened": false,
+  "vindr_test_opened": false,
+  "server_or_slurm_authorized": false,
+  "dataset": {
+    "name": "VinDr-CXR-v1.0.0",
+    "source_split": "train",
+    "role": "supplemental_prior_exposed_development",
+    "selection": "protocol_design positive rows; consolidation and pleural_effusion; one deterministic 3_of_3-preferred sample from area quartiles 1 and 4",
+    "expected_samples": 4,
+    "analysis_unit": "image_id because patient identifiers are not provided by the public release"
+  },
+  "model": {
+    "family": "Qwen3.5",
+    "scale": "2B",
+    "path": "H:/Xiyao_Wang/001_models/Qwen3.5-2B",
+    "snapshot_sha256": "6b57c58ceb3c97d4199d4e8e32b54f6ff11d0cf3a8bde3a4e940d5775ae12120",
+    "score": "softmax(No,Yes)[Yes] at first assistant token"
+  },
+  "explanation": {
+    "method": "local_mean_occlusion",
+    "grid": [4, 4],
+    "region": "stable_row_major_top1_cell",
+    "threshold_selected_from_outcomes": false
+  },
+  "operators": [
+    "local_mean_ring8",
+    "masked_gaussian_blur_sigma8"
+  ],
+  "execution_rule": "prepare and hash-bind the four score-free expert masks first, then shard the frozen samples across cuda:0 and cuda:1; exclusions fail closed and are not repaired from scores",
+  "forbidden": [
+    "BiVES C5 or C6I rerun/repair",
+    "VinDr test access",
+    "CheXlocalize access",
+    "threshold or operator tuning from outcomes",
+    "patient-level or independent-primary claim",
+    "server or Slurm execution"
+  ]
+}

@@ -189,9 +189,20 @@ position remains provisional until a submission-date literature search.
 - freeze all model/checkpoint/explanation/operator identities and feasibility
   exclusions before any test opening.
 
-The user's 2026-07-19 opening authorizes local Qwen3.5-2B synthetic model/GPU
-interface and cross-device determinism gates. It does not authorize a
-CheXlocalize download, real-patient development result, or test opening.
+The user's initial 2026-07-19 opening authorized local Qwen3.5-2B synthetic
+model/GPU interface and cross-device determinism gates. A later explicit
+2026-07-19 authorization confirmed approved Redivis access and opened local
+CheXlocalize validation/development acquisition under the separate frozen
+allowlist in `local_chexlocalize_validation_acquisition_opening_20260719.json`.
+That later opening still does not authorize any CheXlocalize test download,
+inspection, score, or evaluation.
+
+The validation-development matrix is now complete and recorded in
+`phase_h_chexlocalize_qwen35_development_result.md`: 99/100 pairs were eligible
+after one score-free control-geometry exclusion, producing 198 rows over 70
+patients. Mean `CS_E` was positive under both frozen operators for both target
+findings, but localization--`CS_E` associations were small or negative. This
+is protocol-development evidence only and does not change the test boundary.
 
 ### Phase D — one-time locked test (future authority required)
 

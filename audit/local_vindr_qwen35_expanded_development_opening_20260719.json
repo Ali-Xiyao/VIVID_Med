@@ -1,0 +1,37 @@
+{
+  "schema_version": "cxr_localization_vindr_qwen35_expanded_development_opening_v1",
+  "authorization_date": "2026-07-19",
+  "authorization_source": "user authorized continuation with all local datasets and both workstation GPUs",
+  "authorized": true,
+  "local_execution_only": true,
+  "formal_result_authorized": false,
+  "patient_level_claim": false,
+  "chexlocalize_opened": false,
+  "vindr_test_opened": false,
+  "dataset": {
+    "name": "VinDr-CXR-v1.0.0",
+    "source_split": "train",
+    "role": "supplemental_prior_exposed_development",
+    "selection": "protocol_design positive rows; consolidation and pleural_effusion; four deterministic 3_of_3-preferred images per area quartile; exclude every Phase-F pilot image",
+    "expected_samples": 32,
+    "analysis_unit": "image_id"
+  },
+  "model": {
+    "family": "Qwen3.5",
+    "scale": "2B",
+    "path": "H:/Xiyao_Wang/001_models/Qwen3.5-2B",
+    "snapshot_sha256": "6b57c58ceb3c97d4199d4e8e32b54f6ff11d0cf3a8bde3a4e940d5775ae12120"
+  },
+  "explanation": "unchanged local_mean_occlusion_4x4_stable_top1",
+  "operators": ["local_mean_ring8", "masked_gaussian_blur_sigma8"],
+  "outcome_blind_rule": "Phase-F scores do not affect sample selection, operators, controls, prompts, masks, thresholds, or exclusions",
+  "forbidden": [
+    "Phase-F source or result mutation",
+    "BiVES C5/C6I rerun or repair",
+    "VinDr test access",
+    "CheXlocalize access",
+    "patient-level or independent-primary claim",
+    "result-driven parameter change",
+    "server or Slurm execution"
+  ]
+}

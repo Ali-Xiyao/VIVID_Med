@@ -18,14 +18,13 @@ Qwen3.5-4B/9B.
 
 ## Current execution boundary
 
-The repository is in development-tooling phase. Model-free synthetic smokes,
-unit tests, and precomputed-row audits may run locally. On 2026-07-19 the user
-also explicitly opened local Qwen3.5-2B model/GPU development gates on both
-workstation GPUs. This opening covers synthetic interface and determinism
-gates only; it does not open CheXlocalize download/test, real-patient scoring,
-or outcome-driven threshold selection. Future real-data execution still
-requires a separately frozen data/model/explanation/operator lock and explicit
-data/test opening.
+The repository is in authorized CheXlocalize validation-development phase
+under `audit/local_chexlocalize_validation_acquisition_opening_20260719.json`
+and `audit/local_chexlocalize_qwen35_development_opening_20260719.json`. Only
+the validation assets may be downloaded and used locally. A real Qwen3.5-2B
+GPU development run may start only after the complete validation download lock
+and the separate data/model/explanation/operator lock pass. CheXlocalize test,
+test-derived threshold selection, and confirmatory scoring remain unauthorized.
 
 All future validation and evaluation run on this workstation. Do not
 synchronize active experiments to the server or submit SSH/Slurm jobs.

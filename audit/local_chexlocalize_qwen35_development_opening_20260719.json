@@ -1,0 +1,49 @@
+{
+  "schema_version": "chexlocalize-qwen35-development-opening-v1",
+  "opened_at_local_date": "2026-07-19",
+  "authorization": {
+    "local_datasets_authorized_by_user": true,
+    "both_local_gpus_authorized_by_user": true,
+    "development_split_only": true
+  },
+  "data": {
+    "release_reference": "aimi.chexlocalize:efx9:v1_0",
+    "split": "validation",
+    "prior_exposure_disclosed": true,
+    "target_findings": [
+      "consolidation",
+      "pleural_effusion"
+    ],
+    "expected_target_pairs": 100,
+    "patient_clustered": true
+  },
+  "model": {
+    "family": "Qwen3.5",
+    "path": "H:/Xiyao_Wang/001_models/Qwen3.5-2B",
+    "snapshot_sha256": "6b57c58ceb3c97d4199d4e8e32b54f6ff11d0cf3a8bde3a4e940d5775ae12120"
+  },
+  "explanation": {
+    "method": "local_mean_occlusion",
+    "grid": "4x4",
+    "region_rule": "stable_top1_cell"
+  },
+  "operators": [
+    "local_mean_ring8",
+    "masked_gaussian_blur_sigma8"
+  ],
+  "execution": {
+    "devices": [
+      "cuda:0",
+      "cuda:1"
+    ],
+    "patient_disjoint_shards": true,
+    "requires_complete_validation_download_lock": true,
+    "server_execution": false
+  },
+  "claim_boundary": {
+    "formal_result": false,
+    "confirmatory_evidence": false,
+    "test_opened": false,
+    "test_use": false
+  }
+}
