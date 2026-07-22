@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import json
 import unittest
 
 import torch
 
+from morph_cxr.case_study import analyze_morph_result
 from morph_cxr.data import boundary_from_mask, mask_moments
 from morph_cxr.experts import (
     EXPERT_TYPES,
@@ -90,6 +92,90 @@ class MorphProtocolTests(unittest.TestCase):
         validation["patient_sha256"] = rows[0]["patient_sha256"]
         with self.assertRaisesRegex(ValueError, "patients overlap"):
             validate_manifest(rows)
+
+
+class MorphCaseStudyTests(unittest.TestCase):
+    def test_case_study_is_identifier_free_and_fail_closed(self) -> None:
+        runs = {}
+        for expert in ("generic", "region", "boundary", "geometry", "distribution"):
+            expert_runs = []
+            for seed in (1, 2, 3):
+                rows = []
+                metrics = {}
+                for finding in MORPH_FINDINGS:
+                    metrics[finding] = {
+                        "auroc": 0.6 if expert == "generic" else 0.7,
+                        "spatial_hit": 0.4 if expert == "generic" else 0.5,
+                        "boundary_hit": 0.3 if expert == "generic" else 0.4,
+                        "geometry_iou": 0.2 if expert == "generic" else 0.3,
+                        "moment_score": 0.5 if expert == "generic" else 0.6,
+                    }
+                    for index, label in enumerate((0, 0, 0, 1, 1, 1)):
+                        rows.append(
+                            {
+                                "sample_id": f"{finding}-{index}",
+                                "finding": finding,
+                                "label": label,
+                                "margin": float(label) + (0.01 if expert == "region" else 0.0),
+                            }
+                        )
+                expert_runs.append(
+                    {
+                        "seed": seed,
+                        "checkpoint_sha256": f"{expert}-{seed}",
+                        "events": [{"loss": 1.0}, {"loss": 0.5}],
+                        "metrics": metrics,
+                        "validation_rows": rows,
+                    }
+                )
+            runs[expert] = expert_runs
+        per_finding = {
+            "pneumothorax": {
+                "prescribed_expert": "boundary",
+                "discrimination_gain": 0.1,
+                "spatial_gain": 0.1,
+                "pass": True,
+            },
+            "consolidation": {
+                "prescribed_expert": "region",
+                "discrimination_gain": 0.1,
+                "spatial_gain": 0.1,
+                "pass": True,
+            },
+            "pleural_effusion": {
+                "prescribed_expert": "region_boundary",
+                "discrimination_gain": 0.1,
+                "spatial_gain": 0.1,
+                "pass": True,
+            },
+            "cardiomegaly": {
+                "prescribed_expert": "geometry",
+                "discrimination_gain": 0.1,
+                "spatial_gain": 0.1,
+                "pass": True,
+            },
+        }
+        result = {
+            "schema_version": "morph-separability-result-v1",
+            "canonical_sha256": "source-lock",
+            "status": "pass_open_full_proposal",
+            "gate_pass": True,
+            "passed_findings": 4,
+            "minimum_passing_findings": 3,
+            "per_finding": per_finding,
+            "runs": runs,
+            "chexlocalize_test_opened": False,
+            "vindr_test_opened": False,
+            "monotonic_min_delta": 0.0,
+            "concept_direct_median_auroc_gap": 0.1,
+        }
+        analysis = analyze_morph_result(result)
+        self.assertEqual(analysis["execution_integrity"]["completed_runs"], 15)
+        self.assertEqual(analysis["passed_findings"], 4)
+        self.assertNotIn("validation_rows", json.dumps(analysis))
+        result["chexlocalize_test_opened"] = True
+        with self.assertRaisesRegex(ValueError, "opened test split"):
+            analyze_morph_result(result)
 
 
 if __name__ == "__main__":

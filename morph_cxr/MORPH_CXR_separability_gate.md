@@ -2,10 +2,12 @@
 
 ## Status and scope
 
-This is a bounded, development-only survival gate. It is not a full MORPH-CXR
-proposal and cannot support a clinical, causal, or confirmatory claim. ARISE-v1
-and VICER V0 remain terminal records; their pixel-removal results are not tuned,
-replayed, or relabeled here.
+This bounded, development-only survival gate is complete with a terminal
+`1/4` NO-GO. It is not a full MORPH-CXR proposal and cannot support a clinical,
+causal, or confirmatory claim. ARISE-v1 and VICER V0 remain terminal records;
+their pixel-removal results are not tuned, replayed, or relabeled here. The
+frozen result is recorded in
+`audit/morph_cxr_separability_terminal_result.md`.
 
 The gate asks one question: with one frozen Qwen3.5-2B visual backbone and a
 new patient-disjoint development surface, does a preregistered morphology
@@ -72,3 +74,12 @@ Failure stops before a full MORPH-CXR proposal, larger data, additional
 findings, CheXlocalize test, VinDr test, LLM training, and 4B/9B scaling. A
 post-run case study may diagnose failure but may not remap findings to experts,
 relax thresholds, or turn the same validation result into a pass.
+
+## Terminal outcome
+
+Only the cardiomegaly geometry expert achieved strictly positive AUROC and
+spatial gains. Pneumothorax and pleural effusion improved discrimination but
+not their prescribed spatial endpoints; consolidation tied spatially and lost
+discrimination. The concept-only non-inferiority and monotonicity contracts
+passed, but they cannot override the `1/4 < 3/4` primary gate. Full MORPH-CXR,
+test opening, remapping, scaling, and same-surface repair are closed.

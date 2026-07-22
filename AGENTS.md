@@ -2,11 +2,12 @@
 
 ## Active authority
 
-`audit/CXR_localization_causality_audit_proposal.md` remains the active
-scientific authority. `vicer_cxr/VICER_CXR_method_proposal.md` and
-`audit/vicer_v0_intervention_validity_result.md` define the completed
-successor-method attempt. VICER V0 is terminal negative; V1 and V2 remain
-gate-locked.
+`audit/morph_cxr_separability_terminal_result.md` is the current scientific
+decision authority. The prospective MORPH-CXR survival gate is terminal NO-GO
+at `1/4` findings versus the required `3/4`; there is no active successor
+method experiment. `audit/CXR_localization_causality_audit_proposal.md`,
+`vicer_cxr/VICER_CXR_method_proposal.md`, and their results are retained as
+frozen development history.
 
 The predecessor BiVES B2 route is frozen at tag
 `bives-b2-terminal-8bb1a94`. Its archived proposal and terminal report are:
@@ -22,12 +23,16 @@ ARISE-v1 is frozen at tag `arise-oracle-v1-terminal-20260722`. Its terminal
 3-of-4 development verdict may not be changed to a post-hoc pass. Do not add an
 ARISE selector, U/I route, scale-up, rerun, or test opening.
 
+MORPH-CXR is frozen at the separability gate. Do not remap findings to experts,
+relax the gate, rerun the exposed 48-patient surface, write a full MORPH
+proposal, or use the isolated cardiomegaly signal as a post-hoc pass.
+
 ## Current execution boundary
 
-The local VICER V0 VinDr-train development run is complete. No intervention
-family survived all four findings, so there is no active V1/V2 experiment.
-CheXlocalize test, VinDr test, test-derived threshold selection, confirmatory
-scoring, selector work, and model scaling remain unauthorized.
+The local VICER V0 and MORPH separability development runs are complete and
+terminal negative. There is no active experiment. CheXlocalize test, VinDr
+test, test-derived threshold selection, confirmatory scoring, selector work,
+same-surface repair, and model scaling remain unauthorized.
 
 All future validation and evaluation run on this workstation. Do not
 synchronize active experiments to the server or submit SSH/Slurm jobs.
@@ -42,6 +47,8 @@ CheXlocalize test is reserved for one-time locked evaluation.
 - `archive/`: frozen predecessor proposal and terminal negative report.
 - `bives_cxr/`: retained BiVES implementation and reusable audited
   intervention/geometry utilities; frozen as a method route.
+- `morph_cxr/`: retained bounded separability-gate implementation and read-only
+  case-study tooling; frozen before a full method proposal.
 - `configs/bives_cxr/`: historical/frozen BiVES experiment identities; not an
   authorization to launch training or evaluation.
 - `refine-logs/`: immutable C4/C5/C6I execution authorities and evidence.
@@ -72,6 +79,7 @@ new experiment:
 pip install -r requirements.txt
 python scripts/smoke_bives_cxr.py
 python scripts/smoke_localization_causality_audit.py
+python -m unittest discover -s tests -p "test_morph_*.py" -v
 python -m unittest discover -s tests -p "test_bives_*.py" -v
 python scripts/audit_bives_b2_terminal.py --help
 python scripts/audit_cxr_localization_causality.py --help

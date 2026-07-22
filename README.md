@@ -1,4 +1,4 @@
-# CXR Localization-Causality Audit
+# CXR Evidence Method Development: Terminal Audits
 
 This repository now studies a narrower and more defensible question:
 
@@ -28,6 +28,8 @@ causal evidence set.
   [`audit/arise_cxr_method_development_result.md`](audit/arise_cxr_method_development_result.md)
 - VICER-CXR V0 intervention-validity result:
   [`audit/vicer_v0_intervention_validity_result.md`](audit/vicer_v0_intervention_validity_result.md)
+- MORPH-CXR morphology-separability terminal result:
+  [`audit/morph_cxr_separability_terminal_result.md`](audit/morph_cxr_separability_terminal_result.md)
 - Handoff index: [`docs/README.md`](docs/README.md)
 
 ## Frozen BiVES predecessor
@@ -65,7 +67,7 @@ diagnostics. A composite score cannot hide failure in either family.
 
 ## Current status
 
-`LOCAL_CHEXLOCALIZE_QWEN35_DEVELOPMENT_COMPLETE`
+`MORPH_SEPARABILITY_TERMINAL_NO_GO`
 
 Model-free synthetic tooling and a real Qwen3.5-2B synthetic-image interface
 gate have run locally. The model gate was repeated on both RTX 3090 GPUs and
@@ -101,6 +103,13 @@ VICER-CXR V0 subsequently completed on new VinDr-train development identities.
 Independent heads passed, but no tested intervention family was valid across
 all four findings; only 4/12 finding-family cells passed. V1 coverage analysis,
 V2 coalition selection, test execution, and scaling therefore remain closed.
+
+The subsequent prospective MORPH-CXR separability gate also stopped before a
+full proposal. On a new 48-patient Chest ImaGenome gold / MIMIC-CXR-JPG
+development lock, only cardiomegaly's geometry expert beat generic patch-MIL
+on both discrimination and its spatial endpoint. The preregistered result is
+`1/4`, below the required `3/4`; full MORPH, remapping, rerun, test opening,
+LLM training, and 4B/9B scaling are closed.
 
 All future experiment execution is local to this workstation. Do not sync
 active experiments to the server or submit SSH/Slurm jobs.
