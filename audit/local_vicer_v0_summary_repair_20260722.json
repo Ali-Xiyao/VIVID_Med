@@ -1,0 +1,36 @@
+{
+  "schema_version": "local-vicer-v0-summary-repair-v1",
+  "status": "authorized",
+  "authorized_at_local_date": "2026-07-22",
+  "authorization_basis": "User authorized automatic local case study and code repair within the frozen experiment ladder.",
+  "scope": "Offline summary-only repair; no image, model, critic, verifier, or intervention execution.",
+  "source_commit": "631c9c87447a26f13a2efebc1d7c86baaf0e84c0",
+  "input": {
+    "v0_result_file_sha256": "bca4c7324a8014ab88ad47bb6c144f40d712b72392d89205a80fbc5588abff84",
+    "v0_result_canonical_sha256": "3eb091b11fc2b9d1ffb893fec0ec4b19332ffd8745ca2dbc120f92f80400a251",
+    "v0_rows_file_sha256": "fba536afab1fd993fe2537f694484c7a2b7d70cedafe45b8bf411d3386dbe98d",
+    "records": 384
+  },
+  "repair": {
+    "problem": "SciPy represents a mathematically exact Spearman rho of 0.8 as 0.7999999999999999, so a raw >= 0.8 comparison incorrectly fails equality.",
+    "implementation": "Use a fixed 1e-12 absolute tolerance only when comparing measured values against unchanged frozen minimum thresholds.",
+    "thresholds_changed": false,
+    "scores_changed": false,
+    "rows_changed": false,
+    "expected_v0_verdict_change": false
+  },
+  "source_sha256": {
+    "vicer_cxr/validity.py": "0cdd6d945d994d68a1a478124bbc09067f350066b7b5619aabb874ca513de443",
+    "vicer_cxr/case_study.py": "ccfd2071484f7b162c244abe64dd7ac0fbba690fbd479efc8248456af3ea3015",
+    "scripts/summarize_vicer_v0_rows.py": "9e25568b8d53484d237e22e2dfa7a775f4e82ec2c1efab6e8d3c5759825a6a12",
+    "scripts/analyze_vicer_v0_failure.py": "04d2e3b01500d82152d5f9c7e007e3f707044c8da8e0d0de18ff10cbc0a24c68",
+    "tests/test_vicer_validity.py": "01148afd29b20bb5fafd50d6ae1970aca73accb9671ddaaedfc49831e955787d"
+  },
+  "boundaries": {
+    "local_only": true,
+    "test_opened": false,
+    "model_rescored": false,
+    "selector_started": false,
+    "v1_remains_locked_unless_corrected_v0_passes": true
+  }
+}
