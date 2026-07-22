@@ -2,8 +2,8 @@
 
 | ID | Status | Artifact / evidence |
 | --- | --- | --- |
-| V000 | in_progress | Source and contracts under implementation on `codex/vicer-cxr-validity`. |
-| V001 | locked | Wait for clean pre-open source commit and authority. |
+| V000 | complete | Source commit `3aa8adb`; 3/3 contracts, compileall, CLI surfaces, hashes, and proposal frozen. |
+| V001 | authorized | Opening `audit/local_vicer_v0_opening_20260722.json`; build data and score-free geometry next. |
 | V002 | locked | Wait for V001 data/geometry locks. |
 | V003 | locked | Wait for independent head calibration pass. |
 | V100 | locked | Requires V003 pass. |

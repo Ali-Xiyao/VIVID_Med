@@ -1,0 +1,76 @@
+{
+  "schema_version": "local-vicer-v0-opening-v1",
+  "status": "authorized",
+  "authorized_at_local_date": "2026-07-22",
+  "authorized_by": "user",
+  "source_commit": "3aa8adb900ce32d7de3513103f868c003131e301",
+  "method": "VICER-CXR",
+  "stage": "V0 intervention-validity dose response",
+  "execution": {
+    "local_only": true,
+    "model_family": "Qwen3.5",
+    "model_scale": "2B",
+    "gpu_authorized": true,
+    "automatic_case_study_and_code_repair_authorized": true
+  },
+  "data": {
+    "dataset": "VinDr-CXR-v1.0.0",
+    "split": "train only",
+    "arise_images_excluded": true,
+    "roles_globally_image_disjoint": true,
+    "patient_level_claim": false,
+    "single_reader_positive_allowed_for_exploratory_v0": true,
+    "findings": [
+      "pneumothorax",
+      "consolidation",
+      "pleural_effusion",
+      "cardiomegaly"
+    ]
+  },
+  "model_snapshot": {
+    "path": "H:/Xiyao_Wang/001_models/Qwen3.5-2B",
+    "selected_files_sha256": {
+      "config.json": "ed1c1723241f23f7f4e23430759cbd7dcfb4103cbdfe052bfe7626b57c2615b4",
+      "model.safetensors-00001-of-00001.safetensors": "aa33250c4fc64891ddfaba3a314fd9542ea371843c387178b425fbcc5ed680b1",
+      "model.safetensors.index.json": "aca8afed9da75b0f050b408d270766fd77627f1af401e240f61c3b47d0db02f9",
+      "preprocessor_config.json": "27225450ac9c6529872ee1924fcb0962ff5634834f817040f444118116f4e516"
+    },
+    "selected_snapshot_sha256": "4ba76022d2773dc30f2f8a9d7fd5be75abcad3074d5da3436b5f088d689adec3"
+  },
+  "source_sha256": {
+    "vicer_cxr/validity.py": "6e7daff59f81b31d2fb544cfcfbd467ed8eb771454b3e39987c19ff30cf3803b",
+    "vicer_cxr/intervention_bank.py": "23ae6e2fe6c5228abb8f44c0e0f0a78d546b95a25cf57bae86e0a01d970f9878",
+    "scripts/prepare_vicer_v0_vindr.py": "3438c6f7733261925990d5b73309034e639d99fe5b5857befed163689fb1f19f",
+    "scripts/prepare_vicer_v0_geometry.py": "9f11263ebf4a653699ae3e877be74961d13cfdcf8c2dfa1362493b1178a88a75",
+    "scripts/cache_vicer_qwen35_tokens.py": "7c4fccb2a1ae69397678a7961538537ee9d7cc4b8cfde77d1a8fe94351ad0260",
+    "scripts/train_vicer_v0_heads.py": "c26b9c30217c6411598379b0d3b2d64f3f6ad220c9a8211f85613c453f1d2da1",
+    "scripts/run_vicer_validity_gate.py": "eeac5aafc94880fc22c24a8bb80943a4ead3c83c31f24e35f939eea39eba6493",
+    "configs/vicer_cxr/v0_validity.yaml": "abc0dd06b8045b77a9a28c6461113f31b8f7eb912bc6b3254aa07500a1a2dbee",
+    "vicer_cxr/VICER_CXR_method_proposal.md": "3b4fbc20bcf57b135f0b3a802579a89d17ec2097dd93392273d0c7ba5208813a",
+    "tests/test_vicer_validity.py": "d83b40eb6fdbedb0212ce2ce201de2dbe935383d83fffb4432b8662c7120cb7d"
+  },
+  "thresholds": {
+    "minimum_critic_auroc": 0.6,
+    "minimum_verifier_auroc": 0.6,
+    "minimum_q_remove": 0.02,
+    "minimum_q_preserve": 0.98,
+    "minimum_q_realism": 0.5,
+    "minimum_monotonic_spearman": 0.8,
+    "minimum_valid_fraction": 0.5
+  },
+  "validity_independence": {
+    "critic_training_role_disjoint_from_verifier": true,
+    "evaluation_role_disjoint_from_both": true,
+    "critic_uses_target_verifier_effect": false
+  },
+  "forbidden": [
+    "VinDr test",
+    "CheXlocalize test",
+    "ARISE threshold or result changes",
+    "selector or coalition training",
+    "uncertain or insufficient states",
+    "Qwen3.5-4B or 9B",
+    "server, SSH, or Slurm execution"
+  ],
+  "downstream_gate": "V1 remains locked unless V0 passes exactly as preregistered"
+}
