@@ -17,6 +17,7 @@ from bives_cxr.qwen35_preprocessing import letterbox_image  # noqa: E402
 from bives_cxr.rescue_protocol import deterministic_translated_control_mask, mask_geometry  # noqa: E402
 from scripts.cache_qwen35_patch_tokens import read_image  # noqa: E402
 from vicer_cxr.validity import canonical_sha256, file_sha256, validate_v0_manifest  # noqa: E402
+from vicer_cxr.matched_controls import deterministic_connected_statistics_control  # noqa: E402
 
 
 def main() -> None:
@@ -41,7 +42,7 @@ def main() -> None:
         if file_sha256(source) != row["image_sha256"]:
             raise ValueError("VICER V0 geometry source hash changed")
         image = read_image(source)
-        _, content_box = letterbox_image(image, args.image_size)
+        prepared, content_box = letterbox_image(image, args.image_size)
         native = union_box_mask(
             int(row["native_columns"]), int(row["native_rows"]), row["roi_boxes"]
         )
@@ -49,11 +50,23 @@ def main() -> None:
         content = np.zeros((args.image_size, args.image_size), dtype=bool)
         left, top, right, bottom = content_box
         content[top:bottom, left:right] = True
-        control, certificate = deterministic_translated_control_mask(
-            target,
-            content,
-            seed_key=f"vicer-v0:{row['sample_id']}",
-        )
+        try:
+            control, certificate = deterministic_translated_control_mask(
+                target,
+                content,
+                seed_key=f"vicer-v0:{row['sample_id']}",
+            )
+            control_family = "exact_target_shape_translated_same_vertical_band"
+        except ValueError as error:
+            grayscale = np.asarray(prepared.convert("L"), dtype=np.float64) / 255.0
+            control, certificate = deterministic_connected_statistics_control(
+                grayscale,
+                target,
+                content,
+                seed_key=f"vicer-v0:{row['sample_id']}:fallback",
+            )
+            certificate["translated_control_failure"] = str(error)
+            control_family = "exact_area_connected_statistics_fallback"
         if bool((target & control).any()) or int(target.sum()) != int(control.sum()):
             raise AssertionError("VICER V0 control geometry contract failed")
         target_geometry = mask_geometry(target, content)
@@ -76,10 +89,11 @@ def main() -> None:
                 "target_geometry": target_geometry,
                 "control_geometry": control_geometry,
                 "control_certificate": certificate,
+                "control_family": control_family,
                 "exact_area": True,
                 "disjoint": True,
-                "same_vertical_band": True,
-                "target_shape_translated": True,
+                "same_vertical_band": bool(control_family.startswith("exact_target_shape")),
+                "target_shape_translated": bool(control_family.startswith("exact_target_shape")),
                 "model_score_used": False,
             }
         )
@@ -96,9 +110,9 @@ def main() -> None:
         "manifest_sha256": file_sha256(args.manifest),
         "data_lock_canonical_sha256": data_lock["canonical_sha256"],
         "rows_sha256": file_sha256(rows_path),
-        "control_family": "exact-target-shape translated, disjoint, same vertical third",
+        "control_family": "translated exact-shape primary; connected exact-area/statistics fallback",
         "true_anatomy_matching": False,
-        "local_statistics_matching": False,
+        "local_statistics_matching": "fallback only",
         "model_or_score_opened": False,
         "chexlocalize_test_opened": False,
     }

@@ -12,6 +12,7 @@ from vicer_cxr.validity import (
     summarize_v0_rows,
     validate_v0_manifest,
 )
+from vicer_cxr.matched_controls import deterministic_connected_statistics_control
 
 
 class VicerValidityContracts(unittest.TestCase):
@@ -110,6 +111,22 @@ class VicerValidityContracts(unittest.TestCase):
                 minimum_valid_fraction=0.5,
             )["v1_authorized"]
         )
+
+    def test_connected_statistics_fallback_is_exact_and_deterministic(self) -> None:
+        image = np.tile(np.linspace(0.0, 1.0, 32), (32, 1))
+        content = np.ones((32, 32), dtype=bool)
+        target = np.zeros_like(content)
+        target[8:24, 8:24] = True
+        first, audit = deterministic_connected_statistics_control(
+            image, target, content, seed_key="unit"
+        )
+        second, _ = deterministic_connected_statistics_control(
+            image, target, content, seed_key="unit"
+        )
+        self.assertTrue(np.array_equal(first, second))
+        self.assertEqual(int(first.sum()), int(target.sum()))
+        self.assertFalse(bool((first & target).any()))
+        self.assertEqual(audit["connected_component_requirement"], 1)
 
 
 if __name__ == "__main__":

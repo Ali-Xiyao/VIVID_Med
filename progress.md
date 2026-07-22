@@ -699,3 +699,13 @@
   surfaces, byte-identical plan/tracker aliases, and whitespace checks pass.
   Data/model scoring remains unopened pending a clean source commit and a
   separate opening lock.
+- 2026-07-22 V001 data preparation completed under opening `6daada2`: 280/280
+  VinDr-train images are globally role-disjoint, all 1,446 ARISE VinDr images
+  are excluded, official metadata and selected DICOM hashes pass, and the data
+  lock canonical SHA-256 is
+  `b4b54949faffa7419cfdca07fd7c9125d9e257078d546fbe2c33d9566dc2ea09`.
+  The first score-free geometry build stopped on a central cardiomegaly box
+  for which no same-band disjoint exact-shape translation exists. No model or
+  score opened. Implemented and tested an exact-area, disjoint, one-component,
+  original-statistics-matched fallback; a new source commit/opening is required
+  before rebuilding geometry.

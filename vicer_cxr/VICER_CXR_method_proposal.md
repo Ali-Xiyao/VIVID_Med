@@ -50,10 +50,12 @@ The score-free bank contains three prespecified families:
 - local-ring-mean replacement with alpha 0.25, 0.50, 0.75, and 1.00;
 - low-frequency replacement with sigma 24 and the same four alpha levels.
 
-Every evaluation expert mask has an exact-shape translated, target-disjoint,
-same-vertical-third control. This V0 control is geometry matched but is not
-claimed to be true anatomy or local-statistics matched; those stricter controls
-remain a V1 refinement after V0 survival.
+Every evaluation expert mask first attempts an exact-shape translated,
+target-disjoint, same-vertical-third control. If that score-free geometry is
+impossible, a prespecified fallback selects an exact-area, target-disjoint,
+single-connected control by original-image mean, variance, gradient, and
+perimeter similarity. Neither family is called true anatomy matching; stricter
+anatomy controls remain a V1 refinement after V0 survival.
 
 For each target intervention:
 
