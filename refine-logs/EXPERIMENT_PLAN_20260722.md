@@ -1,6 +1,6 @@
 # VICER-CXR V0 Experiment Plan
 
-**Status:** PREOPEN_CODE_VALIDATION
+**Status:** V001_SCORE_FREE_GEOMETRY_V2
 **Date:** 2026-07-22
 **Authority:** `../vicer_cxr/VICER_CXR_method_proposal.md`
 

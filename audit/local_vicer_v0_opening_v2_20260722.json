@@ -1,0 +1,100 @@
+{
+  "schema_version": "local-vicer-v0-opening-v2",
+  "status": "authorized",
+  "authorized_at_local_date": "2026-07-22",
+  "authorized_by": "user",
+  "supersedes_for_future_execution": "audit/local_vicer_v0_opening_20260722.json",
+  "supersession_reason": "The v1 score-free geometry attempt found one central cardiomegaly target for which no disjoint same-band exact-shape translation exists. No model or score was opened. V2 freezes a deterministic score-blind connected exact-area statistics-matched fallback without changing any validity threshold.",
+  "source_commit": "1359d8e92cc9778008477e3d1d4927eced5cedfc",
+  "method": "VICER-CXR",
+  "stage": "V0 intervention-validity dose response",
+  "execution": {
+    "local_only": true,
+    "model_family": "Qwen3.5",
+    "model_scale": "2B",
+    "gpu_authorized": true,
+    "automatic_case_study_and_code_repair_authorized": true
+  },
+  "data": {
+    "dataset": "VinDr-CXR-v1.0.0",
+    "split": "train only",
+    "data_lock_path": "local_runs/vicer_cxr/v0_vindr_validity/vicer_v0_data_lock.json",
+    "data_lock_file_sha256": "33bd4e34944e0c9d6e12a206741fe6a80eda729b7505ba83a2900c3cb1173556",
+    "data_lock_canonical_sha256": "b4b54949faffa7419cfdca07fd7c9125d9e257078d546fbe2c33d9566dc2ea09",
+    "manifest_sha256": "3a531b813ec2c0f377ab664051fd740c2cd61b07aa2a88c0003c8e159c141b7a",
+    "arise_images_excluded": true,
+    "roles_globally_image_disjoint": true,
+    "patient_level_claim": false,
+    "single_reader_positive_allowed_for_exploratory_v0": true,
+    "findings": [
+      "pneumothorax",
+      "consolidation",
+      "pleural_effusion",
+      "cardiomegaly"
+    ]
+  },
+  "geometry": {
+    "primary_control": "same-band disjoint exact-shape translation",
+    "score_blind_fallback": "connected exact-area disjoint statistics-matched control",
+    "fallback_matching_features": [
+      "original_pixel_mean",
+      "original_pixel_standard_deviation",
+      "original_gradient_energy",
+      "region_perimeter"
+    ],
+    "fallback_forbidden_inputs": [
+      "model_score",
+      "critic_score",
+      "verifier_score",
+      "intervention_result"
+    ],
+    "required_geometry_records": 32
+  },
+  "model_snapshot": {
+    "path": "H:/Xiyao_Wang/001_models/Qwen3.5-2B",
+    "selected_files_sha256": {
+      "config.json": "ed1c1723241f23f7f4e23430759cbd7dcfb4103cbdfe052bfe7626b57c2615b4",
+      "model.safetensors-00001-of-00001.safetensors": "aa33250c4fc64891ddfaba3a314fd9542ea371843c387178b425fbcc5ed680b1",
+      "model.safetensors.index.json": "aca8afed9da75b0f050b408d270766fd77627f1af401e240f61c3b47d0db02f9",
+      "preprocessor_config.json": "27225450ac9c6529872ee1924fcb0962ff5634834f817040f444118116f4e516"
+    },
+    "selected_snapshot_sha256": "4ba76022d2773dc30f2f8a9d7fd5be75abcad3074d5da3436b5f088d689adec3"
+  },
+  "source_sha256": {
+    "vicer_cxr/validity.py": "6e7daff59f81b31d2fb544cfcfbd467ed8eb771454b3e39987c19ff30cf3803b",
+    "vicer_cxr/intervention_bank.py": "23ae6e2fe6c5228abb8f44c0e0f0a78d546b95a25cf57bae86e0a01d970f9878",
+    "vicer_cxr/matched_controls.py": "9be5811129e957cc4bc83771c52b0e006c746d36953f759f93999c7073aa4bde",
+    "scripts/prepare_vicer_v0_vindr.py": "3438c6f7733261925990d5b73309034e639d99fe5b5857befed163689fb1f19f",
+    "scripts/prepare_vicer_v0_geometry.py": "14ab5bf6a606631dc544353836c22c15c5b5d6f56bd722158ddd8b6c0cfe1de0",
+    "scripts/cache_vicer_qwen35_tokens.py": "7c4fccb2a1ae69397678a7961538537ee9d7cc4b8cfde77d1a8fe94351ad0260",
+    "scripts/train_vicer_v0_heads.py": "c26b9c30217c6411598379b0d3b2d64f3f6ad220c9a8211f85613c453f1d2da1",
+    "scripts/run_vicer_validity_gate.py": "eeac5aafc94880fc22c24a8bb80943a4ead3c83c31f24e35f939eea39eba6493",
+    "configs/vicer_cxr/v0_validity.yaml": "abc0dd06b8045b77a9a28c6461113f31b8f7eb912bc6b3254aa07500a1a2dbee",
+    "vicer_cxr/VICER_CXR_method_proposal.md": "4971b1a0cadbe97b868be536a9bddb464cc478b47af9920cf4d8ce124f85dedf",
+    "tests/test_vicer_validity.py": "1e0d274545a8918b08981735c4cbeabddc17f782ab470ea113a72c145e9d025a"
+  },
+  "thresholds": {
+    "minimum_critic_auroc": 0.6,
+    "minimum_verifier_auroc": 0.6,
+    "minimum_q_remove": 0.02,
+    "minimum_q_preserve": 0.98,
+    "minimum_q_realism": 0.5,
+    "minimum_monotonic_spearman": 0.8,
+    "minimum_valid_fraction": 0.5
+  },
+  "validity_independence": {
+    "critic_training_role_disjoint_from_verifier": true,
+    "evaluation_role_disjoint_from_both": true,
+    "critic_uses_target_verifier_effect": false
+  },
+  "forbidden": [
+    "VinDr test",
+    "CheXlocalize test",
+    "ARISE threshold or result changes",
+    "selector or coalition training",
+    "uncertain or insufficient states",
+    "Qwen3.5-4B or 9B",
+    "server, SSH, or Slurm execution"
+  ],
+  "downstream_gate": "V1 remains locked unless V0 passes exactly as preregistered"
+}

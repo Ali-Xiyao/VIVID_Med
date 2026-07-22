@@ -709,3 +709,9 @@
   score opened. Implemented and tested an exact-area, disjoint, one-component,
   original-statistics-matched fallback; a new source commit/opening is required
   before rebuilding geometry.
+- 2026-07-22 Froze VICER V0 opening v2 after the score-free geometry-only
+  failure. Opening v2 binds source commit `1359d8e`, data-lock canonical SHA-256
+  `b4b54949...c2ea09`, the unchanged Qwen3.5-2B snapshot and all original
+  thresholds. It adds only a deterministic score-blind exact-area connected
+  control fallback selected from original pixel/statistics/geometry features;
+  model, critic, verifier, and intervention scores remain forbidden inputs.
