@@ -715,3 +715,12 @@
   thresholds. It adds only a deterministic score-blind exact-area connected
   control fallback selected from original pixel/statistics/geometry features;
   model, critic, verifier, and intervention scores remain forbidden inputs.
+- 2026-07-22 Completed VICER V0 locally on GPU1. Geometry is 32/32, Qwen3.5-2B
+  cache is 280/280, all eight heads pass calibration, and the frozen V0 matrix
+  is 384/384. A binary-float equality bug (`0.8` represented as
+  `0.7999999999999999`) was repaired under a separate summary-only opening;
+  no score, row, threshold, or verdict changed. Corrected result canonical
+  SHA-256 is `3c9ceb27...30bb1`; case-study canonical SHA-256 is
+  `48b9c78e...24a93`. V0 fails with zero surviving complete operator families,
+  so automatic execution stops before V1/V2. GPU1 returned to idle and test
+  data remained unopened.

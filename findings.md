@@ -1563,3 +1563,11 @@
 - The first executable gate is V0 intervention-validity dose response on a
   new score-free development sample spanning at least four finding
   morphologies. V1 coverage-redundancy remains conditional on V0 survival.
+- VICER V0 is now terminal negative. All heads calibrated and 384/384 rows
+  completed, but no operator family passed pneumothorax, consolidation,
+  pleural effusion, and cardiomegaly together. Only 4/12 cells pass.
+- The locked-row case study attributes 185 row failures to insufficient local
+  finding removal, 43 to collateral preservation, and 15 to realism. Every
+  cell retains a positive mean target-control gap among valid rows, so the
+  failure is validity/coverage rather than execution, head calibration, or
+  score orientation. V1/V2 remain locked.
