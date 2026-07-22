@@ -1,0 +1,49 @@
+{
+  "boundaries": {
+    "chexlocalize_test_opened": false,
+    "llm_training_used": false,
+    "local_only": true,
+    "patient_disjoint": true,
+    "pixel_intervention_used": false,
+    "qwen35_4b_9b_used": false,
+    "result_driven_remapping_allowed": false,
+    "source_role": "exposed_development_only",
+    "vindr_test_opened": false
+  },
+  "canonical_sha256": "e544ec0c8d6ac6d4b5774ad9da6b2f1762d8776079a285d70965be2fc4179e37",
+  "config_sha256": "394ca12e0c2079245acbef977d2fb3d5f9921f5fa625282d0b412e1666fd7949",
+  "data_lock_canonical_sha256": "5401238e792711dbd49917fe136fa5e02851a74fdb048cf2050f41ff55bd3227",
+  "data_lock_file_sha256": "100304e61a06942a3f4c77ac4a18b1c0f2216d28e9d7eff59c140cbb17a5ff30",
+  "manifest_sha256": "5b14b5a449e5ebc0079df1025d62b433123fe590c9ac5cae78dab487d0360b96",
+  "mapping": {
+    "cardiomegaly": "geometry",
+    "consolidation": "region",
+    "pleural_effusion": "region_boundary",
+    "pneumothorax": "boundary"
+  },
+  "model_snapshot_sha256": "6b57c58ceb3c97d4199d4e8e32b54f6ff11d0cf3a8bde3a4e940d5775ae12120",
+  "opened_at": "2026-07-22T00:00:00+08:00",
+  "processor_snapshot_sha256": "80353c20ac1b7e7db02cd042eedc695d2c637a4b09fdd7f30db1c9741e628f63",
+  "schema_version": "morph-separability-opening-v1",
+  "seeds": [
+    20260722,
+    20260723,
+    20260724
+  ],
+  "source_commit": "dc3914afac9ae358bae7b79ce256f1170e89e0b1",
+  "source_sha256": {
+    "morph_cxr/data.py": "96bc332a788257670eada470e6c0ba3604a190a8296f8f532f0ef5dab1bbb6bc",
+    "morph_cxr/experts.py": "56231e5a1884544a6e10deeef734722048d21a7021d43690477e46500ca7df80",
+    "morph_cxr/protocol.py": "6f4332a308b7304a6cfe2cf135681228115202deefb3376ca05a77929f097aac",
+    "scripts/cache_morph_qwen35_tokens.py": "82252b60e20ab5fb5c7b8dd6e09458428ddce4e0d299137ea7b8f8bf2b90cde0",
+    "scripts/train_morph_separability.py": "b6d954003d146d858de5bb1dda167fb37cad95cf9daae542057e319f8cf27cca"
+  },
+  "status": "authorized_local_development",
+  "thresholds": {
+    "concept_auroc_noninferiority": 0.05,
+    "minimum_discrimination_gain": 0.0,
+    "minimum_passing_findings": 3,
+    "minimum_spatial_gain": 0.0,
+    "monotonic_tolerance": 1e-12
+  }
+}
