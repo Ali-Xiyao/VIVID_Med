@@ -1,0 +1,31 @@
+{
+  "schema_version": "local-arise-pooled-margin-repair-opening-v1",
+  "opened_at_local_date": "2026-07-22",
+  "trigger": "B1 dense smoke produced approximately zero intervention margins despite validation ranking signal",
+  "single_variable_change": {
+    "changed": "dense readout and score scale",
+    "from": "bounded bipolar mean evidence signed margin",
+    "to": "pooled standardized logistic decision-function margin",
+    "held_fixed": [
+      "Qwen3.5-2B visual snapshot",
+      "training token cache",
+      "CheXlocalize validation pairs",
+      "expert and explanation masks",
+      "matched controls",
+      "pixel intervention operators",
+      "full visual re-encoding"
+    ]
+  },
+  "model_files": {
+    "consolidation_sha256": "be783df5c038d9be80933bc9181fde7597f4dd8850ab76b289eb497be9d5bfea",
+    "pleural_effusion_sha256": "a4f09f5ea93e4314479f8ddb764053037fed6245079647c18031ee67e4f131e7",
+    "cache_lock_sha256": "503ead96a0de948b56361b8097bd14cc1ba0942878b56cb3aa0ba2e39d3ec0f2"
+  },
+  "boundary": {
+    "local_only": true,
+    "formal_result": false,
+    "confirmatory_evidence": false,
+    "test_opened": false,
+    "selector_training_unlocked": false
+  }
+}

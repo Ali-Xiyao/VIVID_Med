@@ -1,0 +1,38 @@
+{
+  "schema_version": "local-arise-vindr-box-supervision-opening-v1",
+  "status": "authorized_development_only",
+  "formal_result": false,
+  "confirmatory_evidence": false,
+  "test_opened": false,
+  "trigger": "the complete patch-MIL oracle has meaningful positive target-control means but three patient-bootstrap cells cross zero, with no score collapse, control excess, or operator sign reversal",
+  "single_variable_change": {
+    "changed": "local evidence supervision during verifier training",
+    "from": "weak report S/C classification only",
+    "to": "initialize the same patch-MIL head and add VinDr-train expert-box patch localization loss on support images",
+    "held_fixed": [
+      "Qwen3.5-2B frozen visual snapshot",
+      "patch-MIL architecture and score scale",
+      "CheXlocalize validation evaluation pairs",
+      "Phase-H controls",
+      "two pixel operators",
+      "full visual reencoding",
+      "oracle gate thresholds"
+    ]
+  },
+  "data_boundary": {
+    "training": "VinDr-CXR train protocol_design only",
+    "validation": "VinDr-CXR train rescue_confirm only",
+    "patient_claim": false,
+    "image_disjoint": true,
+    "vindr_test_opened": false,
+    "chexlocalize_regions_used_for_training": false
+  },
+  "forbidden": [
+    "VinDr test access",
+    "CheXlocalize test access",
+    "CheXlocalize expert-region training",
+    "Qwen3.5-4B or 9B scaling",
+    "BiVES B2 modification",
+    "server or Slurm execution"
+  ]
+}

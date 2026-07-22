@@ -1,0 +1,23 @@
+{
+  "schema_version": "local-arise-mil-dense-opening-v1",
+  "status": "authorized_development_only",
+  "formal_result": false,
+  "confirmatory_evidence": false,
+  "test_opened": false,
+  "purpose": "single-factor local-dependence repair after frozen-vision dense heads fail the expert-mask oracle ceiling",
+  "fixed_factors": [
+    "Qwen3.5-2B frozen visual snapshot",
+    "patient-disjoint weak explicit S/C cache",
+    "CheXlocalize validation expert masks used only after training",
+    "Phase-H matched controls and two pixel operators",
+    "full visual reencoding"
+  ],
+  "changed_factor": "replace global/diffuse evidence aggregation with finding-specific patch MIL smooth-max aggregation",
+  "forbidden": [
+    "CheXlocalize validation-region training",
+    "CheXlocalize test access",
+    "Qwen3.5-4B or 9B scaling",
+    "BiVES B2 modification",
+    "server or Slurm execution"
+  ]
+}

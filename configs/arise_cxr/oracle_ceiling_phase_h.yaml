@@ -1,0 +1,20 @@
+schema_version: arise-cxr-oracle-ceiling-config-v1
+source:
+  rows_path: local_runs/cxr_localization_causality/chexlocalize_qwen35_development/merged/audit_rows.jsonl
+  merged_result_path: local_runs/cxr_localization_causality/chexlocalize_qwen35_development/merged/merged_result.json
+  input_lock_canonical_sha256: 6b199600b6b7d0235f5e19e0503512b361a66421f8a4ed60a02c05e00733f163
+identity:
+  model_id: qwen35-2b-6b57c58ceb3c
+  explanation_id: occlusion_local_mean_4x4_top1
+  pathologies:
+    - consolidation
+    - pleural_effusion
+  operators:
+    - local_mean_ring8
+    - masked_gaussian_blur_sigma8
+gate:
+  minimum_passing_pathologies: 3
+  ci_lower_threshold: 0.0
+  bootstrap_replicates: 2000
+  bootstrap_seed: 20260719
+output_path: local_runs/arise_cxr/oracle_ceiling_phase_h/result.json

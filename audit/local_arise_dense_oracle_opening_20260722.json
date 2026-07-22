@@ -1,0 +1,42 @@
+{
+  "schema_version": "local-arise-dense-oracle-opening-v1",
+  "opened_at_local_date": "2026-07-22",
+  "authorization": {
+    "continuous_local_experiments_authorized_by_user": true,
+    "automatic_case_study_and_bounded_repair_authorized": true,
+    "server_execution": false
+  },
+  "data": {
+    "role": "chexlocalize_validation_prior_exposed_development",
+    "source_rows_sha256": "66dfa63556ab53657cef67341f43626ffadb234ef23cf0ebf8526b98af7970ed",
+    "expected_pairs": 99,
+    "test_opened": false
+  },
+  "model": {
+    "family": "Qwen3.5",
+    "scale": "2B",
+    "vision_snapshot_sha256": "6b57c58ceb3c97d4199d4e8e32b54f6ff11d0cf3a8bde3a4e940d5775ae12120",
+    "dense_checkpoint_sha256": "7429c5a071388ffd56a75e03e24af5903e0306e733cc598ab724bab0c91bea45",
+    "dense_checkpoint_step": 300,
+    "score": "signed_evidence_margin"
+  },
+  "intervention": {
+    "full_visual_reencoding": true,
+    "masks_controls_operators_unchanged_from_phase_h": true,
+    "operators": [
+      "local_mean_ring8",
+      "masked_gaussian_blur_sigma8"
+    ]
+  },
+  "gate": {
+    "minimum_passing_pathologies": 3,
+    "all_operator_patient_ci_lower_bounds_strictly_above_zero": true,
+    "selector_training_remains_locked_on_failure": true
+  },
+  "claim_boundary": {
+    "formal_result": false,
+    "confirmatory_evidence": false,
+    "test_use": false,
+    "bives_repair": false
+  }
+}

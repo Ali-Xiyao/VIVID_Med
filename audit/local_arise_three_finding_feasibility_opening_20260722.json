@@ -1,0 +1,27 @@
+{
+  "schema_version": "local-arise-three-finding-feasibility-opening-v1",
+  "status": "authorized_score_free_development",
+  "formal_result": false,
+  "confirmatory_evidence": false,
+  "test_opened": false,
+  "purpose": "prepare the minimum three-finding development surface required by the frozen ARISE oracle gate without opening a model result",
+  "findings": [
+    "consolidation",
+    "pleural_effusion",
+    "pulmonary_edema"
+  ],
+  "allowed": [
+    "patient-disjoint weak explicit S/C manifest feasibility",
+    "CheXlocalize publisher validation Edema expert-mask binding",
+    "local image hashing after the active oracle completes",
+    "Qwen3.5-2B token caching only after a complete image/data lock"
+  ],
+  "forbidden": [
+    "CheXlocalize test access",
+    "result-driven sample selection",
+    "clinical four-state claims",
+    "Qwen3.5-4B or 9B scaling",
+    "BiVES B2 modification",
+    "server or Slurm execution"
+  ]
+}

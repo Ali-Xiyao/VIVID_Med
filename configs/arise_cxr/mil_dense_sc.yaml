@@ -1,0 +1,14 @@
+variant: arise_patch_mil_dense_sc_v1
+cache_dir: local_runs/bives_cxr/qwen35_2b_weak_sc_cache
+output_dir: local_runs/arise_cxr/mil_dense_sc_seed20260722
+device: cuda:0
+seed: 20260722
+batch_size: 8
+max_steps: 300
+eval_interval: 25
+learning_rate: 0.003
+weight_decay: 0.0001
+max_grad_norm: 5.0
+temperature: 0.5
+max_pool_weight: 0.75
+target_specificity: 0.9

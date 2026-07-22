@@ -1,0 +1,37 @@
+{
+  "schema_version": "local-arise-stat-matched-control-opening-v1",
+  "status": "prepared_conditional_development",
+  "formal_result": false,
+  "confirmatory_evidence": false,
+  "test_opened": false,
+  "activation_condition": "the complete patch-MIL oracle case study identifies matched-control excess or target/control mismatch in at least one failed pathology/operator cell",
+  "single_variable_change": {
+    "changed": "matched control candidate selection",
+    "from": "one deterministic coordinate-zone geometry control",
+    "to": "deterministic exact-area connected candidate family selected by original-image intensity mean, standard deviation, gradient energy, and geometry",
+    "held_fixed": [
+      "Qwen3.5-2B patch-MIL checkpoint",
+      "CheXlocalize validation pairs and expert masks",
+      "two pixel intervention operators",
+      "full visual reencoding",
+      "patient-cluster bootstrap",
+      "oracle gate thresholds"
+    ]
+  },
+  "result_blind_contract": {
+    "model_scores_used_for_control_selection": false,
+    "outcomes_used_for_control_selection": false,
+    "exact_area": true,
+    "single_connected_component": true,
+    "target_and_other_region_disjoint": true,
+    "same_coordinate_zone": true
+  },
+  "forbidden": [
+    "CheXlocalize test access",
+    "hardest-control selection by model effect in this diagnostic",
+    "gate-threshold changes",
+    "Qwen3.5-4B or 9B scaling",
+    "BiVES B2 modification",
+    "server or Slurm execution"
+  ]
+}
