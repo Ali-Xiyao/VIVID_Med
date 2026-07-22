@@ -26,6 +26,7 @@ VALIDITY_ROLES = {
     "validity_eval": 8,
 }
 V0_SCHEMA_VERSION = "vicer-v0-validity-dose-response-v1"
+THRESHOLD_ATOL = 1e-12
 
 
 def canonical_sha256(value: Any) -> str:
@@ -39,6 +40,11 @@ def file_sha256(path: Path) -> str:
         for block in iter(lambda: handle.read(16 << 20), b""):
             digest.update(block)
     return digest.hexdigest()
+
+
+def meets_minimum(value: float, minimum: float) -> bool:
+    """Compare a measured value to a frozen threshold without binary-float artifacts."""
+    return bool(np.isfinite(value) and value + THRESHOLD_ATOL >= minimum)
 
 
 def stable_rank(seed: int, *parts: str) -> int:
@@ -164,11 +170,10 @@ def summarize_v0_rows(
             ]
             valid_gap_mean = float(np.mean(positive_valid_gaps)) if positive_valid_gaps else float("nan")
             passed = bool(
-                np.isfinite(correlation)
-                and correlation >= minimum_monotonic_spearman
-                and strongest_preservation >= minimum_preservation
-                and strongest_realism >= minimum_realism
-                and valid_fraction >= minimum_valid_fraction
+                meets_minimum(correlation, minimum_monotonic_spearman)
+                and meets_minimum(strongest_preservation, minimum_preservation)
+                and meets_minimum(strongest_realism, minimum_realism)
+                and meets_minimum(valid_fraction, minimum_valid_fraction)
                 and positive_valid_gaps
                 and valid_gap_mean > 0.0
             )
@@ -190,7 +195,9 @@ def summarize_v0_rows(
         }
     critic_auc = min(float(row["critic_calibration_auroc"]) for row in records)
     verifier_auc = min(float(row["verifier_calibration_auroc"]) for row in records)
-    heads_pass = critic_auc >= minimum_critic_auroc and verifier_auc >= minimum_verifier_auroc
+    heads_pass = meets_minimum(critic_auc, minimum_critic_auroc) and meets_minimum(
+        verifier_auc, minimum_verifier_auroc
+    )
     surviving = [family for family, value in per_family.items() if value["all_findings_pass"]]
     result = {
         "schema_version": V0_SCHEMA_VERSION,

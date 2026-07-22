@@ -6,9 +6,11 @@ import numpy as np
 from PIL import Image
 
 from vicer_cxr.intervention_bank import apply_v0_intervention
+from vicer_cxr.case_study import analyze_v0_failure
 from vicer_cxr.validity import (
     VALIDITY_FINDINGS,
     VALIDITY_ROLES,
+    meets_minimum,
     summarize_v0_rows,
     validate_v0_manifest,
 )
@@ -16,6 +18,10 @@ from vicer_cxr.matched_controls import deterministic_connected_statistics_contro
 
 
 class VicerValidityContracts(unittest.TestCase):
+    def test_frozen_threshold_comparison_ignores_binary_float_artifact(self) -> None:
+        self.assertTrue(meets_minimum(0.7999999999999999, 0.8))
+        self.assertFalse(meets_minimum(0.799, 0.8))
+
     def _manifest(self) -> list[dict]:
         rows = []
         for finding in VALIDITY_FINDINGS:
@@ -127,6 +133,65 @@ class VicerValidityContracts(unittest.TestCase):
         self.assertEqual(int(first.sum()), int(target.sum()))
         self.assertFalse(bool((first & target).any()))
         self.assertEqual(audit["connected_component_requirement"], 1)
+
+    def test_failure_case_study_cannot_unlock_v1(self) -> None:
+        rows = []
+        per_finding = {}
+        for finding in VALIDITY_FINDINGS:
+            for strength in (0.25, 0.5, 0.75, 1.0):
+                rows.append(
+                    {
+                        "sample_id": f"{finding}-{strength}",
+                        "operator_family": "local_ring_mean",
+                        "strength": strength,
+                        "canonical_statement_id": finding,
+                        "q_remove": 0.0,
+                        "q_preserve": 0.995,
+                        "q_realism": 0.9,
+                        "target_control_gap": 0.1,
+                        "valid_intervention": False,
+                    }
+                )
+            per_finding[finding] = {
+                "strengths": [0.25, 0.5, 0.75, 1.0],
+                "median_q_remove": [0.0, 0.0, 0.0, 0.0],
+                "median_q_preserve": [0.995] * 4,
+                "median_q_realism": [0.9] * 4,
+                "median_target_control_gap": [0.1] * 4,
+                "q_remove_strength_spearman": 0.0,
+                "valid_fraction": 0.0,
+                "mean_valid_target_control_gap": 0.1,
+                "pass": False,
+            }
+        result = {
+            "schema_version": "vicer-v0-validity-dose-response-v1",
+            "records": len(rows),
+            "head_gate_pass": True,
+            "per_operator_family": {
+                "local_ring_mean": {
+                    "per_finding": per_finding,
+                    "all_findings_pass": False,
+                }
+            },
+            "surviving_operator_families": [],
+            "v0_pass": False,
+            "v1_authorized": False,
+            "thresholds": {
+                "minimum_monotonic_spearman": 0.8,
+                "minimum_preservation": 0.98,
+                "minimum_realism": 0.5,
+                "minimum_valid_fraction": 0.5,
+            },
+            "run_identity": {"thresholds": {"minimum_q_remove": 0.02}},
+            "canonical_sha256": "result",
+            "rows_sha256": "rows",
+        }
+        report = analyze_v0_failure(rows, result)
+        self.assertEqual(report["cells_passed"], 0)
+        self.assertEqual(
+            report["diagnosis"]["dominant_invalid_row_component"], "removal"
+        )
+        self.assertFalse(report["boundaries"]["v1_authorized"])
 
 
 if __name__ == "__main__":
