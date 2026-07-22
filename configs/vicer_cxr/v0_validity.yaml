@@ -1,0 +1,43 @@
+schema_version: vicer-v0-config-v1
+method: vicer_cxr
+stage: V0_intervention_validity
+formal_result: false
+local_only: true
+model_path: H:/Xiyao_Wang/001_models/Qwen3.5-2B
+device: cuda:1
+dtype: bf16
+image_size: 448
+data_dir: local_runs/vicer_cxr/v0_vindr_validity
+geometry_dir: local_runs/vicer_cxr/v0_geometry
+cache_dir: local_runs/vicer_cxr/v0_qwen35_cache
+head_dir: local_runs/vicer_cxr/v0_heads
+output_dir: local_runs/vicer_cxr/v0_result
+findings:
+  - pneumothorax
+  - consolidation
+  - pleural_effusion
+  - cardiomegaly
+roles:
+  critic_train: 10
+  critic_calibration: 5
+  verifier_train: 10
+  verifier_calibration: 6
+  validity_eval: 8
+thresholds:
+  minimum_critic_auroc: 0.60
+  minimum_verifier_auroc: 0.60
+  minimum_q_remove: 0.02
+  minimum_q_preserve: 0.98
+  minimum_q_realism: 0.50
+  minimum_monotonic_spearman: 0.80
+  minimum_valid_fraction: 0.50
+boundaries:
+  arise_images_excluded: true
+  image_disjoint_roles: true
+  patient_level_claim: false
+  single_reader_positive_allowed: true
+  vindr_test_opened: false
+  chexlocalize_test_opened: false
+  selector_authorized: false
+  qwen35_4b_9b_authorized: false
+  server_authorized: false

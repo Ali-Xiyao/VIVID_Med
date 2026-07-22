@@ -2,9 +2,10 @@
 
 ## Active authority
 
-`audit/CXR_localization_causality_audit_proposal.md` is the only active
-research authority. The project audits whether chest-X-ray localization
-actually predicts causal model reliance under matched interventions.
+`vicer_cxr/VICER_CXR_method_proposal.md` is the active successor-method
+authority, subordinated to the preservation and test-blind boundaries in
+`audit/CXR_localization_causality_audit_proposal.md`. The active row is V0
+intervention-validity development only; V1 and V2 remain gate-locked.
 
 The predecessor BiVES B2 route is frozen at tag
 `bives-b2-terminal-8bb1a94`. Its archived proposal and terminal report are:
@@ -16,15 +17,18 @@ BiVES B2 is one audited model/explanation case, not a successful main method.
 Do not create C6J, tune/replay C4/C5/C6I, repair B2, or scale that route to
 Qwen3.5-4B/9B.
 
+ARISE-v1 is frozen at tag `arise-oracle-v1-terminal-20260722`. Its terminal
+3-of-4 development verdict may not be changed to a post-hoc pass. Do not add an
+ARISE selector, U/I route, scale-up, rerun, or test opening.
+
 ## Current execution boundary
 
-The repository is in authorized CheXlocalize validation-development phase
-under `audit/local_chexlocalize_validation_acquisition_opening_20260719.json`
-and `audit/local_chexlocalize_qwen35_development_opening_20260719.json`. Only
-the validation assets may be downloaded and used locally. A real Qwen3.5-2B
-GPU development run may start only after the complete validation download lock
-and the separate data/model/explanation/operator lock pass. CheXlocalize test,
-test-derived threshold selection, and confirmatory scoring remain unauthorized.
+The repository is in local VICER V0 VinDr-train development. A real
+Qwen3.5-2B GPU V0 run may start only after a committed V0 opening binds the
+new image-disjoint data roles, score-free geometry, model snapshot, independent
+critic/verifier endpoints, source hashes, and thresholds. CheXlocalize test,
+VinDr test, test-derived threshold selection, and confirmatory scoring remain
+unauthorized.
 
 All future validation and evaluation run on this workstation. Do not
 synchronize active experiments to the server or submit SSH/Slurm jobs.

@@ -18,6 +18,11 @@ is retained under `../archive/` and in its original tracked execution records.
 11. [`../docs/SCIENTIFIC_STATUS.md`](../docs/SCIENTIFIC_STATUS.md)
 12. [`local_model_development_opening_20260719.json`](local_model_development_opening_20260719.json)
 13. [`local_vindr_qwen35_development_opening_20260719.json`](local_vindr_qwen35_development_opening_20260719.json)
+
+The active successor-method entrypoint is
+[`../vicer_cxr/VICER_CXR_method_proposal.md`](../vicer_cxr/VICER_CXR_method_proposal.md).
+It authorizes only the V0 intervention-validity preparation until a committed
+opening binds the exact source/data/model/threshold identity.
 14. [`local_chexlocalize_validation_acquisition_opening_20260719.json`](local_chexlocalize_validation_acquisition_opening_20260719.json)
 15. [`local_chexlocalize_qwen35_development_opening_20260719.json`](local_chexlocalize_qwen35_development_opening_20260719.json)
 16. [`MANIFEST.md`](MANIFEST.md)

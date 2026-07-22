@@ -684,3 +684,18 @@
   inventory separately as `fe92105` and the frozen ARISE implementation as
   `f6a4624`; terminal documentation is the only remaining current-branch
   commit before push/tag.
+- 2026-07-22 Published the frozen ARISE-v1 terminal snapshot. Commit `f6f5283`
+  records the 3-of-4 method-development verdict; branch
+  `codex/localization-causality-audit` and annotated tag
+  `arise-oracle-v1-terminal-20260722` were pushed and the remote peeled tag
+  resolves to `f6f5283a14b9c080ee523489e38e0a08f57b352f`. Created independent branch
+  `codex/vicer-cxr-validity`; no successor result was added to the terminal tag.
+- 2026-07-22 Implemented the score-blind VICER V0 source surface before data
+  access: four-finding globally image-disjoint role selection, exact-shape
+  translated-control geometry locks, resumable Qwen3.5-2B original-token
+  cache, separate local critic/global verifier calibration heads, three
+  four-strength intervention families, independent validity metrics, and a
+  fail-closed V0 summary. `3/3` V0 contracts, compileall, five CLI help
+  surfaces, byte-identical plan/tracker aliases, and whitespace checks pass.
+  Data/model scoring remains unopened pending a clean source commit and a
+  separate opening lock.
