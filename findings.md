@@ -1430,3 +1430,136 @@
   `dfe0966` (`Record localization causality development`) to
   `origin/codex/localization-causality-audit`. The commit contains only the
   reviewed source, protocol, audit summary, test, and documentation surfaces.
+- 2026-07-22 `H:\xiyao\dataset` is a separate local asset root containing
+  CheXpert-Plus, IU-Xray/OpenI, MIMIC-CXR derivatives, and unclassified
+  `027_diffsionretrieval` material. These paths are now documented as
+  inventory-only; no directory name is treated as provenance, expert-region
+  eligibility, or authorization for the active CheXlocalize audit.
+
+## 2026-07-22 ARISE-CXR oracle-ceiling findings
+
+- The proposed expert-mask/full-pixel-re-encoding oracle is partly represented
+  by the frozen Phase-H `X/C_X` rows, but those rows use the zero-shot Qwen3.5
+  Yes/No scorer, not a trained dense S/C verifier.
+- A new fail-closed ARISE gate replayed all 198 hash-locked rows. Consolidation
+  passes both expert-region cells: local mean `CS_X=0.1413`, 95% patient CI
+  `[0.0769, 0.2158]`; blur `CS_X=0.1790`, CI `[0.1135, 0.2520]`.
+- Pleural effusion fails both expert-region cells: local mean `CS_X=0.0003`, CI
+  `[-0.0367, 0.0388]`; blur `CS_X=-0.0185`, CI `[-0.0641, 0.0293]`.
+  The method gate also requires at least three passing findings, while only two
+  are available and only consolidation passes. Selector training stays locked.
+- Effect decomposition localizes the pleural-effusion failure to scorer
+  sensitivity rather than a uniquely strong control. Local mean has mean
+  `dX=0.0156` versus `dCX=0.0153`; blur has `dX=-0.0241` versus
+  `dCX=-0.0056`. The next single-variable bridge is therefore a trained dense
+  Qwen3.5 verifier with the masks, controls, operators, and pixel re-encoding
+  held fixed.
+- The existing B1 dense head is ranking-capable on its historical validation
+  set but its signed evidence margin is numerically collapsed around zero.
+  The deterministic 2-pair full-reencoding smoke produced target/control
+  changes at roughly `1e-6`, so a full B1 run is retained as a negative
+  mechanism control rather than treated as a credible causal-score scale.
+- A separately locked pooled-logistic head over the same frozen Qwen3.5-2B
+  features passed the same 2-pair pipeline and restored intervention responses
+  to order-one margins. Its tiny-sample operator signs disagree, so only the
+  complete 99-pair patient-aware run can determine whether the repair survives.
+- The complete pooled-logistic oracle restores meaningful score scale but does
+  not restore pleural-effusion expert-region reliance. Consolidation passes:
+  local mean `CS_X=1.6254`, 95% patient CI `[0.8086, 2.4064]`; blur
+  `0.9898`, CI `[0.2428, 1.7796]`. Pleural effusion fails: local mean
+  `-0.0161`, CI `[-0.5349, 0.5419]`; blur `-0.2903`, CI
+  `[-0.7537, 0.1488]`. In both pleural cells, matched-control mean effect
+  exceeds expert-target mean effect.
+- The complete B1 oracle is not credible positive mechanism evidence despite
+  two numerically positive consolidation CIs: every target/control response is
+  at roughly `1e-6`, and all four case-study cells are classified
+  `score_amplitude_collapsed`. Its result is a negative scale-control.
+- The new patch-MIL dense verifier trained only on the existing patient-disjoint
+  weak S/C cache. At frozen step 300 it reaches macro AUROC/AUPRC
+  `0.8361/0.8349`; pleural effusion reaches `0.8919/0.9008`, with margin std
+  `0.8116`. It therefore survives the classification and score-amplitude
+  prerequisites for the same expert-mask oracle without seeing CheXlocalize
+  annotations during training.
+- A next-stage control repair can be prepared without result leakage: enumerate
+  deterministic exact-area connected controls in the target coordinate zone,
+  then select using only pre-intervention intensity mean/std, gradient energy,
+  and geometry. The new isolated implementation accepts no model scores and
+  fails closed when fewer than two valid candidates exist. It is not yet part
+  of the active MIL oracle and cannot be opened unless the completed aggregate
+  case study attributes failure to the current matched-control family.
+- The pre-existing explicit report-cue candidates can support a third ARISE
+  finding without clinical review or test access. A score-free feasibility
+  split over consolidation, pleural effusion, and pulmonary edema yields
+  `1250` balanced train rows and `382` balanced validation rows with zero
+  patient overlap. It is deliberately marked `feasibility_only_unhashed` and
+  cannot feed token caching until image hashes are frozen.
+- CheXlocalize publisher validation contains `45` Edema expert-region pairs
+  over `42` patients. The separate score-free lock canonical SHA-256 is
+  `e84fb47372fb6228bb763c56148224203b29d4a6d898873f1ab1504e4c670aa9`.
+  This satisfies data-surface feasibility for the gate's third pathology but
+  does not authorize a score or make validation independent evidence.
+- The completed patch-MIL oracle has normal response scale and positive mean
+  `CS_X` in all four finding/operator cells, but only consolidation/blur has a
+  patient-cluster CI wholly above zero. Consolidation/local-mean is `0.0708`
+  with CI `[-0.0422, 0.1825]`; pleural/local-mean is `0.0646` with CI
+  `[-0.0050, 0.1422]`; pleural/blur is `0.0057` with CI
+  `[-0.0522, 0.0599]`. Thus no pathology passes both operators.
+- The identifier-free MIL case study detects no mean matched-control excess,
+  score collapse, target inertness, or operator sign reversal. Positive
+  sample fractions range from `0.4848` to `0.7576`, identifying inconsistent
+  local reliance across images as the next issue. This fails the activation
+  condition for the prepared statistics-matched-control diagnostic.
+- A non-test VinDr route exists for local supervision without contaminating
+  CheXlocalize evaluation: the immutable VinDr-train rescue manifest supplies
+  `721` protocol-design train images and `725` image-disjoint rescue-confirm
+  validation images, with expert boxes on support rows. The new ARISE data lock
+  canonical SHA-256 is
+  `5b02774f9e790081bd61c665ba6c98502ddd6fb69c670f31488429b1bd01a457`.
+
+## 2026-07-22 ARISE-CXR terminal development finding
+
+- VinDr-train box supervision is a real method improvement: macro AUROC is
+  `0.95052`, pointing hit is `0.74186`, and pointing improves by `0.09944`
+  over the locked initial head while classification remains noninferior.
+- Under the original frozen geometric controls, the corresponding 99-pair
+  full-reencoding oracle still has pleural matched-control excess and an
+  operator sign reversal; its result canonical SHA-256 is
+  `c2acaa7f1c5eeee1e75e3cb9512c4d8e64ed348052a6ecfcb492551c1874f49e`.
+- The score-blind statistics-matched v2 control family materially changes the
+  causal estimate. Consolidation/local-mean, consolidation/blur, and
+  pleural/local-mean all have patient-bootstrap lower bounds above zero. All
+  four means are positive and operator signs agree.
+- The remaining pleural/blur mean is `0.01824` with 95% CI
+  `[-0.05995, 0.09065]`. Its positive fraction is `0.5455` and median is
+  `0.01196`; the final case study detects no engineering pathology.
+- Final result canonical SHA-256 is
+  `0f118a1ac7e534dfb91116dc2f85137e13c337463f079f2f4da493f0ed986f52`,
+  rows SHA-256 is
+  `4d340d309b989d6e73ff513337c7bc03d0db7581de901ec06672dbc0701bf0b4`,
+  and case-study canonical SHA-256 is
+  `2d656aafd5bbe24527a2eaabdeb41fe8dfe86d357652ef3bc0be3916ddb85782`.
+- This is a final development fail-stop, not an invitation to tune the same
+  validation surface. Selector training, U/I, 4B/9B, and CheXlocalize test
+  remain closed because one operator cell and the three-finding coverage gate
+  fail.
+
+## 2026-07-22 Post-ARISE VICER direction
+
+- The residual pleural-effusion blur cell is not a diagnosed engineering
+  failure. Its positive but imprecise effect is consistent with two unresolved
+  mechanisms: blur may not remove low-frequency effusion evidence, and one
+  expert box may not cover a distributed/redundant evidence coalition.
+- Increasing the same exposed sample cannot establish intervention semantics.
+  Under a crude independent-normal approximation, shrinking the current CI
+  half-width from `0.07530` below the point estimate `0.01824` would require
+  roughly `17x` effective sample size, without resolving semantic validity.
+- VICER-CXR changes the estimand rather than the ARISE threshold: first
+  independently calibrate pathology removal, non-target preservation, and
+  realism for each operator/strength; then estimate target-control causal
+  effects only over the valid intervention set.
+- Evidence is modeled as an adaptive coalition whose union can be necessary
+  even when no component is individually necessary. Selector learning is a
+  later V2 gate, not the next run.
+- The first executable gate is V0 intervention-validity dose response on a
+  new score-free development sample spanning at least four finding
+  morphologies. V1 coverage-redundancy remains conditional on V0 survival.

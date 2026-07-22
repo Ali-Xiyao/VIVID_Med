@@ -14,12 +14,15 @@ is retained under `../archive/` and in its original tracked execution records.
 7. [`phase_e_frozen_existing_data_retrospective_result.md`](phase_e_frozen_existing_data_retrospective_result.md)
 8. [`phase_f_vindr_qwen35_development_result.md`](phase_f_vindr_qwen35_development_result.md)
 9. [`phase_h_chexlocalize_qwen35_development_result.md`](phase_h_chexlocalize_qwen35_development_result.md)
-10. [`local_model_development_opening_20260719.json`](local_model_development_opening_20260719.json)
-11. [`local_vindr_qwen35_development_opening_20260719.json`](local_vindr_qwen35_development_opening_20260719.json)
-12. [`local_chexlocalize_validation_acquisition_opening_20260719.json`](local_chexlocalize_validation_acquisition_opening_20260719.json)
-13. [`local_chexlocalize_qwen35_development_opening_20260719.json`](local_chexlocalize_qwen35_development_opening_20260719.json)
-14. [`MANIFEST.md`](MANIFEST.md)
-15. [`../archive/BiVES_B2_terminal_negative_report.md`](../archive/BiVES_B2_terminal_negative_report.md)
+10. [`arise_cxr_method_development_result.md`](arise_cxr_method_development_result.md)
+11. [`../docs/SCIENTIFIC_STATUS.md`](../docs/SCIENTIFIC_STATUS.md)
+12. [`local_model_development_opening_20260719.json`](local_model_development_opening_20260719.json)
+13. [`local_vindr_qwen35_development_opening_20260719.json`](local_vindr_qwen35_development_opening_20260719.json)
+14. [`local_chexlocalize_validation_acquisition_opening_20260719.json`](local_chexlocalize_validation_acquisition_opening_20260719.json)
+15. [`local_chexlocalize_qwen35_development_opening_20260719.json`](local_chexlocalize_qwen35_development_opening_20260719.json)
+16. [`MANIFEST.md`](MANIFEST.md)
+17. [`../archive/BiVES_B2_terminal_negative_report.md`](../archive/BiVES_B2_terminal_negative_report.md)
+18. [`local_h_xiyao_asset_inventory.md`](local_h_xiyao_asset_inventory.md)
 
 ## Current execution status
 
@@ -37,3 +40,10 @@ sealed, and completed the frozen 100-pair/70-patient Qwen3.5-2B development
 matrix. Its nonformal result separates modest localization from positive but
 weakly associated explanation-region causal specificity. Future test execution
 still requires a separately frozen one-time authority.
+
+The subsequent local ARISE-CXR candidate-method ladder is also complete and
+fails closed before selector training. Box supervision and result-blind
+statistics-matched controls materially improve the expert-region causal
+effects, but pleural-effusion blur remains statistically unstable and only two
+findings are available. See `arise_cxr_method_development_result.md`. Test,
+4B/9B scaling, U/I, and server execution remain closed.

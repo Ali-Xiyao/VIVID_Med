@@ -520,3 +520,167 @@
 - 2026-07-21 Committed and pushed all 40 reviewed publishable files as
   `dfe0966` (`Record localization causality development`) to the tracked audit
   branch.
+- 2026-07-22 Per user request, read-only inventoried `H:\xiyao` and added
+  `audit/local_h_xiyao_asset_inventory.md`, linked from `audit/README.md`.
+  Documented CheXpert-Plus, IU-Xray/OpenI, MIMIC-CXR derivatives, and
+  `027_diffsionretrieval` with explicit inventory-only/provenance gates. No
+  data/model copy, upload, server action, model run, or test opening occurred.
+- 2026-07-22 Opened ARISE-CXR local method development as a separate audited
+  lane without modifying frozen BiVES. Added `arise_cxr/oracle_ceiling.py`,
+  `scripts/run_arise_oracle_ceiling.py`, config, and three passing tests. The
+  hash-locked Phase-H replay completed with canonical SHA-256
+  `a4183feebde8f95a14084230720e4de5e7141c42366b0d56dd2015f554c88aed`
+  and status `fail_stop_before_selector`: consolidation passes both expert-mask
+  operator gates, pleural effusion fails both, and only two findings are
+  available versus the required three. No model/GPU/new score/test/server was
+  opened by this replay.
+- 2026-07-22 The user authorized continuous automatic local execution,
+  case-study diagnosis, and bounded repair without per-run approval. This does
+  not widen the data boundary: CheXlocalize test, servers, Slurm, frozen BiVES
+  evidence, and Qwen3.5 4B/9B scaling remain closed. The next automatic run is
+  a trained Qwen3.5-2B frozen-vision dense-verifier oracle with every other
+  Phase-H factor fixed.
+- 2026-07-22 Implemented the separate ARISE dense-oracle runner and scorer
+  interfaces without modifying `bives_cxr/`. The first CUDA smoke correctly
+  failed on the deterministic-cuBLAS contract; setting
+  `CUBLAS_WORKSPACE_CONFIG=:4096:8` before torch import preserved strict
+  determinism and the repeated 2-pair B1 smoke completed. The B1 intervention
+  margins are approximately `1e-6`, confirming score-amplitude collapse.
+- 2026-07-22 Locked a one-factor pooled-logistic margin repair using the same
+  Qwen3.5-2B snapshot, image set, expert masks, matched controls, two pixel
+  operators, and full visual reencoding. Its 2-pair GPU0 smoke completed with
+  canonical SHA-256 `f2378f39a35a47e3eca57a4ef9e74ac5b644aa7ea0057f269f54c138b98591bd`
+  and order-one score responses. Full 99-pair runs are active locally: the B1
+  comparator on GPU1 and pooled-logistic repair on GPU0; both stderr logs are
+  empty and CheXlocalize test remains unopened.
+- 2026-07-22 A separate `H:\Xiyao_Wang\037_SFT_Position` training process
+  appeared on GPU1 after the ARISE runs started and raised combined use to
+  about 22.6 GiB. Stopped only the ARISE B1 comparator PID `19556`, preserving
+  its resumable `33/99` progress; the unrelated PID `18404` remains running and
+  untouched. The pooled-logistic full run continues on GPU0. B1 will resume
+  from its saved development rows on the first free authorized local GPU.
+- 2026-07-22 Completed the 99-pair pooled-logistic full-reencoding oracle.
+  Result canonical SHA-256 is
+  `b4b70b1ae87c7a41f22fd4b75db51864c4b35549de65402f10b78b8371e4c5db`;
+  rows SHA-256 is
+  `9f43a966596bbef61be47da18ff5dc9f94fb1d72f98643ead75503493dab81c1`.
+  Consolidation passes both operator CIs; pleural effusion fails both, with
+  matched-control mean effects exceeding expert-target effects. Aggregate
+  case-study canonical SHA-256 is
+  `7b0da452a91248b13e2cd6b1d39aeb63dfc5eb2d1a99043923c4980e13c5215a`.
+- 2026-07-22 Resumed and completed the B1 comparator after an exact legacy
+  progress-identity migration. Its 99-pair result canonical SHA-256 is
+  `d473991bcd5181662aa277ae4f11678e807fb512a97ce25931c9f7314fd18189`;
+  rows SHA-256 is
+  `51f75c51f209bea3e345a152ee40c3019830020e807705e4372113d9831165bc`.
+  All four case-study cells have collapsed response scale around `1e-6`;
+  case-study canonical SHA-256 is
+  `609d503dfe10efe8eefef84c2a1260cc53365a7319aa14a6bdc8a4055c6aeebb`.
+- 2026-07-22 Implemented and trained the separate Qwen3.5-2B patch-MIL dense
+  verifier on the pre-existing weak S/C cache. The 300-step result canonical
+  SHA-256 is `c7155084d51a31c4594a186a25f3150d340c31484e4a78c3cf4717bd0e5652fb`;
+  checkpoint SHA-256 is
+  `e5d1de32e126f3dcc58dff7c283f2612d226ef4018a8871128a2332604e655bb`.
+  Macro AUROC/AUPRC is `0.8361/0.8349`; a 2-pair oracle smoke passed, and the
+  full 99-pair MIL oracle is now active on local GPU0. CheXlocalize test remains
+  absent/unopened.
+- 2026-07-22 While the locked 99-pair MIL oracle continued on GPU0 with empty
+  stderr, prepared but did not connect the next result-blind control diagnostic.
+  `arise_cxr/matched_controls.py` generates deterministic exact-area,
+  single-component, target/forbidden-disjoint controls and selects only from
+  original-image mean/std/gradient plus geometry; model outcomes are not an
+  accepted input. Its 3 new contracts pass, and the complete ARISE suite now
+  passes 16/16. This preparation does not alter the active run identity.
+- 2026-07-22 Completed result-blind third-finding feasibility while the active
+  MIL oracle continued. The new configurable ARISE weak-S/C preparer produced
+  an explicitly unhashed `1250`-train/`382`-validation feasibility split for
+  consolidation, pleural effusion, and pulmonary edema with zero patient
+  overlap. Separately bound all `45` CheXlocalize validation Edema expert-mask
+  pairs over `42` patients under canonical SHA-256
+  `e84fb47372fb6228bb763c56148224203b29d4a6d898873f1ab1504e4c670aa9`.
+  No model score, test asset, server, or frozen BiVES surface was opened.
+- 2026-07-22 Completed the full 99-pair patch-MIL expert-mask oracle with empty
+  stderr. The 198-row SHA-256 is
+  `42f38f6b671671d38d5fd72650435c78fb4139a49d102532a465621b24dd6ff9`;
+  result canonical SHA-256 is
+  `04df7f1a61f71f00b1cf8889b4d6c85f504590d8ff9636d34f9eee49dc84a834`.
+  All four cell means are positive, but three patient-bootstrap lower bounds
+  cross zero, so no pathology passes both operators and selector training stays
+  locked. Identifier-free case study canonical SHA-256
+  `565f439346a33b802f3af04192cfae222d35f32c1bda7191c4efbd7a558193cc`
+  finds no score collapse, target inertness, matched-control mean excess, or
+  operator sign reversal; the prepared control-family change was not activated.
+- 2026-07-22 Opened one-factor VinDr-train box supervision for the same 2B
+  patch-MIL head. Froze `721` protocol-design train images and `725`
+  rescue-confirm validation images with zero overlap under data-lock canonical
+  SHA-256 `5b02774f9e790081bd61c665ba6c98502ddd6fb69c670f31488429b1bd01a457`.
+  Added deterministic box-to-patch mapping/ranking loss, training config, and
+  3 passing contracts (ARISE total `21/21`). The first cache launch was stopped
+  before model loading because it redundantly rehashed DICOMs; after propagating
+  the already verified upstream image hashes, the cache restarted on GPU0 and
+  is producing immutable token items. GPU1 remains outside this task.
+- 2026-07-22 Replaced the intentionally stopped mixed cache with two independent
+  resumable caches: `vindr_box_sc_cache_train` on GPU0 (`721` images) and
+  `vindr_box_sc_cache_val` on GPU1 (`725` images). The existing unrelated GPU1
+  workload remains untouched and both cache jobs continue to make progress.
+  Recompiled all ARISE sources, passed `21/21` `test_arise_*.py` contracts,
+  passed both repository smoke scripts, and passed the complete frozen
+  `test_bives_*.py` regression suite. No test data, server job, or frozen BiVES
+  experiment was opened.
+- 2026-07-22 Completed and verified both VinDr-train-only token caches. Train:
+  `721` unique images / `754` rows, lock SHA-256 `2885eb65...50ad`;
+  validation: `725` unique images / `756` rows, lock SHA-256
+  `fdb401ce...8682`. Index hashes, item counts, cached payload identities,
+  source image hashes, patch geometry, and support/contradict box semantics all
+  passed. The first training run exposed one score-independent small-box
+  geometry bug; exactly one train positive had no patch center but did overlap
+  six valid cells. Version 2 uses any patch-cell overlap, passes a new contract,
+  and maps all `377` train plus `378` validation positive rows non-emptily.
+- 2026-07-22 Completed the 200-step VinDr box-supervised patch-MIL repair.
+  Macro AUROC rose from `0.93094` to `0.95052` and pointing-hit from `0.64242`
+  to `0.74186` (`+0.09944`), so both frozen gates passed. Result canonical
+  SHA-256 is `6f783fd4ba5c4da9b29604ea152b4a55c3494e3700dbf748d86a21be62a3870e`;
+  checkpoint SHA-256 is
+  `c4cbd7de800d0bfddb88147c36e4e44bb1fe8109eb2156067414f3378cdd9b5a`.
+  A fully locked 2-pair full-reencoding oracle smoke then completed under
+  canonical SHA-256 `a8837b5aaf76a9b9d9a2625b17a08312faea909359bf4674f588469a89245ea3`.
+  The full 99-pair run is active in two patient-disjoint local GPU shards;
+  CheXlocalize test remains absent/unopened.
+- 2026-07-22 Completed the box-supervised full-reencoding oracle and its
+  result-blind statistics-matched-control repair. The frozen-control matrix
+  triggered the prepared diagnostic because pleural-effusion blur was negative
+  with matched-control excess and operator sign reversal. The v2 control
+  generator retained every frozen strength threshold and enforced perimeter
+  admissibility before scoring; four patient-disjoint shards then produced
+  198 rows over 99 pairs/70 patients. Final result canonical SHA-256 is
+  `0f118a1ac7e534dfb91116dc2f85137e13c337463f079f2f4da493f0ed986f52`,
+  rows SHA-256 is
+  `4d340d309b989d6e73ff513337c7bc03d0db7581de901ec06672dbc0701bf0b4`.
+  Three of four cells pass; all means are positive; pleural-effusion blur is
+  `0.01824` with CI `[-0.05995, 0.09065]`. Final case-study canonical SHA-256
+  `2d656aafd5bbe24527a2eaabdeb41fe8dfe86d357652ef3bc0be3916ddb85782`
+  finds no remaining engineering diagnosis. The automatic ladder therefore
+  stops before selector/U-I/test/scaling, with CheXlocalize test unopened.
+- 2026-07-22 Final closure validation passed: `23/23` ARISE contracts,
+  `174/174` frozen BiVES/audit regression contracts, both repository smoke
+  scripts, compilation, exact final-result lock assertions, report-link
+  targets, and `git diff --check`. No ARISE experiment process remains. GPU1
+  is idle and GPU0 has only low non-ARISE background allocation. Added
+  `audit/arise_cxr_method_development_result.md` and linked it from the root,
+  audit, and docs entrypoints.
+- 2026-07-22 Read the user-supplied post-ARISE review and opened a new bounded
+  pivot phase. The review keeps ARISE-v1 terminal, prohibits post-hoc 3/4
+  threshold repair, and defines VICER V0 validity calibration -> V1 coverage
+  redundancy -> V2 coalition selector as a strict gate order. Logged one
+  no-op Bash-heredoc/PowerShell compatibility error and recovered the complete
+  UTF-8 text. Publication scope audit is next; no new model or data score has
+  been created and CheXlocalize test remains unopened.
+- 2026-07-22 Completed the ARISE publication scope and regression audit. The
+  exact 33-file code/config/test/opening scope has aggregate SHA-256
+  `01501e3076369199986596167b51b1a057dcf5c2ebf2debd2d206f5d0f8fd` and
+  passed the explicit secret scan. `23/23` ARISE contracts, `174/174` frozen
+  BiVES/audit contracts, both smoke scripts, compilation, Markdown links, and
+  the terminal manifest JSON passed. Committed the pre-existing local asset
+  inventory separately as `fe92105` and the frozen ARISE implementation as
+  `f6a4624`; terminal documentation is the only remaining current-branch
+  commit before push/tag.

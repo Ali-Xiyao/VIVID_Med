@@ -1,0 +1,55 @@
+{
+  "schema_version": "arise-v1-terminal-manifest-v1",
+  "status": "terminal_fail_closed_before_selector",
+  "tag": "arise-oracle-v1-terminal-20260722",
+  "source_snapshot": {
+    "algorithm": "sha256(path_utf8 + NUL + file_bytes + NUL), paths sorted lexically",
+    "files": 33,
+    "sha256": "01501e3076369199986596167b51b1a057dcf5c2ebf2debd2d206f5d0f8fd834",
+    "included": [
+      "arise_cxr/**/*.py",
+      "configs/arise_cxr/*.yaml",
+      "scripts/*arise*.py",
+      "tests/test_arise_*.py",
+      "audit/local_arise_*_opening_20260722.json"
+    ]
+  },
+  "terminal_evidence": {
+    "result_canonical_sha256": "0f118a1ac7e534dfb91116dc2f85137e13c337463f079f2f4da493f0ed986f52",
+    "rows_sha256": "4d340d309b989d6e73ff513337c7bc03d0db7581de901ec06672dbc0701bf0b4",
+    "case_study_canonical_sha256": "2d656aafd5bbe24527a2eaabdeb41fe8dfe86d357652ef3bc0be3916ddb85782",
+    "box_training_result_canonical_sha256": "6f783fd4ba5c4da9b29604ea152b4a55c3494e3700dbf748d86a21be62a3870e",
+    "box_checkpoint_sha256": "c4cbd7de800d0bfddb88147c36e4e44bb1fe8109eb2156067414f3378cdd9b5a",
+    "cells_passed": 3,
+    "cells_total": 4,
+    "patients": 70,
+    "pairs": 99,
+    "rows": 198
+  },
+  "validation": {
+    "arise_tests_passed": 23,
+    "arise_tests_total": 23,
+    "frozen_bives_tests_passed": 174,
+    "frozen_bives_tests_total": 174,
+    "test_opened": false,
+    "server_execution": false
+  },
+  "locked": {
+    "selector_training": true,
+    "four_state_training": true,
+    "qwen35_4b_or_9b_scaling": true,
+    "chexlocalize_test": true,
+    "same_validation_threshold_repair": true
+  },
+  "publish_exclusions": [
+    "data/",
+    "outputs/",
+    "local_runs/",
+    "model weights",
+    "checkpoints",
+    "medical images",
+    "patient identifiers",
+    "credentials",
+    "caches"
+  ]
+}

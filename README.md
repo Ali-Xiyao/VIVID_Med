@@ -24,6 +24,8 @@ causal evidence set.
   [`audit/phase_c_synthetic_development_result.md`](audit/phase_c_synthetic_development_result.md)
 - CheXlocalize Qwen3.5 development result:
   [`audit/phase_h_chexlocalize_qwen35_development_result.md`](audit/phase_h_chexlocalize_qwen35_development_result.md)
+- ARISE-CXR method-development result:
+  [`audit/arise_cxr_method_development_result.md`](audit/arise_cxr_method_development_result.md)
 - Handoff index: [`docs/README.md`](docs/README.md)
 
 ## Frozen BiVES predecessor
@@ -76,6 +78,22 @@ expert overlap and little positive association between overlap and causal
 specificity, despite positive mean explanation-region specificity under both
 frozen operators. The official test split was not downloaded or opened and
 remains reserved for a separately frozen one-time local evaluation.
+
+A subsequent Qwen3.5-2B-only ARISE-CXR development ladder tested trained dense
+and patch-MIL verifiers, VinDr-train box supervision, full visual re-encoding,
+and result-blind statistics-matched controls. These changes materially improve
+the mechanism, but the final oracle still fails the pleural-effusion blur and
+minimum three-finding gates. Selector/four-state training, larger models, and
+test execution therefore remain closed.
+
+ARISE-v1 status:
+
+- oracle intervention development closed;
+- 3/4 finding/operator cells passed;
+- pleural-effusion blur inconclusive;
+- selector/U/I/scaling not authorized;
+- CheXlocalize test unopened;
+- successor method not authorized in this terminal snapshot.
 
 All future experiment execution is local to this workstation. Do not sync
 active experiments to the server or submit SSH/Slurm jobs.

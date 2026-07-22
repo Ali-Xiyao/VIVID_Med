@@ -1205,3 +1205,109 @@ medical images, local runtime evidence, model weights, credentials, or caches.
 | R1 publication-scope inventory | complete | 40 tracked/untracked source and document files reviewed. `.gitignore` excludes `outputs/` and `local_runs/`; no data, model, credential, or generated runtime file is staged. |
 | R2 validation | complete | BiVES smoke, localization-causality smoke, `test_bives_*.py`, compilation, audit CLI help, and `git diff --check` pass. |
 | R3 stage, commit, and push | complete | Commit `dfe0966` (`Record localization causality development`) contains all 40 reviewed files and is pushed to `origin/codex/localization-causality-audit`. |
+
+---
+
+## 2026-07-22 Local `H:\xiyao` asset documentation
+
+| Step | Status | Evidence / boundary |
+| --- | --- | --- |
+| A1 read-only local inventory | complete | Observed `dataset/` and `model/` roots only; no copy, upload, model load, or experiment action. |
+| A2 document research boundary | complete | Added `audit/local_h_xiyao_asset_inventory.md` and linked it from `audit/README.md`; CheXlocalize test and all existing locks remain unchanged. |
+
+---
+
+## 2026-07-22 ARISE-CXR local method development
+
+**User direction:** Continue locally from the proposed ARISE-CXR method design,
+change code, and run the next admissible experiment. This is a new audited
+candidate-method development lane, not a BiVES B2 repair.
+
+**Execution boundary:** CheXlocalize validation/development only; Qwen3.5-2B
+only for the first gate; local workstation only. CheXlocalize test remains
+absent/unopened. Frozen BiVES C4/C5/C6I code/evidence and `bives_cxr/` method
+contracts are not modified.
+
+| Step | Status | Evidence / next action |
+| --- | --- | --- |
+| AR1 authority and prior-result mapping | complete | Phase-H already contains expert-mask/full-pixel-re-encoding `X/C_X` rows, but its scorer is the frozen zero-shot Qwen Yes/No interface rather than the proposed trained dense verifier. |
+| AR2 reusable Oracle Ceiling gate | complete | Added separate `arise_cxr/oracle_ceiling.py`, CLI/config, and 3 passing contracts. The gate requires every operator CI lower bound above zero and at least three passing pathologies. |
+| AR3 run zero-shot Oracle Ceiling development gate | complete_fail_stop_before_selector | Deterministic replay consumed 198 hash-locked Phase-H rows and created no model score. Consolidation passes both operator cells; pleural effusion fails both CI gates; only 1/2 findings passes and coverage is below the required three. Result canonical SHA-256 `a4183feebde8f95a14084230720e4de5e7141c42366b0d56dd2015f554c88aed`. |
+| AR4 single-variable mechanism diagnostic | complete_fail_stop | Both 99-pair runs completed. B1 has `score_amplitude_collapsed` in all four cells (responses at about `1e-6`). Pooled logistic restores order-one margins and passes both consolidation cells, but pleural-effusion expert target is weaker than its matched control under both operators. Selector remains locked. |
+| AR5 ARISE S/C selector | locked | May open only after an expert-mask oracle ceiling survives the declared multi-operator gate. U/I and test execution remain out of scope. |
+| AR6 patch-MIL dense repair | complete_fail_stop_before_selector | Training passed its classification/scale prerequisites, then the 99-pair oracle completed with rows SHA-256 `42f38f6b...d6ff9` and result canonical SHA-256 `04df7f1a...84a834`. All four means are positive, but three patient-cluster CIs cross zero; no pathology passes the all-operator gate. Case-study canonical SHA-256 `565f4393...193cc` finds no collapse, target inertness, mean control excess, or sign reversal. |
+| AR7 result-blind statistics-matched control diagnostic | prepared_not_activated | The conditional trigger did not fire: MIL target mean effects exceed control in every cell. The isolated control generator and opening are preserved but not connected or scored. |
+| AR8 minimum three-finding surface | score_free_feasibility_complete | An unhashed feasibility manifest supports balanced patient-disjoint weak S/C data for consolidation, pleural effusion, and pulmonary edema (`1250` train / `382` val). A separate score-free CheXlocalize validation Edema lock binds `45` expert-mask pairs over `42` patients, canonical SHA-256 `e84fb473...670aa9`. Formal image hashing/token caching/training stays behind AR6 and the mechanism gate. |
+| AR9 VinDr-train box-supervised MIL repair | complete_pass | Completed immutable Qwen3.5-2B caches for `721` train and `725` image-disjoint validation images. The overlap-based v2 box repair completed 200 steps with macro AUROC `0.95052` and pointing-hit `0.74186` (`+0.09944`), passing both classification noninferiority and the `+0.05` localization gate. Checkpoint SHA-256 `c4cbd7de...d9b5a`; result canonical SHA-256 `6f783fd4...3870e`. |
+| AR10 box-supervised full-reencoding oracle | complete_fail_stop | The frozen-control 99-pair matrix merged under canonical SHA-256 `c2acaa7f...49e`: only consolidation/blur passes; pleural/blur has negative mean `CS_X`. The identifier-free case study finds matched-control excess and operator sign reversal for pleural effusion, activating the already prepared result-blind control diagnostic. |
+| AR11 statistics-matched-control diagnostic | complete_partial_repair_fail_stop | Perimeter-constrained v2 controls completed in four patient-disjoint shards. Final result canonical SHA-256 `0f118a1a...6f52`, rows SHA-256 `4d340d30...0b4`, and case-study canonical SHA-256 `2d656aaf...782`. Three cells pass and all means are positive, but pleural-effusion blur CI is `[-0.05995, 0.09065]`; only one pathology passes both operators and only two are available. No case-study engineering pathology remains, so selector/U-I/test/scaling stay locked. |
+
+### ARISE survival rules
+
+- Expert-mask Oracle Ceiling is the first survival gate; no selector or four-state
+  training may bypass it.
+- Full pixel intervention and complete model re-encoding are required for any
+  newly scored causal effect.
+- Presence/refutation heads, adaptive extent, and hardest matched controls live
+  in a new `arise_cxr/` package; they are never backported into frozen BiVES.
+- Change one factor per diagnostic run and preserve result-blind locks before
+  any new model score.
+- A failed finding/operator oracle cell is evidence requiring diagnosis, not a
+  reason to scale Qwen3.5 to 4B/9B or open CheXlocalize test.
+- Automatic continuation is authorized only inside this ladder: finish the
+  current locked run, diagnose a failed gate from saved development artifacts,
+  change one declared factor, rerun its smoke/contracts, and then execute the
+  locked development matrix. It never authorizes test opening, server work,
+  BiVES B2 repair, or model scaling.
+
+### ARISE implementation error log
+
+| Error | Attempt | Resolution |
+| --- | --- | --- |
+| Windows `py_compile` did not expand `arise_cxr/*.py`. | First ARISE static compilation | Switched to `python -m compileall`; all new files compile. |
+| Dense-oracle smoke stopped at the first visual attention matmul because deterministic CUDA requires a cuBLAS workspace setting. | First 2-pair GPU smoke | Set `CUBLAS_WORKSPACE_CONFIG=:4096:8` before importing torch; retain strict deterministic algorithms and rerun the same smoke identity. |
+| New case-study test fixture omitted the established `masked_edge_energy_change` field, then expected a later error string than the shared row validator emits. | First two ARISE case-study contract runs | Added the missing strength field and accepted the earlier fail-closed `test-closed` rejection; the production analyzer was unchanged and the full ARISE suite passes. |
+| Piping the three-finding feasibility CLI through `Select-Object -First 5` closed stdout and returned exit code 1 after the output files were already written. | First compact feasibility display | Re-ran/validated the written lock directly and stopped truncating Python stdout with an early-closing pipe; production manifest construction was unaffected. |
+| Hidden `Start-Process` cache launch was rejected by the workstation execution policy before creating a process. | First VinDr token-cache launch | Switched to a monitored unified terminal session. The first session was then intentionally interrupted before GPU/model load when duplicate DICOM hashing was found; propagated the already verified upstream image SHA into the new manifest and restarted from zero. |
+| The first 200-step box-supervision run stopped after step 25 because one small pleural-effusion box contained no patch center. | First VinDr-box v1 training | Case study found exactly `1/377` train positives and `0/378` validation positives affected; the box overlapped six valid patch cells. Replaced center sampling with conservative patch-cell overlap, added a small-box regression contract, scanned all `755` support rows successfully, froze a distinct v2 identity, and restarted from zero. |
+| The first box-MIL oracle smoke loaded every lock but failed when its new head was absent from the audit-row model-ID whitelist. | First 2-pair v2 oracle smoke | Centralized the explicit head-to-model-ID registry, added a fail-closed regression contract, and reran the same 2-pair identity successfully. No partial audit row had been written before the failure. |
+| Statistics-matched control v1 stopped on one sample whose control perimeter ratio exceeded the frozen perturbation-strength threshold. | First full statistics-matched-control matrix | Kept the threshold unchanged and made perimeter admissibility part of score-blind candidate generation. The affected sample then passed all geometry/strength checks under distinct v2 source identity. |
+| The final method gate still failed after v2 control repair. | Final automatic case study | Case study found no collapse, target inertness, matched-control excess, or operator sign reversal. Classified the residual pleural-blur failure as weak heterogeneous causal reliance and stopped without result-driven tuning. |
+
+---
+
+## 2026-07-22 ARISE-v1 terminal publication and VICER-CXR pivot
+
+**New direction authority:** The user supplied a post-ARISE review that accepts
+the 3/4 result as terminal development evidence and defines VICER-CXR as a new
+method line. ARISE thresholds/results remain immutable. The next method must
+use a new branch, protocol, development authority, and score-free sample lock.
+
+| Step | Status | Evidence / next action |
+| --- | --- | --- |
+| VT1 restore review text and publication scope | complete | Read the UTF-8 attachment, separated the pre-existing local asset inventory, ARISE code/tests/configs, and ARISE terminal documents, and verified an explicit 33-file source scope with aggregate SHA-256 `01501e3076369199986596167b51b1a057dcf5c2ebf2debd2d206f5d0f8fd`. |
+| VT2 publish ARISE-v1 terminal | in_progress | Asset inventory commit `fe92105` and ARISE implementation commit `f6a4624` are complete. The terminal documentation commit, branch push, and annotated tag `arise-oracle-v1-terminal-20260722` remain. Do not publish data, weights, caches, patient rows, or runtime outputs. |
+| VT3 freeze VICER proposal and V0 authority | pending | Create a new `codex/vicer-cxr-validity` branch and independent `vicer_cxr/` protocol surface. V0 independently calibrates intervention validity; it does not train a selector or use target-verifier effect as the validity label. |
+| VT4 build new V0 score-free development lock | pending | Use VinDr-train expert-box images excluded from every ARISE train/validation/oracle identity. Cover at least pleural effusion, consolidation, pneumothorax, and cardiomegaly or edema. Preserve image-level claim because VinDr patient IDs are unavailable. |
+| VT5 implement and run V0 dose-response | pending | Compare multiple blur strengths, local-mean strengths, and admissible donor/low-frequency replacements. Report removal, preservation, realism, and target-control effect separately. Stop before V1 if no independently valid operator family survives. |
+| VT6 run V1 coverage-redundancy only if V0 passes | locked | Compare expert box, dilation levels, multi-box union, and anatomy envelope with the frozen verifier/operator family. Learned coalition and V2 stay locked. |
+
+### VICER hard boundaries
+
+- Do not change ARISE's 4/4 or minimum-three-finding terminal gate.
+- Do not reuse the current 70 CheXlocalize validation patients for rule or
+  threshold selection, and do not open CheXlocalize test.
+- Do not use the audited verifier's target-control score to define operator
+  validity; validity critics and thresholds are frozen independently.
+- Do not start selector, U/I, Qwen3.5-4B/9B, server, or Slurm work.
+- V0 precedes V1; V1 precedes V2. A failed gate is recorded and stops the
+  downstream ladder.
+
+### Pivot error log
+
+| Error | Attempt | Resolution |
+| --- | --- | --- |
+| Used Bash heredoc syntax in PowerShell while inspecting attachment bytes. | First encoding diagnostic | No command executed. Switched to a PowerShell here-string piped to Python, then forced UTF-8 console output and recovered the complete review text. |
+| Used shell wildcards in a Windows `rg` secret scan, where they were not expanded. | First publication secret scan | Rebuilt the scan input from an explicit `rg --files` list and scanned the exact 33-file source scope successfully. |
+| The first parallel BiVES validation call yielded without a captured final exit code. | Publication regression validation | Waited for the exact process to exit, then reran the frozen suite standalone; `174/174` passed with exit code `0`. |
+| The first asset-inventory commit command used semicolon-separated validation and commit steps, so the commit proceeded after `git diff --cached --check` reported trailing whitespace. | Asset inventory publication | Removed the two trailing spaces, restaged, amended to `fe92105`, and switched all remaining publication steps to explicit `$LASTEXITCODE` gates. |

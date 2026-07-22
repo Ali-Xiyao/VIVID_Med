@@ -12,6 +12,10 @@
 | Frozen existing-data retrospective | `../audit/phase_e_frozen_existing_data_retrospective_result.md` |
 | VinDr Qwen3.5 development result | `../audit/phase_f_vindr_qwen35_development_result.md` |
 | CheXlocalize Qwen3.5 development result | `../audit/phase_h_chexlocalize_qwen35_development_result.md` |
+| ARISE-CXR method-development result | `../audit/arise_cxr_method_development_result.md` |
+| ARISE docs pointer | `arise_cxr_method_development_result.md` |
+| Scientific status | `SCIENTIFIC_STATUS.md` |
+| ARISE terminal manifest | `ARISE_TERMINAL_MANIFEST.json` |
 | Repository overview | `../README.md` |
 | Persistent task plan | `../task_plan.md` |
 | Durable findings | `../findings.md` |
@@ -27,6 +31,12 @@ CheXlocalize validation-only release was subsequently downloaded, fully
 MD5-verified, and used for a frozen 100-pair/70-patient Qwen3.5-2B development
 matrix. This validation result is prior-exposed and nonconfirmatory. No
 CheXlocalize test opening, server, or Slurm action is authorized.
+
+The bounded ARISE-CXR local development ladder is complete with a fail-closed
+result before selector training. The final report records the successful
+box-supervision/control-family repairs and the remaining pleural-blur and
+three-finding gate failures. It does not open test, scaling, or four-state
+training.
 
 ## Frozen predecessor
 
