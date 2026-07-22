@@ -2,10 +2,11 @@
 
 ## Active authority
 
-`vicer_cxr/VICER_CXR_method_proposal.md` is the active successor-method
-authority, subordinated to the preservation and test-blind boundaries in
-`audit/CXR_localization_causality_audit_proposal.md`. The active row is V0
-intervention-validity development only; V1 and V2 remain gate-locked.
+`audit/CXR_localization_causality_audit_proposal.md` remains the active
+scientific authority. `vicer_cxr/VICER_CXR_method_proposal.md` and
+`audit/vicer_v0_intervention_validity_result.md` define the completed
+successor-method attempt. VICER V0 is terminal negative; V1 and V2 remain
+gate-locked.
 
 The predecessor BiVES B2 route is frozen at tag
 `bives-b2-terminal-8bb1a94`. Its archived proposal and terminal report are:
@@ -23,12 +24,10 @@ ARISE selector, U/I route, scale-up, rerun, or test opening.
 
 ## Current execution boundary
 
-The repository is in local VICER V0 VinDr-train development. A real
-Qwen3.5-2B GPU V0 run may start only after a committed V0 opening binds the
-new image-disjoint data roles, score-free geometry, model snapshot, independent
-critic/verifier endpoints, source hashes, and thresholds. CheXlocalize test,
-VinDr test, test-derived threshold selection, and confirmatory scoring remain
-unauthorized.
+The local VICER V0 VinDr-train development run is complete. No intervention
+family survived all four findings, so there is no active V1/V2 experiment.
+CheXlocalize test, VinDr test, test-derived threshold selection, confirmatory
+scoring, selector work, and model scaling remain unauthorized.
 
 All future validation and evaluation run on this workstation. Do not
 synchronize active experiments to the server or submit SSH/Slurm jobs.

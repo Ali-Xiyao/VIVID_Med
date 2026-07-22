@@ -1,6 +1,6 @@
 # VICER-CXR V0 Experiment Plan
 
-**Status:** V001_SCORE_FREE_GEOMETRY_V2
+**Status:** TERMINAL_V0_FAIL_STOP_BEFORE_V1
 **Date:** 2026-07-22
 **Authority:** `../vicer_cxr/VICER_CXR_method_proposal.md`
 

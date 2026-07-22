@@ -13,6 +13,7 @@
 | VinDr Qwen3.5 development result | `../audit/phase_f_vindr_qwen35_development_result.md` |
 | CheXlocalize Qwen3.5 development result | `../audit/phase_h_chexlocalize_qwen35_development_result.md` |
 | ARISE-CXR method-development result | `../audit/arise_cxr_method_development_result.md` |
+| VICER-CXR V0 intervention-validity result | `../audit/vicer_v0_intervention_validity_result.md` |
 | ARISE docs pointer | `arise_cxr_method_development_result.md` |
 | Scientific status | `SCIENTIFIC_STATUS.md` |
 | ARISE terminal manifest | `ARISE_TERMINAL_MANIFEST.json` |
@@ -37,6 +38,11 @@ result before selector training. The final report records the successful
 box-supervision/control-family repairs and the remaining pleural-blur and
 three-finding gate failures. It does not open test, scaling, or four-state
 training.
+
+The subsequent independent VICER-CXR V0 intervention-validity gate also
+completed locally. It passed all head calibrations but found no operator family
+valid across all four findings, so V1/V2 remain locked. See the VICER V0 result
+linked above.
 
 ## Frozen predecessor
 

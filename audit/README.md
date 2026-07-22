@@ -15,14 +15,15 @@ is retained under `../archive/` and in its original tracked execution records.
 8. [`phase_f_vindr_qwen35_development_result.md`](phase_f_vindr_qwen35_development_result.md)
 9. [`phase_h_chexlocalize_qwen35_development_result.md`](phase_h_chexlocalize_qwen35_development_result.md)
 10. [`arise_cxr_method_development_result.md`](arise_cxr_method_development_result.md)
-11. [`../docs/SCIENTIFIC_STATUS.md`](../docs/SCIENTIFIC_STATUS.md)
+11. [`vicer_v0_intervention_validity_result.md`](vicer_v0_intervention_validity_result.md)
+12. [`../docs/SCIENTIFIC_STATUS.md`](../docs/SCIENTIFIC_STATUS.md)
 12. [`local_model_development_opening_20260719.json`](local_model_development_opening_20260719.json)
 13. [`local_vindr_qwen35_development_opening_20260719.json`](local_vindr_qwen35_development_opening_20260719.json)
 
-The active successor-method entrypoint is
+The VICER successor-method entrypoint is
 [`../vicer_cxr/VICER_CXR_method_proposal.md`](../vicer_cxr/VICER_CXR_method_proposal.md).
-It authorizes only the V0 intervention-validity preparation until a committed
-opening binds the exact source/data/model/threshold identity.
+V0 is now terminal negative: no intervention family passed all four findings,
+so V1 and V2 remain locked.
 14. [`local_chexlocalize_validation_acquisition_opening_20260719.json`](local_chexlocalize_validation_acquisition_opening_20260719.json)
 15. [`local_chexlocalize_qwen35_development_opening_20260719.json`](local_chexlocalize_qwen35_development_opening_20260719.json)
 16. [`MANIFEST.md`](MANIFEST.md)
@@ -52,3 +53,9 @@ statistics-matched controls materially improve the expert-region causal
 effects, but pleural-effusion blur remains statistically unstable and only two
 findings are available. See `arise_cxr_method_development_result.md`. Test,
 4B/9B scaling, U/I, and server execution remain closed.
+
+The independent VICER-CXR V0 ladder is also complete. All calibration heads
+passed, but only 4/12 finding-family validity cells passed and no complete
+operator family survived. The aggregate case study identifies removal
+validity, followed by pneumothorax preservation, as the dominant failure;
+valid-row target-control gaps remain positive. V1/V2 and test remain closed.

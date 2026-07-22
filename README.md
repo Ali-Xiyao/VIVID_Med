@@ -26,6 +26,8 @@ causal evidence set.
   [`audit/phase_h_chexlocalize_qwen35_development_result.md`](audit/phase_h_chexlocalize_qwen35_development_result.md)
 - ARISE-CXR method-development result:
   [`audit/arise_cxr_method_development_result.md`](audit/arise_cxr_method_development_result.md)
+- VICER-CXR V0 intervention-validity result:
+  [`audit/vicer_v0_intervention_validity_result.md`](audit/vicer_v0_intervention_validity_result.md)
 - Handoff index: [`docs/README.md`](docs/README.md)
 
 ## Frozen BiVES predecessor
@@ -94,6 +96,11 @@ ARISE-v1 status:
 - selector/U/I/scaling not authorized;
 - CheXlocalize test unopened;
 - successor method not authorized in this terminal snapshot.
+
+VICER-CXR V0 subsequently completed on new VinDr-train development identities.
+Independent heads passed, but no tested intervention family was valid across
+all four findings; only 4/12 finding-family cells passed. V1 coverage analysis,
+V2 coalition selection, test execution, and scaling therefore remain closed.
 
 All future experiment execution is local to this workstation. Do not sync
 active experiments to the server or submit SSH/Slurm jobs.

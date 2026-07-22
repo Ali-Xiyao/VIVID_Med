@@ -32,19 +32,22 @@ authority remains
 The canonical ARISE report is
 [`../audit/arise_cxr_method_development_result.md`](../audit/arise_cxr_method_development_result.md).
 
-## Successor-method boundary
+## VICER-CXR V0
 
-VICER-CXR is the proposed successor, not an ARISE repair. It requires a new
-branch, proposal, development authority, data lock, and preregistered gates.
-Its intended order is:
+VICER-CXR is an independent successor attempt, not an ARISE repair. Its V0
+intervention-validity development gate is complete and terminal negative:
 
-1. V0 independently validate intervention dose-response and collateral
-   preservation on new development images;
-2. V1 diagnose evidence coverage and redundancy using only V0-valid
-   intervention families;
-3. V2 train an adaptive evidence-coalition selector only if V0 and V1 pass.
+- 384/384 frozen rows completed over four findings, three families, and four
+  strengths;
+- all independent critic/verifier calibration heads passed;
+- only 4/12 finding-family cells passed;
+- no family passed all four findings;
+- corrected result canonical SHA-256:
+  `3c9ceb27c66abfe28c2a269e0566a2f2be08ea3a43dea8c18dc7ddaf5a330bb1`;
+- V1 coverage-redundancy and V2 coalition selection remain locked.
 
-This terminal snapshot does not itself authorize VICER scores or test use.
+The canonical report is
+[`../audit/vicer_v0_intervention_validity_result.md`](../audit/vicer_v0_intervention_validity_result.md).
 
 ## Data and execution status
 

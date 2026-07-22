@@ -1,8 +1,13 @@
 # VICER-CXR V0 Method Proposal
 
-**Status:** candidate method; V0 only
+**Status:** V0 complete; terminal fail-stop before V1
 **Date:** 2026-07-22
 **Predecessor:** frozen ARISE-v1 tag `arise-oracle-v1-terminal-20260722`
+
+The frozen execution result is recorded in
+[`../audit/vicer_v0_intervention_validity_result.md`](../audit/vicer_v0_intervention_validity_result.md).
+No operator family survived all four findings, so the V1/V2 clauses below are
+preserved as preregistered design history and are not active authorization.
 
 ## Method question
 
