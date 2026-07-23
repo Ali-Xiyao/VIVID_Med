@@ -94,3 +94,7 @@
   authority hashes before training and began fresh S1 `ums_prefix8` overfit.
   The first optimizer records are healthy; no protected evaluation surface was
   accessed.
+- Diagnostic S1 `ums_prefix8` passed at step 400 with token accuracy
+  `0.98466` and NLL reduction `97.22%`. The same queue advanced to fresh S1
+  `ums_spd4x2_no_ortho`; no method identity, threshold, or data surface
+  changed.
