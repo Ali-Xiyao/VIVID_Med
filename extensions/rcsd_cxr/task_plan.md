@@ -23,7 +23,7 @@ or diagnostic run in this phase.
 | C. Classify D0-D4 evidence | completed | exact D0 missing; D1 untested; D2/D3 NO-GO; D4 prohibited |
 | D. Build deidentified verdict | completed | Markdown, JSON, and per-finding CSV |
 | E. Validate audit package | completed | integrity pass, 48/48 tests, clean Git scope audit |
-| F. Publish audit branch | in progress | push `codex/rcsd-no-go-audit` |
+| F. Publish audit branch | completed | pushed `codex/rcsd-no-go-audit` |
 
 ## Binding decisions
 
