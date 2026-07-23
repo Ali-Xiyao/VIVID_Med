@@ -21,3 +21,6 @@
 - Allocation 3066 is currently occupied by an unrelated VPPM step. The strict
   queue will be submitted as an exclusive follow-on step rather than
   preempting or sharing that active process.
+- Added a tracked allocation-3066 launcher. It requests an exclusive Slurm
+  step, so the queue waits behind existing allocation work before acquiring
+  the GPU and four CPUs.
