@@ -32,3 +32,31 @@
   behind unrelated step `3066.19219`; no strict-route GPU training has started
   yet. A ten-minute heartbeat monitor now owns the automatic handoff and
   bounded failure policy.
+- At `2026-07-24T01:43+08:00`, unrelated step `3066.19219` remained healthy.
+  Its MixLoRA phase had completed and the same preregistered `--full` wrapper
+  had advanced to the plain-LoRA phase (`lora_piqa` at epoch 1, step
+  5200/16113). The strict launcher remained alive and correctly blocked; its
+  run root was still absent, so strict S0/S1 training had not started or used
+  the GPU.
+- At `2026-07-24T02:41+08:00`, the VPPM plain-LoRA phase had finished the
+  large PIQA candidate and advanced to `lora_arc-e`. Its configuration trains
+  three candidates one at a time (`train_lora_simultaneously_num=1`), so the
+  strict route correctly remained queued behind step `3066.19219`. Launcher
+  PID `2207535` was healthy and the strict run root was still absent.
+- A PowerShell-to-SSH status command expanded remote shell variables locally
+  and produced a read-only quoting error. The monitor command was changed to
+  use literal remote arguments; no server state, experiment output, or queue
+  state was modified.
+- At `2026-07-24T03:07+08:00`, unrelated step `3066.19219` completed and the
+  strict launcher acquired the allocation. S0 passed, but `ums_prefix4`
+  failed before its first optimizer step because deterministic cuBLAS required
+  `CUBLAS_WORKSPACE_CONFIG`. The failed run and logs are being preserved as an
+  implementation case study. The single permitted identity-preserving repair
+  sets `CUBLAS_WORKSPACE_CONFIG=:4096:8`; both S1 arms will rerun from zero.
+- The repair passed all seven strict extension unit tests, Python compilation,
+  and launcher shell syntax validation before server synchronization.
+- The original failure was archived unchanged under
+  `local_runs/history/strict_vivid_spd_qwen35_2b_20260723_s0_s3_failed_cublas_20260724T030859`.
+  The repaired queue launched from an empty original run root as step
+  `3066.19599` at `2026-07-24T03:13:50+08:00`; its queue state was healthy and
+  rerunning S0 before fresh paired S1 execution.

@@ -5,10 +5,15 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import os
 import random
 import sys
 import time
 from pathlib import Path
+
+# PyTorch's fail-closed deterministic mode requires this CUDA >=10.2 cuBLAS
+# workspace contract to be present before torch initializes CUDA.
+os.environ.setdefault("CUBLAS_WORKSPACE_CONFIG", ":4096:8")
 
 import numpy as np
 import torch

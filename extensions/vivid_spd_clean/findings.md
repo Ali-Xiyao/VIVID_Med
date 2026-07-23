@@ -27,3 +27,16 @@
 - On this cluster, `srun --exclusive` can coexist with an existing step in the
   same retained allocation. Safe serialization therefore requires an explicit
   non-batch-step wait before `srun`; this is now part of the tracked launcher.
+- The unrelated VPPM command is a two-stage `--full` wrapper: completing its
+  MixLoRA phase does not free allocation step `3066.19219`; it immediately
+  enters a plain-LoRA phase. Queue readiness must therefore be determined from
+  the Slurm step and wrapper completion, not from a single phase marker.
+- The VPPM plain-LoRA configuration contains PIQA, ARC-E, and BoolQ candidates
+  with `train_lora_simultaneously_num=1`; its per-task epoch counter can reset
+  after a candidate completes without indicating a stalled or restarted job.
+- The first strict S1 launch exposed a missing deterministic CUDA runtime
+  contract: `torch.use_deterministic_algorithms(True)` requires
+  `CUBLAS_WORKSPACE_CONFIG` on this CUDA stack. The failure occurred in the
+  initial validation forward pass before training, so it does not bear on
+  either scientific arm. Setting the workspace contract before importing
+  PyTorch is the one identity-preserving repair.

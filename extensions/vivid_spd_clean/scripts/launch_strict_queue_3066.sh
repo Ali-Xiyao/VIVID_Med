@@ -12,6 +12,7 @@ fi
 
 cd "$ROOT"
 export PYTHONUNBUFFERED=1
+export CUBLAS_WORKSPACE_CONFIG=:4096:8
 
 while squeue -s -j 3066 -h -o '%i' \
   | grep -v '^3066\.batch$' \
