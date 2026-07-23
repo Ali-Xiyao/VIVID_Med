@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "route": "strict_vivid_spd_clean_extension",
+  "frozen_at": "2026-07-23",
+  "teacher": {
+    "family": "Qwen3.5",
+    "primary_size": "2B",
+    "frozen": true,
+    "larger_sizes_locked_until_s4": true
+  },
+  "backbone": {
+    "name": "vit_base_patch16_224.augreg2_in21k_ft_in1k",
+    "input_size": 224,
+    "output": "all_tokens"
+  },
+  "target": {
+    "name": "deterministic_hard_ums",
+    "reliability_weighting": false,
+    "soft_posterior": false,
+    "field_anchor": false
+  },
+  "arms": {
+    "ums_prefix4": {
+      "projector": "historical_prefix",
+      "prefix_tokens": 4,
+      "orthogonality_weight": 0.0
+    },
+    "ums_spd4x2": {
+      "projector": "historical_spd",
+      "groups": 4,
+      "tokens_per_group": 2,
+      "attention_heads": 4,
+      "orthogonality_weight": 0.02
+    }
+  },
+  "training": {
+    "seed": 0,
+    "pilot_steps": 3000,
+    "warmup_steps": 500,
+    "backbone_lr": 2e-05,
+    "projector_lr": 0.0001,
+    "weight_decay": 0.01,
+    "gradient_clip": 1.0,
+    "checkpoint_rule": "minimum_unweighted_internal_validation_token_nll"
+  },
+  "promotion": {
+    "primary_findings": [
+      "Atelectasis",
+      "Cardiomegaly",
+      "Consolidation",
+      "Edema",
+      "Pleural Effusion"
+    ],
+    "macro_auroc_delta_min": 0.005,
+    "macro_auprc_delta_min": -0.005,
+    "nonnegative_finding_count_min": 4,
+    "large_decline_threshold": -0.02,
+    "large_decline_count_max": 1
+  },
+  "protected_surfaces": [
+    "CheXlocalize_test",
+    "VinDr_test"
+  ],
+  "server": {
+    "host": "dqxy11@172.20.52.10",
+    "allocation": "3066",
+    "node": "gpu01",
+    "sequential_arms": true
+  }
+}

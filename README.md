@@ -1,6 +1,23 @@
-# VIVID extension audit branch: RCSD-CXR
+# VIVID strict hard-UMS/SPD clean extension
 
-> **Branch identity:** `codex/rcsd-no-go-audit` is the bounded attribution
+> **Active branch:** `codex/vivid-spd-clean-extension`
+>
+> The only active method route is
+> [`extensions/vivid_spd_clean/`](extensions/vivid_spd_clean/). It compares the
+> historical four-prefix hard-UMS projector with historical 4x2 SPD under the
+> same frozen Qwen3.5-2B teacher, ViT-B encoder, data, prompt, target, optimizer,
+> budget, and validation-NLL checkpoint rule.
+>
+> Start with the
+> [frozen protocol](extensions/vivid_spd_clean/audit/VIVID_SPD_CLEAN_EXPERIMENT_PROTOCOL.md),
+> [machine lock](extensions/vivid_spd_clean/audit/vivid_spd_clean_lock.json),
+> and [execution tracker](extensions/vivid_spd_clean/refine-logs/EXPERIMENT_TRACKER.md).
+> RCSD, BiVES, VSL, and later evidence routes are frozen history. CheXlocalize
+> test and VinDr test remain sealed.
+
+## Prior RCSD audit branch history
+
+> **Historical branch identity:** `codex/rcsd-no-go-audit` was the bounded attribution
 > branch created from the frozen VIVID journal-extension implementation at
 > `bc1105f`. Its extension package is
 > [`extensions/rcsd_cxr/`](extensions/rcsd_cxr/), and its terminal scientific

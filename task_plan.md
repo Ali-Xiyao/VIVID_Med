@@ -1,4 +1,7 @@
-# VSL-CXR v5 Full Experiment Execution Plan
+# Historical VSL-CXR Plan
+
+> Frozen history on `codex/vivid-spd-clean-extension`. The current task plan is
+> [`extensions/vivid_spd_clean/task_plan.md`](extensions/vivid_spd_clean/task_plan.md).
 
 ## Active Scope
 

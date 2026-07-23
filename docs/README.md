@@ -1,6 +1,23 @@
-# BiVES-CXR Handoff Index
+# Repository Handoff Index
 
-BiVES-CXR is the only active paper and code mainline.
+## Active strict VIVID/SPD route
+
+| Purpose | File |
+| --- | --- |
+| Route overview | `../extensions/vivid_spd_clean/README.md` |
+| Frozen scientific protocol | `../extensions/vivid_spd_clean/audit/VIVID_SPD_CLEAN_EXPERIMENT_PROTOCOL.md` |
+| Machine lock | `../extensions/vivid_spd_clean/audit/vivid_spd_clean_lock.json` |
+| Active task plan | `../extensions/vivid_spd_clean/task_plan.md` |
+| Durable findings | `../extensions/vivid_spd_clean/findings.md` |
+| Chronological progress | `../extensions/vivid_spd_clean/progress.md` |
+| Experiment tracker | `../extensions/vivid_spd_clean/refine-logs/EXPERIMENT_TRACKER.md` |
+
+The BiVES material below is retained history, not the active method on
+`codex/vivid-spd-clean-extension`.
+
+## Historical BiVES-CXR handoff
+
+BiVES-CXR was the prior paper and code mainline.
 
 ## Start here
 

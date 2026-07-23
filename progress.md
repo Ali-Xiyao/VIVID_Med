@@ -1,4 +1,8 @@
-# VSL-CXR v5 Progress Log
+# Historical VSL-CXR Progress Log
+
+> Frozen history on `codex/vivid-spd-clean-extension`. Current strict-route
+> progress is in
+> [`extensions/vivid_spd_clean/progress.md`](extensions/vivid_spd_clean/progress.md).
 
 ## 2026-07-11 Repository Storage Cleanup
 

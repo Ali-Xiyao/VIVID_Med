@@ -1,4 +1,8 @@
-# VSL-CXR v5 Findings
+# Historical VSL-CXR Findings
+
+> Frozen history on `codex/vivid-spd-clean-extension`. Current strict-route
+> findings are in
+> [`extensions/vivid_spd_clean/findings.md`](extensions/vivid_spd_clean/findings.md).
 
 ## 2026-07-07 Project Organization Findings
 

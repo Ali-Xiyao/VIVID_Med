@@ -2,20 +2,25 @@
 
 ## Active authority
 
-`BiVES_CXR_MIA_TMI_ready_proposal.md` is the final research authority. The
-active implementation is BiVES-CXR and uses multimodal Qwen3.5 only:
+This branch activates the isolated strict VIVID/SPD clean extension under:
 
-- Qwen3.5-2B for P0/debug;
-- Qwen3.5-4B as the default main model;
-- Qwen3.5-9B for the locked scale study;
-- Qwen3.5-0.8B only for optional ultra-light smoke checks.
+- `extensions/vivid_spd_clean/audit/VIVID_SPD_CLEAN_EXPERIMENT_PROTOCOL.md`;
+- `extensions/vivid_spd_clean/audit/vivid_spd_clean_lock.json`;
+- `extensions/vivid_spd_clean/AGENTS.md`.
 
-Do not introduce active Qwen2, Qwen2.5, Qwen3-VL, LLaDA, Gemma, InternVL,
-Llama, BiomedCLIP, CEQ, CCSH, or AUCH model paths. Historical implementations
-belong under `legacy/`.
+The active question is the paired hard-UMS comparison between the historical
+four-prefix projector and historical four-by-two SPD using frozen
+Qwen3.5-2B. Qwen3.5-4B/9B remain locked behind the primary gate.
+
+BiVES, RCSD, VSL, ARISE, VICER, and MORPH are frozen history. Do not merge
+their targets, losses, selectors, posterior weighting, field anchors,
+interventions, or claims into the strict VIVID/SPD route.
 
 ## Project structure
 
+- `extensions/vivid_spd_clean/`: only active method, protocol, code, tests,
+  launchers, and planning state on this branch.
+- `extensions/rcsd_cxr/`: terminal RCSD audit history; not an active method.
 - `bives_cxr/`: active evidence model, closed-form decoder, intervention logic,
   losses, metrics, Qwen3.5 adapter, and manifest dataset.
 - `configs/bives_cxr/`: the only active experiment configurations.
@@ -52,12 +57,17 @@ python scripts/audit_bives_manifest.py \
   --train data/bives_cxr/manifests/train_locked.jsonl \
   --val data/bives_cxr/manifests/val_locked.jsonl
 # Formal P0 uses qwen35_2b_p0.yaml without --debug, only after its locks pass.
+
+python -m unittest discover -s extensions/vivid_spd_clean/tests -v
+python extensions/vivid_spd_clean/scripts/smoke_vivid_spd_clean.py
+python extensions/vivid_spd_clean/scripts/audit_vivid_spd_lock.py
 ```
 
-All active validation, model loading, training, calibration, and final
-evaluation run on this workstation. Do not synchronize active experiments to
-the server or submit SSH/Slurm jobs. Formal local execution remains blocked
-until the same data-readiness, lock, cache, calibration, and release gates pass.
+The user explicitly authorized server execution and cached models for the
+strict extension. It may run through retained SUES allocation `3066` on
+`gpu01` as a sequential queue after read-only ownership/capacity checks. Do not
+stop or alter unrelated jobs. All older routes remain frozen and are not
+authorized for server replay.
 
 The nonclinical weak-label proxy P0 has completed and failed its held-out S/C
 survival gate; do not scale it to 4B/9B without a justified data-side repair.
