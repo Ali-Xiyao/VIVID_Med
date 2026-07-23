@@ -24,3 +24,7 @@
 - Added a tracked allocation-3066 launcher. It requests an exclusive Slurm
   step, so the queue waits behind existing allocation work before acquiring
   the GPU and four CPUs.
+- The first launcher attempt showed that Slurm `--exclusive` alone did not
+  serialize job steps. Our S0-only step `3066.19335` was stopped before model
+  loading, its empty/pretraining-free run root was removed, and the launcher
+  now explicitly waits until allocation 3066 has no non-batch step.

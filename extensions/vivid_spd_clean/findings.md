@@ -24,3 +24,6 @@
   validation rows, 256 locked overfit rows, zero missing selected MIMIC images,
   available CheXpert probe/expert-development paths, and unchanged teacher,
   backbone, and manifest hashes.
+- On this cluster, `srun --exclusive` can coexist with an existing step in the
+  same retained allocation. Safe serialization therefore requires an explicit
+  non-batch-step wait before `srun`; this is now part of the tracked launcher.

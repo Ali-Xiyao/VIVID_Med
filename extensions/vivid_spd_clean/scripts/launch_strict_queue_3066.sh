@@ -13,6 +13,16 @@ fi
 cd "$ROOT"
 export PYTHONUNBUFFERED=1
 
+while squeue -s -j 3066 -h -o '%i' \
+  | grep -v '^3066\.batch$' \
+  | grep -q '^3066\.'; do
+  echo "$(date -Is) waiting for existing allocation-3066 steps to finish"
+  squeue -s -j 3066 -h -o '%i|%N|%j|%M'
+  sleep 60
+done
+
+echo "$(date -Is) allocation-3066 step queue is clear; launching strict route"
+
 exec srun \
   --jobid=3066 \
   --exclusive \
