@@ -1,0 +1,72 @@
+schema_version: 1
+datasets:
+  mimic_cxr:
+    path: /ipfs/inspurfileset/home/dqxy/dqxy11/projects/xiyaowang/021_260129VIVID/data/dataset/mimic-cxr
+    kind: base_cxr_reports
+    parent: null
+    roles: [track_a_train]
+    status: canonical_manifest_full_path_audit_passed_20260723
+    test_exposure: internal_patient_split_required
+  mimic_cxr_metadata:
+    path: /ipfs/inspurfileset/home/dqxy/dqxy11/projects/xiyaowang/02101_data/MIMIC-CXR-metadata
+    kind: official_metadata_and_split
+    parent: mimic_cxr
+    roles: [track_a_identity]
+    status: uploaded_six_files_sha256_verified_20260723
+    test_exposure: official_split_table_test_rows_must_be_rejected
+  chexpert:
+    path: /ipfs/inspurfileset/home/dqxy/dqxy11/projects/xiyaowang/021_260129VIVID/data/dataset/CheXpert-v1.0-small
+    kind: base_cxr_labels
+    parent: null
+    roles: [track_b_pixels, paper1_external]
+    status: present_pending_lineage_audit
+    test_exposure: expert_test_reserved
+  chexpert_plus:
+    path: /ipfs/inspurfileset/home/dqxy/dqxy11/projects/xiyaowang/02101_data/CheXpert-Plus
+    kind: report_metadata_addon
+    parent: chexpert
+    roles: [track_b_reports]
+    status: uploaded_and_sha256_verified_20260722
+    test_exposure: must_exclude_expert_val_test
+  nih:
+    path: /ipfs/inspurfileset/home/dqxy/dqxy11/projects/xiyaowang/02101_data/NIH_Chest_X-rays
+    kind: base_cxr_labels
+    parent: null
+    roles: [paper1_external]
+    status: uploaded_tree_digest_verified_20260723
+    test_exposure: frozen_external
+  vindr_cxr:
+    path: /ipfs/inspurfileset/home/dqxy/dqxy11/projects/xiyaowang/021_260129VIVID/data/dataset/vinbigdata_xhlulu_512png
+    kind: derived_cxr_boxes_labels
+    parent: null
+    roles: [paper1_external]
+    status: present_pending_integrity_audit
+    test_exposure: previously_inspected_retrospective_only
+  chest_imagenome:
+    path: /ipfs/inspurfileset/home/dqxy/dqxy11/projects/xiyaowang/02101_data/chest-imagenome-dataset-1.0.0.zip
+    kind: structured_annotation_addon
+    parent: mimic_cxr
+    roles: [structured_supervision]
+    status: publisher_archive_sha256_verified_20260722
+    test_exposure: not_independent
+  ms_cxr:
+    path: /ipfs/inspurfileset/home/dqxy/dqxy11/projects/xiyaowang/02101_data/MS-CXR
+    kind: grounding_annotation_addon
+    parent: mimic_cxr
+    roles: [secondary_only]
+    status: uploaded_and_sha256_verified_20260722
+    test_exposure: previously_inspected_not_blind
+  chexlocalize_validation:
+    path: null
+    kind: localization_annotation_addon
+    parent: chexpert
+    roles: [paper2_only]
+    status: absent_from_rcsd
+    test_exposure: forbidden_for_paper1
+  chexlocalize_test:
+    path: null
+    kind: localization_annotation_addon
+    parent: chexpert
+    roles: [paper2_reserved_test]
+    status: deliberately_absent
+    test_exposure: sealed

@@ -1,0 +1,110 @@
+schema_version: 1
+scope: RCSD-CXR paper one
+datasets:
+  mimic_cxr:
+    version: 2.1.0
+    parent: null
+    roles: [track_a_train]
+    access: PhysioNet credentialed local copy; no redistribution
+    license_status: PhysioNet Credentialed Health Data License 1.5.0 and DUA recorded
+    eligibility: qualified
+    test_exposure: official train and validate only; test rejected by builder
+    evidence:
+      - official PhysioNet MIMIC-CXR-JPG v2.1.0 release page
+      - local official split and publisher SHA256 manifest
+      - local_runs/gate0_20260723/mimic_gate0_manifest_audit.json
+  mimic_cxr_metadata:
+    version: 2.0.0 tables distributed with MIMIC-CXR-JPG 2.1.0
+    parent: mimic_cxr
+    roles: [track_a_identity]
+    access: PhysioNet credentialed local copy; no redistribution
+    license_status: inherits MIMIC-CXR credentialed license and DUA
+    eligibility: qualified
+    test_exposure: test rows rejected
+    evidence:
+      - six uploaded files independently SHA256 matched on 2026-07-23
+  chest_imagenome:
+    version: 1.0.0
+    parent: mimic_cxr
+    roles: [structured_supervision]
+    access: PhysioNet credentialed local copy; no redistribution
+    license_status: PhysioNet credentialed license recorded in publisher archive
+    eligibility: qualified
+    test_exposure: MIMIC-derived and never an external cohort
+    evidence:
+      - publisher archive contains LICENSE.txt and SHA256SUMS.txt
+      - publisher archive SHA256 verified on 2026-07-22
+  ms_cxr:
+    version: 1.1.0
+    parent: mimic_cxr
+    roles: [secondary_only]
+    access: PhysioNet credentialed local copy; no redistribution
+    license_status: PhysioNet Credentialed Health Data License 1.5.0 recorded locally
+    eligibility: qualified
+    test_exposure: previously inspected; secondary only
+    evidence:
+      - local LICENSE.txt
+      - local SHA256SUMS.txt and verified upload
+  chexpert:
+    version: 1.0-small
+    parent: null
+    roles: [track_b_pixels, paper1_external]
+    access: Stanford research release local copy
+    license_status: exact accepted terms record not yet attached to RCSD ledger
+    eligibility: conditional
+    test_exposure: official validation reserved; test not present in Track B manifest
+    evidence:
+      - local train.csv and valid.csv
+      - data_refs/chexpert_lineage_manifest.json
+  chexpert_plus:
+    version: 1.0
+    parent: chexpert
+    roles: [track_b_reports]
+    access: Redivis AIMI release local report/metadata copy
+    license_status: exact accepted terms record not yet attached to RCSD ledger
+    eligibility: conditional
+    test_exposure: valid rows and patients excluded from optional Track B
+    evidence:
+      - local download_manifest.json resolves aimi.chexpert_plus:5yyj:v1_0
+      - data_refs/chexpert_lineage_manifest.json
+  nih:
+    version: ChestX-ray14 2017 release
+    parent: null
+    roles: [paper1_external]
+    access: public NIH image release local copy
+    license_status: local publisher README has citation and limitations but no explicit license grant
+    eligibility: conditional
+    test_exposure: frozen external; not used for model selection
+    evidence:
+      - local README_CHESTXRAY.pdf
+      - verified 112128-file upload tree digest
+  vindr_cxr:
+    version: derived PNG copy; parent release identity pending
+    parent: null
+    roles: [paper1_external]
+    access: existing server copy
+    license_status: publisher release/derivative provenance record incomplete
+    eligibility: conditional
+    test_exposure: previously inspected retrospective only
+    evidence:
+      - existing server dataset registry
+  chexlocalize_validation:
+    version: not copied into RCSD
+    parent: chexpert
+    roles: [paper2_only]
+    access: absent
+    license_status: outside paper-one scope
+    eligibility: excluded
+    test_exposure: forbidden_for_paper1
+    evidence:
+      - data_refs/datasets.server.yaml has null path
+  chexlocalize_test:
+    version: not copied into RCSD
+    parent: chexpert
+    roles: [paper2_reserved_test]
+    access: deliberately absent
+    license_status: outside paper-one scope
+    eligibility: excluded
+    test_exposure: sealed_absent
+    evidence:
+      - data_refs/datasets.server.yaml has null path

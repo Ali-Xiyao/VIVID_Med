@@ -1,3 +1,21 @@
+# VIVID extension branch: RCSD-CXR
+
+> **Branch identity:** `codex/vivid-extension-rcsd` is the VIVID journal
+> extension branch. Its extension package is
+> [`extensions/rcsd_cxr/`](extensions/rcsd_cxr/), and its terminal scientific
+> authority is
+> [`extensions/rcsd_cxr/docs/RCSD_CXR_terminal_gate_result_20260723.md`](extensions/rcsd_cxr/docs/RCSD_CXR_terminal_gate_result_20260723.md).
+>
+> RCSD-CXR is terminal **NO-GO** as a new method: posterior fusion failed G2
+> and the simplified equal-budget field-anchor route failed G3. Full-data,
+> external-test, multi-seed, multi-institution, and Qwen-size expansion were
+> cancelled prospectively. CheXlocalize test remained sealed.
+>
+> The material below is inherited VIVID repository history from the branch
+> base. It is not the active authority for this extension branch. See
+> [`VIVID_EXTENSION_BRANCH.md`](VIVID_EXTENSION_BRANCH.md) for the exact scope
+> and publication boundary.
+
 # BiVES-CXR
 
 BiVES-CXR learns a statement-conditioned bipolar visual evidence set for

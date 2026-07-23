@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "artifact": "chexpert_lineage_manifest",
+  "contains_patient_identifiers": false,
+  "source": {
+    "chexpert_plus_table": "H:\\xiyao\\dataset\\CheXpert-Plus\\df_chexpert_plus_240401.parquet",
+    "chexpert_plus_sha256": "90e8b47d3ccf944955cbd5e215fd7eb90248d918a2be9b5c7f70528d73d208b7",
+    "chexpert_valid_csv": "H:\\Xiyao_Wang\\000_Public Dataset\\CheXpert-v1.0-small\\valid.csv",
+    "chexpert_valid_sha256": "aa43403f7bb183a35ae3bb9152896c1fe9a5b297635e0b541e363b776830ec4a"
+  },
+  "summary": {
+    "rows": 223462,
+    "patients": 64725,
+    "split_counts": {
+      "train": 223228,
+      "valid": 234
+    },
+    "patient_counts": {
+      "train": 64525,
+      "valid": 200
+    },
+    "multi_split_patients": 0,
+    "frontal_train_rows": 190869,
+    "official_valid_rows": 234,
+    "plus_valid_rows": 234,
+    "valid_path_overlap": 234,
+    "valid_path_symmetric_difference": 0
+  },
+  "decision": {
+    "chexpert_plus_valid_is_official_chexpert_valid": true,
+    "track_b_training_policy": "train_split_only_and_frontal_only",
+    "reserved_valid_policy": "exclude_all_valid_rows_and_patients",
+    "chexlocalize_test_policy": "absent_and_sealed"
+  }
+}

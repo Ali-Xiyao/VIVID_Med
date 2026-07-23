@@ -1,0 +1,167 @@
+schema_version: 1
+allocation:
+  job_id: 4161
+  node: gpu01
+  gpu: 1x_A800_80GB
+  cpus: 4
+  memory: 64G
+policy:
+  sequential: true
+  preserve_unrelated_processes: true
+  fail_closed: true
+tasks:
+  - id: G0_registry
+    enabled: true
+    resource: cpu
+    command: >-
+      RCSD_DATA_REGISTRY=data_refs/datasets.server.yaml
+      /ipfs/inspurfileset/home/dqxy/dqxy11/miniforge3/envs/vivid_med310/bin/python
+      scripts/validate_data_refs.py
+      --roles track_a_train paper1_external structured_supervision secondary_only
+  - id: G0_manifest_build
+    enabled: true
+    resource: cpu
+    requires: [G0_registry]
+    command: >-
+      /ipfs/inspurfileset/home/dqxy/dqxy11/miniforge3/envs/vivid_med310/bin/python
+      scripts/build_mimic_frontal_manifest.py
+      --metadata /ipfs/inspurfileset/home/dqxy/dqxy11/projects/xiyaowang/02101_data/MIMIC-CXR-metadata/mimic-cxr-2.0.0-metadata.csv.gz
+      --split-table /ipfs/inspurfileset/home/dqxy/dqxy11/projects/xiyaowang/02101_data/MIMIC-CXR-metadata/mimic-cxr-2.0.0-split.csv.gz
+      --image-root /ipfs/inspurfileset/home/dqxy/dqxy11/projects/xiyaowang/021_260129VIVID/data/dataset/mimic-cxr/mimic-cxr-images
+      --report-root /ipfs/inspurfileset/home/dqxy/dqxy11/projects/xiyaowang/021_260129VIVID/data/dataset/mimic-cxr/mimic-cxr-reports
+      --output local_runs/gate0_20260723/mimic_canonical_train_validate.csv
+      --splits train validate
+  - id: G0_manifest_audit
+    enabled: true
+    resource: cpu
+    requires: [G0_manifest_build]
+    command: >-
+      /ipfs/inspurfileset/home/dqxy/dqxy11/miniforge3/envs/vivid_med310/bin/python
+      scripts/audit_mimic_gate0.py
+      --manifest local_runs/gate0_20260723/mimic_canonical_train_validate.csv
+      --image-root /ipfs/inspurfileset/home/dqxy/dqxy11/projects/xiyaowang/021_260129VIVID/data/dataset/mimic-cxr/mimic-cxr-images
+      --report-root /ipfs/inspurfileset/home/dqxy/dqxy11/projects/xiyaowang/021_260129VIVID/data/dataset/mimic-cxr/mimic-cxr-reports
+      --metadata /ipfs/inspurfileset/home/dqxy/dqxy11/projects/xiyaowang/02101_data/MIMIC-CXR-metadata/mimic-cxr-2.0.0-metadata.csv.gz
+      --split-table /ipfs/inspurfileset/home/dqxy/dqxy11/projects/xiyaowang/02101_data/MIMIC-CXR-metadata/mimic-cxr-2.0.0-split.csv.gz
+      --output local_runs/gate0_20260723/mimic_gate0_manifest_audit.json
+  - id: G0_lineage_overlap_license
+    enabled: true
+    resource: cpu
+    requires: [G0_manifest_audit]
+    command: >-
+      /ipfs/inspurfileset/home/dqxy/dqxy11/miniforge3/envs/vivid_med310/bin/python
+      scripts/audit_dataset_qualification.py
+      --qualification data_refs/gate0_qualification.server.yaml
+      --chexpert-lineage data_refs/chexpert_lineage_manifest.json
+      --output local_runs/gate0_20260723/dataset_qualification_audit.json
+  - id: G1_historical_checkpoint_static_audit
+    enabled: true
+    resource: cpu
+    requires: [G0_lineage_overlap_license]
+    command: >-
+      /ipfs/inspurfileset/home/dqxy/dqxy11/miniforge3/envs/vivid_med310/bin/python
+      scripts/audit_historical_checkpoints.py
+      --ums-checkpoint /ipfs/inspurfileset/home/dqxy/dqxy11/projects/xiyaowang/021_260129VIVID/outputs/ablation_A_ums_12label/checkpoints/best.pt
+      --spd-checkpoint /ipfs/inspurfileset/home/dqxy/dqxy11/projects/xiyaowang/021_260129VIVID/outputs/ablation_A_ums_spd_12label/checkpoints/best.pt
+      --ums-config /ipfs/inspurfileset/home/dqxy/dqxy11/projects/xiyaowang/021_260129VIVID/legacy/vivid_med/configs/ablation_A_ums_12label.yaml
+      --spd-config /ipfs/inspurfileset/home/dqxy/dqxy11/projects/xiyaowang/021_260129VIVID/legacy/vivid_med/configs/ablation_A_ums_spd_12label.yaml
+      --trainer-source /ipfs/inspurfileset/home/dqxy/dqxy11/projects/xiyaowang/021_260129VIVID/legacy/vivid_med/training/trainer.py
+      --output local_runs/gate1_static_20260723/historical_checkpoint_audit.json
+  - id: G2_official_source_manifest
+    enabled: true
+    resource: cpu
+    requires: [G1_historical_checkpoint_static_audit]
+    command: >-
+      /ipfs/inspurfileset/home/dqxy/dqxy11/miniforge3/envs/vivid_med310/bin/python
+      scripts/build_mimic_source_labels.py
+      --canonical-manifest local_runs/gate0_20260723/mimic_canonical_train_validate.csv
+      --chexpert-table /ipfs/inspurfileset/home/dqxy/dqxy11/projects/xiyaowang/02101_data/MIMIC-CXR-metadata/mimic-cxr-2.0.0-chexpert.csv.gz
+      --negbio-table /ipfs/inspurfileset/home/dqxy/dqxy11/projects/xiyaowang/02101_data/MIMIC-CXR-metadata/mimic-cxr-2.0.0-negbio.csv.gz
+      --output local_runs/gate2_20260723/mimic_official_source_labels.csv
+      --audit-output local_runs/gate2_20260723/mimic_official_source_labels_audit.json
+  - id: G2_chest_imagenome_gold_audit
+    enabled: true
+    resource: cpu
+    requires: [G2_official_source_manifest]
+    command: >-
+      /ipfs/inspurfileset/home/dqxy/dqxy11/miniforge3/envs/vivid_med310/bin/python
+      scripts/audit_chest_imagenome_gold.py
+      --archive /ipfs/inspurfileset/home/dqxy/dqxy11/projects/xiyaowang/02101_data/chest-imagenome-dataset-1.0.0.zip
+      --output local_runs/gate2_20260723/chest_imagenome_gold_audit.json
+  - id: G2_posterior_gold
+    enabled: false
+    resource: cpu
+    requires: [G2_chest_imagenome_gold_audit]
+    locked_reason: LUNGUAGE DUA signed; protected CSV files must be acquired and qualified
+  - id: G1_ums_overfit
+    enabled: false
+    resource: gpu
+    requires: [G2_posterior_gold]
+    locked_reason: trainer is not implemented and posterior validity must pass first
+    min_free_mib: 50000
+    max_utilization_percent: 85
+  - id: G1_spd4x2_overfit
+    enabled: false
+    resource: gpu
+    requires: [G1_ums_overfit]
+    locked_reason: trainer and historical checkpoint audit not yet implemented
+  - id: G3_5k
+    enabled: false
+    resource: gpu
+    requires: [G1_spd4x2_overfit]
+    locked_reason: gated by G1 and G2
+  - id: G3_20k_spd
+    enabled: false
+    resource: gpu
+    requires: [G3_5k]
+    locked_reason: gated by G3 learnability
+  - id: G3_20k_posterior
+    enabled: false
+    resource: gpu
+    requires: [G3_20k_spd]
+    locked_reason: gated by prior controlled run
+  - id: G3_20k_anchor
+    enabled: false
+    resource: gpu
+    requires: [G3_20k_posterior]
+    locked_reason: gated by prior controlled run
+  - id: G3_20k_full
+    enabled: false
+    resource: gpu
+    requires: [G3_20k_anchor]
+    locked_reason: gated by prior controlled run
+  - id: G4_full_seed0
+    enabled: false
+    resource: gpu
+    requires: [G3_20k_full]
+    locked_reason: gated by G3 decision
+  - id: G5_seed1
+    enabled: false
+    resource: gpu
+    requires: [G4_full_seed0]
+    locked_reason: gated by full single-seed result
+  - id: G5_seed2
+    enabled: false
+    resource: gpu
+    requires: [G5_seed1]
+    locked_reason: gated by full single-seed result
+  - id: G6_qwen35_08b
+    enabled: false
+    resource: gpu
+    requires: [G5_seed2]
+    locked_reason: conditional teacher-size sensitivity after G5
+  - id: G6_qwen35_2b
+    enabled: false
+    resource: gpu
+    requires: [G6_qwen35_08b]
+    locked_reason: conditional teacher-size sensitivity after G5
+  - id: G6_qwen35_4b
+    enabled: false
+    resource: gpu
+    requires: [G6_qwen35_2b]
+    locked_reason: conditional teacher-size sensitivity after G5
+  - id: G6_qwen35_9b
+    enabled: false
+    resource: gpu
+    requires: [G6_qwen35_4b]
+    locked_reason: conditional teacher-size sensitivity after G5

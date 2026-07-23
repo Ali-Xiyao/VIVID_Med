@@ -1,0 +1,27 @@
+experiment:
+  name: rcsd_track_a_pilot
+  stage: locked_until_gate_0
+  seed: 0
+data:
+  registry_env: RCSD_DATA_REGISTRY
+  dataset: mimic_cxr
+  manifest: null
+  image_size: 224
+  frontal_only: true
+  canonical_view_order: [PA, AP]
+model:
+  backbone: vit_base_patch16_224
+  spd:
+    groups: 4
+    tokens_per_group: 2
+  field_anchor:
+    fields: [observation, assertion, anatomy, global]
+    tokens_per_field: 2
+posterior:
+  states: [present, absent, uncertain]
+  missing_policy: mask
+  temperature: null
+training:
+  status: not_authorized
+  checkpoint_selection: validation_structured_nll
+  one_checkpoint_for_all_metrics: true

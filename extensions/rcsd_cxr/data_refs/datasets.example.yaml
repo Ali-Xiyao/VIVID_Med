@@ -1,0 +1,65 @@
+schema_version: 1
+datasets:
+  mimic_cxr:
+    path: /path/to/MIMIC-CXR
+    kind: base_cxr_reports
+    parent: null
+    roles: [track_a_train]
+    status: credentialed
+    test_exposure: internal_patient_split_required
+  chexpert:
+    path: /path/to/CheXpert-v1.0-small
+    kind: base_cxr_labels
+    parent: null
+    roles: [track_b_pixels, paper1_external]
+    status: local
+    test_exposure: expert_test_reserved
+  chexpert_plus:
+    path: /path/to/CheXpert-Plus
+    kind: report_metadata_addon
+    parent: chexpert
+    roles: [track_b_reports]
+    status: local_no_pixels
+    test_exposure: must_exclude_expert_val_test
+  nih:
+    path: /path/to/NIH-ChestXray14
+    kind: base_cxr_labels
+    parent: null
+    roles: [paper1_external]
+    status: local
+    test_exposure: frozen_external
+  vindr_cxr:
+    path: /path/to/VinDr-CXR
+    kind: base_cxr_boxes_labels
+    parent: null
+    roles: [paper1_external]
+    status: local
+    test_exposure: previously_inspected_retrospective_only
+  chest_imagenome:
+    path: /path/to/chest-imagenome-dataset-1.0.0.zip
+    kind: structured_annotation_addon
+    parent: mimic_cxr
+    roles: [structured_supervision]
+    status: local_archive
+    test_exposure: not_independent
+  ms_cxr:
+    path: /path/to/MS-CXR
+    kind: grounding_annotation_addon
+    parent: mimic_cxr
+    roles: [secondary_only]
+    status: local
+    test_exposure: previously_inspected_not_blind
+  chexlocalize_validation:
+    path: /path/to/CheXlocalize/validation
+    kind: localization_annotation_addon
+    parent: chexpert
+    roles: [paper2_only]
+    status: exposed_validation
+    test_exposure: forbidden_for_paper1
+  chexlocalize_test:
+    path: null
+    kind: localization_annotation_addon
+    parent: chexpert
+    roles: [paper2_reserved_test]
+    status: deliberately_absent
+    test_exposure: sealed
