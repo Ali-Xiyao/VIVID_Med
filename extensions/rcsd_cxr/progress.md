@@ -197,3 +197,16 @@
   `159768072505e163ccc3e224567452714f22b40cdac28f65be8b00ab77535c41`.
 - Completed final local and remote validation: 45/45 unit tests passed on both
   sides.
+- Created `codex/rcsd-no-go-audit` from frozen implementation commit
+  `bc1105f880116e97e06da023110b7080debc28a4`.
+- Read the supplied component-attribution critique and reconciled it against
+  the existing aggregate G2/G3 server evidence.
+- Added a deidentified NO-GO verdict, machine-readable component status,
+  D0-D4 evidence inventory, and per-finding G3 macro-F1 table under `audit/`.
+- Corrected the overall interpretation from “RCSD-CXR as a whole is closed” to
+  “full RCSD and the tested D2/D3 contributions are NO-GO; the VIVID extension
+  remains open only for a bounded, review-gated component audit.”
+- Added an integrity validator and tests. No training, external test, data
+  download, server mutation, or GPU/Slurm job was launched.
+- Validated the audit package: the integrity checker passed, Python sources
+  compiled, and all 48 unit tests passed.

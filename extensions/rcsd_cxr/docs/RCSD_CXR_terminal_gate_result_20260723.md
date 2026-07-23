@@ -1,8 +1,8 @@
 # RCSD-CXR terminal gate result
 
 **Date:** 2026-07-23  
-**Status:** terminal NO-GO for RCSD-CXR as a new method  
-**Active authority:** this document
+**Status:** frozen G2/G3 result; full RCSD combination NO-GO
+**Active overall interpretation:** `audit/RCSD_P0_NO_GO_VERDICT.md`
 
 ## Decision
 
@@ -130,6 +130,11 @@ The negative result is specific to the proposed RCSD additions. It does not
 invalidate the earlier VIVID-Med UMS/SPD representation-learning evidence,
 which remains a separate historical line requiring its own clean
 paper-code-checkpoint audit.
+
+This result does not declare the whole VIVID journal extension failed. The
+component-attribution audit records that exact D0 and D1 remain incomplete
+under the proposed common diagnostic protocol; that observation does not
+itself authorize a new run.
 
 ## Final acceptance
 

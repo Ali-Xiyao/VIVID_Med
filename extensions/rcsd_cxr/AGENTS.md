@@ -2,9 +2,10 @@
 
 ## Active authority
 
-`docs/RCSD_CXR_active_protocol.md` is the only active scientific authority.
-The original supplied proposal under `provenance/` is background input and
-may not override the reviewed protocol.
+`audit/RCSD_P0_NO_GO_VERDICT.md` is the active scientific authority.
+`audit/RCSD_COMPONENT_ATTRIBUTION_PLAN.md` defines the D0-D4 evidence boundary.
+The original proposal and historical execution protocol remain provenance and
+may not override the audit.
 
 ## Scientific boundary
 
@@ -27,9 +28,12 @@ The historical SPD baseline is exactly four groups by two tokens.
 
 ## Execution boundary
 
-Documentation, static validation, and CPU unit tests are allowed. Training,
-external-test evaluation, data download, server upload/replacement, and GPU or
-Slurm jobs require an explicit reviewed gate decision.
+Documentation, aggregate-evidence validation, and CPU unit tests are allowed.
+No D0-D4 training is currently authorized. D1 may be considered only after a
+separate reviewed gate freezes its exact weighting rule, common D0 comparator,
+dataset, seed, budget, checkpoint rule, and endpoints. External-test
+evaluation, data download, server upload/replacement, and GPU or Slurm jobs
+remain unauthorized.
 
 ## Coding and validation
 

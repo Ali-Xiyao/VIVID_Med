@@ -3,7 +3,9 @@
 ## Identity
 
 - Repository: `Ali-Xiyao/VIVID_Med`
-- Branch: `codex/vivid-extension-rcsd`
+- Branch: `codex/rcsd-no-go-audit`
+- Frozen implementation branch: `codex/vivid-extension-rcsd`
+- Frozen implementation commit: `bc1105f880116e97e06da023110b7080debc28a4`
 - Extension package: `extensions/rcsd_cxr/`
 - Working name: RCSD-CXR
 - Relationship to VIVID: clean-room journal-extension investigation of the
@@ -15,7 +17,8 @@ this branch.
 
 ## Scientific status
 
-RCSD-CXR is terminal **NO-GO** as a new method.
+The full RCSD combination is **NO-GO**, but the overall VIVID journal
+extension is not declared failed.
 
 1. Multi-source posterior fusion failed G2 because NLL was 6.98% worse than
    the best single source, CheXbert.
@@ -34,10 +37,18 @@ The fail-closed protocol therefore cancelled:
 
 CheXlocalize test remained sealed.
 
+The bounded attribution authority is
+`extensions/rcsd_cxr/audit/RCSD_P0_NO_GO_VERDICT.md`. D2 posterior fusion and
+the tested D3 field anchor are rejected; exact D0 and D1 have not both been
+evaluated under the proposed common component-audit protocol. No new training
+is authorized by that observation.
+
 ## Authoritative files
 
 - Terminal result:
   `extensions/rcsd_cxr/docs/RCSD_CXR_terminal_gate_result_20260723.md`
+- Active component-attribution verdict:
+  `extensions/rcsd_cxr/audit/RCSD_P0_NO_GO_VERDICT.md`
 - Final task ledger: `extensions/rcsd_cxr/task_plan.md`
 - Experiment tracker:
   `extensions/rcsd_cxr/refine-logs/EXPERIMENT_TRACKER_20260723T001428+0800.md`

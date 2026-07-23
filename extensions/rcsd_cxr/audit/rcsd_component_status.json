@@ -1,0 +1,84 @@
+{
+  "schema_version": 1,
+  "artifact": "rcsd_component_attribution_audit",
+  "base_commit": "bc1105f880116e97e06da023110b7080debc28a4",
+  "decision": "FULL_RCSD_NO_GO_COMPONENT_AUDIT_OPEN",
+  "test_sets_opened": [],
+  "g2": {
+    "audit_completed": true,
+    "gate_pass": false,
+    "evidence_sha256": "73d3dd216a5820dfe6a10adbeaf2d604fc286246810c013aa5e5b03e23d52980",
+    "thresholds": {
+      "macro_f1_gain_at_least": 0.01,
+      "nll_relative_change_at_most": -0.05
+    },
+    "baseline": {
+      "name": "chexbert",
+      "macro_f1": 0.8005042079250303,
+      "nll": 0.37115624626034804,
+      "ece": 0.005906493244007121
+    },
+    "candidate": {
+      "name": "chexpert_negbio_chexbert_fusion",
+      "macro_f1": 0.8132700930713,
+      "nll": 0.39706729797400664,
+      "ece": 0.015316305349233814
+    },
+    "failed_checks": [
+      "nll"
+    ]
+  },
+  "g3": {
+    "audit_completed": true,
+    "gate_pass": false,
+    "evidence_sha256": "159768072505e163ccc3e224567452714f22b40cdac28f65be8b00ab77535c41",
+    "dataset_lock_sha256": "5e9e05552712a7c6298ff63731c4250c0bdc6d5e3d2a28e9e4476b7c7c242ae2",
+    "config_sha256": "348a902f6963ea09fd7c57ccdb872a2523ed8dc0b4be2471abe6df82085c0b98",
+    "training_seed": 0,
+    "checkpoint_rule": "strictly lower validation structured NLL",
+    "thresholds": {
+      "nll_relative_change_at_most": -0.03,
+      "macro_f1_gain_at_least": 0.005,
+      "ece_change_at_most": 0.01,
+      "findings_below_minus_0_02_at_most": 2
+    },
+    "baseline": {
+      "name": "chexbert_unanchored_spd_4x2",
+      "nll": 0.4784779897995328,
+      "macro_f1": 0.7019501519688692,
+      "ece": 0.010645743861305276
+    },
+    "candidate": {
+      "name": "chexbert_field_anchor_4x2",
+      "nll": 0.4782576282984767,
+      "macro_f1": 0.7025980120912,
+      "ece": 0.007876329822829781
+    },
+    "failed_checks": [
+      "nll",
+      "macro_f1"
+    ]
+  },
+  "arms": {
+    "D0": {
+      "status": "MISSING_EXACT_COMMON_PROTOCOL_ARM",
+      "note": "The existing unanchored SPD comparator is D0-like but does not reproduce the original VIVID objective."
+    },
+    "D1": {
+      "status": "UNTESTED",
+      "note": "Selective agreement weighting has not been trained."
+    },
+    "D2": {
+      "status": "NO_GO_AT_LABEL_GATE",
+      "note": "Posterior fusion failed G2 NLL and is blocked before visual training."
+    },
+    "D3": {
+      "status": "NO_GO_AT_G3",
+      "note": "The equal-budget field-anchor structured-state pilot failed NLL and macro-F1 thresholds."
+    },
+    "D4": {
+      "status": "PROHIBITED",
+      "note": "Full RCSD prerequisites did not survive independently."
+    }
+  }
+}

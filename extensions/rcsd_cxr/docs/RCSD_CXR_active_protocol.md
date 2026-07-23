@@ -1,11 +1,11 @@
 # RCSD-CXR active execution protocol
 
-**Status:** superseded by terminal G3 NO-GO  
+**Status:** superseded by bounded component-attribution audit
 **Date:** 2026-07-22  
 **Source proposal:** `provenance/RCSD_CXR_full_proposal_20260722.original.md`
 
-The terminal scientific authority is
-`docs/RCSD_CXR_terminal_gate_result_20260723.md`. The protocol below is
+The active scientific authority is `audit/RCSD_P0_NO_GO_VERDICT.md`, with arm
+status in `audit/RCSD_COMPONENT_ATTRIBUTION_PLAN.md`. The protocol below is
 retained to show the prospectively frozen gate order; it no longer authorizes
 any experiment.
 

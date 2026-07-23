@@ -34,15 +34,17 @@ ignored by Git.
 
 ## Status
 
-RCSD-CXR is terminal **NO-GO** as a new method. Multi-source fusion failed the
-G2 likelihood gate, and the surviving equal-budget field-anchor variant failed
+The full RCSD combination is **NO-GO**. Multi-source fusion failed the G2
+likelihood gate, and the surviving equal-budget field-anchor variant failed
 the G3 NLL and macro-F1 gates. Full-data, external-test, multi-seed,
 multi-institution, and Qwen3.5-size experiments are cancelled.
 
 The current scientific authority is
-`docs/RCSD_CXR_terminal_gate_result_20260723.md`. The negative result applies
-to the proposed RCSD additions; it does not reactivate or rewrite the frozen
-VSL/BiVES/MORPH routes.
+`audit/RCSD_P0_NO_GO_VERDICT.md`. It records that D2 posterior fusion and the
+tested D3 field anchor are NO-GO, while exact D0 and D1 remain incomplete under
+the proposed common component-audit protocol. This keeps the VIVID journal
+extension conceptually open without authorizing new training or reactivating
+the frozen VSL/BiVES/MORPH routes.
 
 ## Validation
 

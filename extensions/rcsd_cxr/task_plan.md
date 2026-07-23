@@ -1,52 +1,60 @@
-# RCSD-CXR terminal execution plan
+# RCSD-CXR component-attribution audit plan
 
-## Outcome
+## Goal
 
-RCSD-CXR is terminal NO-GO. The formal fusion contribution failed G2 and the
-simplified field-anchor contribution failed G3. No downstream method
-experiment is active.
+Freeze the exact G2/G3 NO-GO evidence, determine which D0-D4 arms genuinely
+exist, and produce a deidentified decision package. Do not launch a new method
+or diagnostic run in this phase.
 
 ## Authority
 
-- Terminal decision: `docs/RCSD_CXR_terminal_gate_result_20260723.md`.
-- Binding G2 amendment: `docs/RCSD_CXR_protocol_amendment_20260723_G2.md`.
-- Original reviewed protocol: `docs/RCSD_CXR_active_protocol.md`.
-- Background proposal:
-  `provenance/RCSD_CXR_full_proposal_20260722.original.md`.
+- Active verdict: `audit/RCSD_P0_NO_GO_VERDICT.md`.
+- Arm inventory: `audit/RCSD_COMPONENT_ATTRIBUTION_PLAN.md`.
+- Machine-readable status: `audit/rcsd_component_status.json`.
+- Frozen historical result:
+  `docs/RCSD_CXR_terminal_gate_result_20260723.md`.
 
-## Completed gates
+## Phases
 
-| Phase | Final status | Decision |
+| Phase | Status | Output |
 | --- | --- | --- |
-| E0 runnable-surface audit | completed | clean project and server execution surface verified |
-| G0 data identity | pass | 215,098 canonical MIMIC studies; no forbidden overlap/test rows |
-| G1 historical audit | pass | accepted SPD checkpoint confirmed as 4x2 |
-| G2 source preparation | pass | source manifests and independent report gold qualified |
-| G2 posterior validity | NO-GO | fusion NLL 6.98% worse than CheXbert |
-| G1 simplified trainability | pass | both equal-budget variants overfit 256 rows |
-| G3 paired 20k pilot | NO-GO | NLL/F1 gains below frozen thresholds |
-| G4 full MIMIC | cancelled | G3 failed |
-| G5 multi-seed/downstream | cancelled | G3 failed |
-| G6 scale/teacher sensitivity | cancelled | G2/G3 failed |
+| A. Freeze base implementation | completed | commit `bc1105f880116e97e06da023110b7080debc28a4` |
+| B. Verify aggregate G2/G3 evidence | completed | exact metrics, gates, and hashes |
+| C. Classify D0-D4 evidence | completed | exact D0 missing; D1 untested; D2/D3 NO-GO; D4 prohibited |
+| D. Build deidentified verdict | completed | Markdown, JSON, and per-finding CSV |
+| E. Validate audit package | completed | integrity pass, 48/48 tests, clean Git scope audit |
+| F. Publish audit branch | in progress | push `codex/rcsd-no-go-audit` |
 
-## Final closeout checklist
+## Binding decisions
 
-- [x] Preserve G2 and G3 artifacts and hashes.
-- [x] Write terminal scientific decision.
-- [x] Cancel every locked downstream experiment.
-- [x] Correct the G3 artifact top-level pass field and rerun the audit only.
-- [x] Run local and remote unit tests: 45/45 passed on each side.
-- [x] Refresh the server upload manifest and verify exact remote hashes.
-- [x] Confirm no RCSD screen/process remains on allocation 3066.
+- Full RCSD remains NO-GO.
+- D2 posterior fusion is rejected by G2.
+- The tested D3 field anchor is rejected by G3.
+- The current unanchored SPD comparator is D0-like, not an exact original
+  VIVID D0 reconstruction.
+- D1 selective agreement weighting is untested.
+- No new training is authorized by this audit.
+- D4, external tests, full-data scaling, multi-seed expansion, institution
+  mixing, and teacher scaling remain locked.
 
-## Boundaries
+## Review gate for any future D1
 
-- Do not tune or rerun the G2 mapping, sources, folds, temperatures, or
-  thresholds.
-- Do not tune or rerun the G3 data surface, loss, field definitions, teacher,
-  checkpoint rule, or budget.
-- Do not open external tests to rescue the method.
-- Do not run Qwen3.5 size variants.
-- Do not reactivate VSL, BiVES, ARISE, VICER, or MORPH.
-- Allocation 3066 is retained infrastructure and must not be cancelled as part
-  of this closeout.
+Before a D1 run could be authorized, a separate protocol must freeze:
+
+- exact original-SPD D0 comparator;
+- scalar agreement-weight definition;
+- 20k patient-locked dataset and seed;
+- equal budget, optimizer, augmentation, and checkpoint rule;
+- expert-development AUROC/AUPRC endpoints;
+- reliability coverage/quartile table;
+- promotion and stop thresholds.
+
+Until that review exists, the correct action is evidence audit only.
+
+## Errors encountered
+
+| Error | Resolution |
+| --- | --- |
+| Historical G2 JSON uses top-level `pass: true` although `gate.g2_pass` is false. | Preserve the artifact; normalize audit completion and scientific gate outcome in the new JSON without rerunning G2. |
+| Attached critique assumed gate metrics were unavailable from Git. | Retrieve only read-only aggregate server artifacts and publish deidentified metrics/hashes, not raw outputs. |
+| A combined multi-file patch could not match one historical mojibake context line. | Split the change into narrow UTF-8-safe patches and apply each file independently. |

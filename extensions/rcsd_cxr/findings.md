@@ -238,3 +238,24 @@
   “audit completed” while `comparison.g3_pass` correctly recorded false. The
   schema is corrected so top-level `pass` equals the scientific gate result;
   metrics and thresholds are unchanged.
+
+## 2026-07-23 component-attribution audit
+
+- The correct project-level statement is not “the whole VIVID extension
+  failed.” Full RCSD is NO-GO; the VIVID extension remains open only for a
+  bounded attribution decision.
+- G2 directly rejects D2 posterior fusion. CheXbert was the best single source
+  at macro-F1 0.800504, NLL 0.371156, and ECE 0.005906. Fusion reached
+  macro-F1 0.813270 but worsened NLL by 6.981% and ECE to 0.015316.
+- G3 rejects the tested D3 field anchor under the structured-state pilot.
+  NLL improved only 0.046% and macro-F1 only 0.0648 pp.
+- The existing unanchored SPD arm is D0-like rather than exact D0: it uses
+  CheXbert report-state targets and Qwen field prototypes, not a verified
+  reconstruction of the original VIVID objective.
+- D1 selective agreement weighting has never been trained.
+- D2 did not proceed to visual training because its label-layer prerequisite
+  failed.
+- Expert-development macro AUROC/AUPRC and a visual reliability-quartile table
+  are unavailable. They must remain missing, not inferred from macro-F1.
+- The only possible future diagnostic is a separately reviewed exact D0 versus
+  D1 pair. The current audit does not authorize it.
