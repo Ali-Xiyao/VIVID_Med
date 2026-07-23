@@ -47,3 +47,19 @@
 - Historical SPD 4x2 also passed S1 (`0.98761` token accuracy; `98.15%` NLL
   reduction). Both primary identities can fit the locked hard-UMS development
   surface, so the scientific comparison proceeds to paired S2 pilots.
+- The historical prefix4 arm also passed the 20k-study S2 learnability gate
+  (`94.41%` validation-NLL reduction; `0.96953` token accuracy). Its locked
+  best checkpoint is step 3000 and will be used for the later S3 probe.
+- Historical SPD 4x2 passed S2 with `95.85%` validation-NLL reduction and
+  `0.96988` token accuracy; its minimum-NLL checkpoint was also step 3000.
+- The strict S3 comparison is a scientific NO-GO under the frozen gate.
+  SPD improved macro AUROC by `+0.004641` and macro AUPRC by `+0.003205`,
+  but the AUROC gain missed the required `+0.005` and only three of five
+  findings were nonnegative. Atelectasis declined by `-0.03349`; the other
+  per-finding deltas were Cardiomegaly `+0.03732`, Consolidation `-0.00515`,
+  Edema `+0.01637`, and Pleural Effusion `+0.00815`.
+- The strict verdict authorizes only two bounded diagnostics. Prefix8 tests
+  token-budget confounding and is never promotable. SPD4x2 without the
+  orthogonality loss is the sole possible repaired identity, and it may only
+  be nominated if it passes the unchanged S3 gate and improves on historical
+  SPD under the pre-frozen rule.

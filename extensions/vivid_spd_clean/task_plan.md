@@ -15,18 +15,22 @@ training budgets, and fail-closed promotion gates.
 - [x] S0c: implement the paired model, trainer, linear-probe evaluator, queue,
   audits, and tests.
 - [x] S1: run both 256-row overfit gates sequentially.
-- [ ] S2: run both 20k-study token-pretraining pilots sequentially. (in
-  progress)
-- [ ] S3: run the locked CheXpert development linear probe from each
-  validation-NLL-selected ViT checkpoint and freeze PASS/NO-GO.
+- [x] S2: run both 20k-study token-pretraining pilots sequentially.
+- [x] S3: run the locked CheXpert development linear probe from each
+  validation-NLL-selected ViT checkpoint and freeze PASS/NO-GO. The strict
+  route is frozen as `STRICT_NO_GO_DIAGNOSTIC_OPEN`.
+- [ ] D1: run only the preregistered `ums_prefix8` and
+  `ums_spd4x2_no_ortho` bounded diagnostics from initialization, then freeze
+  either `REPAIR_NOMINATED` or `TERMINAL_NO_GO`. (in progress)
 - [ ] S4: only after PASS, run three seeds and then the full MIMIC scale track.
 - [ ] S5: only after S4, freeze external mappings and run independent external
   evaluation.
 
 ## Current action
 
-Monitor the paired S2 20k-study pilots, beginning with `ums_prefix4`, then
-`ums_spd4x2`.
+Launch and monitor the two-arm bounded diagnostic queue on retained allocation
+3066. The strict result remains NO-GO; prefix8 is diagnostic-only, and
+no-ortho is the sole repair candidate under the pre-frozen nomination rule.
 
 ## Stop conditions
 

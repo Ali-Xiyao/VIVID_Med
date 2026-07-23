@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "route": "strict_vivid_spd_bounded_diagnostics",
+  "frozen_at": "2026-07-24",
+  "strict_authority": {
+    "verdict": "STRICT_NO_GO_DIAGNOSTIC_OPEN",
+    "s3_verdict_sha256": "426f46e54b7cc29f7647ba4bf62ca639de8f842498259737222fc6cd0004353a",
+    "prefix_s3_summary_sha256": "f707a740d877ce33bc181e365d8031d93a0641d9666e7caf830b8ee063450134",
+    "spd_s3_summary_sha256": "b318adc981b5e9e025f6bc458ddaebcb1a62e69c200285e4ac1a36db0f85ae79",
+    "prefix_s2_checkpoint_sha256": "58cd816e83ebd97f590dccdd315259283405a1fb8cd4f9d18cefb73fecfe0ee8",
+    "spd_s2_checkpoint_sha256": "74f24e8db89db18876ef139f2b4bd7b8dc2066101106ccd691588cf2dbcea139"
+  },
+  "diagnostic_arms": {
+    "ums_prefix8": {
+      "purpose": "sequence_budget_confounding",
+      "prefix_tokens": 8,
+      "nomination_eligible": false
+    },
+    "ums_spd4x2_no_ortho": {
+      "purpose": "orthogonality_term_ablation",
+      "groups": 4,
+      "tokens_per_group": 2,
+      "orthogonality_weight": 0.0,
+      "nomination_eligible": true
+    }
+  },
+  "training_identity": {
+    "teacher": "Qwen3.5-2B",
+    "backbone": "vit_base_patch16_224.augreg2_in21k_ft_in1k",
+    "target": "deterministic_hard_ums",
+    "seed": 0,
+    "pilot_steps": 3000,
+    "checkpoint_rule": "minimum_unweighted_internal_validation_token_nll"
+  },
+  "repair_nomination": {
+    "candidate": "ums_spd4x2_no_ortho",
+    "baseline": "ums_prefix4",
+    "must_pass_original_s3_gate": true,
+    "must_exceed_historical_spd_macro_auroc": true,
+    "must_not_reduce_nonnegative_finding_count": true
+  },
+  "protected_surfaces": [
+    "CheXlocalize_test",
+    "VinDr_test"
+  ]
+}

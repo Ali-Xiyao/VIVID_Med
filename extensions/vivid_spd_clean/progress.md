@@ -68,3 +68,21 @@
   reduction `98.15%`, and finite nonzero gradients in both the backbone and
   projector. The paired S1 gate is therefore PASS. The queue advanced to S2
   and began the 20k-study `ums_prefix4` pilot from initialization.
+- S2 `ums_prefix4` passed at the locked 3,000-step budget. Validation token
+  NLL fell from `1.40079` to `0.07827` (`94.41%` reduction), token accuracy
+  reached `0.96953`, and the minimum validation NLL selected step 3000. The
+  queue advanced automatically to the fresh S2 `ums_spd4x2` pilot.
+- S2 `ums_spd4x2` passed at 3,000 steps. Validation token NLL fell from
+  `1.85146` to `0.07681` (`95.85%` reduction), token accuracy reached
+  `0.96988`, and step 3000 was selected.
+- Both S3 expert-development probes completed. Prefix4 achieved macro AUROC
+  `0.85921` and macro AUPRC `0.69087`; SPD4x2 achieved macro AUROC `0.86385`
+  and macro AUPRC `0.69408`.
+- The frozen promotion gate returned `STRICT_NO_GO_DIAGNOSTIC_OPEN`: macro
+  AUROC delta `+0.004641` failed the `+0.005` minimum, and three of five
+  findings were nonnegative versus the required four. The strict route will
+  not scale or be relabeled as successful.
+- Added a separate bounded-diagnostic protocol and lock. They authorize only
+  `ums_prefix8` and `ums_spd4x2_no_ortho`, preserve the strict hashes and
+  protected-test ban, and freeze the sole repair-nomination rule before any
+  diagnostic run.
