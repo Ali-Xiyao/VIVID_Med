@@ -34,7 +34,7 @@ or diagnostic run in this phase.
 | N. Run paired 20k pilot | completed | both arms completed 3,000 steps; D1 failed the first frozen promotion condition |
 | O. Case study and single-factor repair | completed | case study completed; no preregistered repair exists |
 | P. Freeze terminal decision | completed | terminal NO-GO frozen; integrity audit PASS; 68/68 tests PASS |
-| Q. Publish terminal closure | in progress | stage, commit, push, and verify the current audit branch |
+| Q. Publish terminal closure | completed | commit `b7b7d46` pushed and upstream verified |
 | R. Continue method experiments | blocked | current terminal lock authorizes zero jobs; requires a new reviewed strict VIVID/SPD protocol |
 
 ## Binding decisions

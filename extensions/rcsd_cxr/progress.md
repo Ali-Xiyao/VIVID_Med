@@ -407,3 +407,6 @@
   training is not started because the validated terminal lock authorizes zero
   jobs and no preregistered D1 repair exists; any successor must first freeze
   a separate strict VIVID/SPD extension protocol.
+- Published the complete RCSD D0/D1 Qwen3.5 audit as commit `b7b7d46` on
+  `codex/rcsd-no-go-audit`. Push to `origin` succeeded, local HEAD equals the
+  upstream commit, and the worktree was clean before this completion note.
