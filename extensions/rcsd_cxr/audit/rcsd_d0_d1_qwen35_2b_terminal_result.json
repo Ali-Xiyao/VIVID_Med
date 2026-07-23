@@ -1,0 +1,94 @@
+{
+  "schema_version": 1,
+  "artifact": "rcsd_d0_d1_qwen35_2b_terminal_result",
+  "recorded": "2026-07-23",
+  "decision": "TERMINAL_NO_GO",
+  "run_identity": "d0_d1_token_pilot_qwen35_2b_20260723_s2",
+  "execution": {
+    "allocation_id": 3066,
+    "node": "gpu01",
+    "queue_completed": true,
+    "d0_returncode": 0,
+    "d1_returncode": 0,
+    "test_sets_opened": []
+  },
+  "identity": {
+    "teacher": "Qwen/Qwen3.5-2B",
+    "backbone": "vit_base_patch16_224",
+    "spd_groups": 4,
+    "tokens_per_group": 2,
+    "seed": 0,
+    "train_rows": 19533,
+    "validation_rows": 1679,
+    "max_steps": 3000,
+    "effective_batch_size": 32,
+    "checkpoint_rule": "strictly lower unweighted validation token NLL"
+  },
+  "d0": {
+    "best_step": 3000,
+    "token_nll": 0.07681191478718964,
+    "token_accuracy": 0.9698801932481138,
+    "elapsed_seconds": 5915.032523870468,
+    "summary_sha256": "6d39051eecb6fb00af58da2b14269fe2f7eb2f4262f85dd393f43b9e9c6b52dd",
+    "checkpoint_sha256": "37ab60d2782043d0cffc7e8925b385143264731f4283112e5666744384e14895"
+  },
+  "d1": {
+    "best_step": 3000,
+    "token_nll": 0.07728892820775057,
+    "token_accuracy": 0.9697445184429252,
+    "elapsed_seconds": 8030.7762751579285,
+    "summary_sha256": "200d5c3cc541ccee2634b2781f71eb9bf03f26cacab00c9b3291c243831178ab",
+    "checkpoint_sha256": "f08357394e4c96ef1c4d2d42b92add9eb2e8313a45e5a0cee616fb3216b3023e"
+  },
+  "primary_gate": {
+    "metric": "validation_token_nll_relative_change",
+    "observed": 0.006210148801556577,
+    "required_at_most": -0.03,
+    "passed": false,
+    "first_failed_condition": true
+  },
+  "secondary_execution_diagnostics": {
+    "token_accuracy_change_percentage_points": -0.013567480518861252,
+    "elapsed_time_change": 0.3576892845050724,
+    "finite_nonzero_gradients": true,
+    "all_six_matched_validation_nll_deltas_favored_d0": true
+  },
+  "case_study": {
+    "train_rows_with_any_downweight": 4011,
+    "train_rows_with_any_downweight_fraction": 0.20534480110582093,
+    "train_downweighted_fields": 4791,
+    "train_observed_fields": 89622,
+    "train_downweighted_field_fraction": 0.05345807904353886,
+    "validation_rows_with_any_downweight": 330,
+    "validation_rows_with_any_downweight_fraction": 0.19654556283502084,
+    "validation_downweighted_fields": 385,
+    "validation_observed_fields": 7676,
+    "validation_downweighted_field_fraction": 0.05015633142261699,
+    "validation_downweighted_target_tokens": 6853,
+    "validation_target_tokens": 169523,
+    "validation_downweighted_token_fraction": 0.040425193041652166,
+    "validation_mean_token_weight": 0.9762137229466098,
+    "largest_train_downweight_concentration": {
+      "finding": "Pneumonia",
+      "downweighted_fraction": 0.19751280175566935,
+      "mean_weight": 0.8851034571245581
+    }
+  },
+  "hashes": {
+    "queue_state_sha256": "c7c8c26a8910497b3df237fc37d79f373b1dc0beaf2824fd19cdde167d1a1548",
+    "hard_manifest_sha256": "1da254ab25ab8f005536ff16ac7a1c40e33f15add2afa25277a8c6e06f6e30b4",
+    "reliability_manifest_sha256": "a06959dfb98a2074a638dfb032c39e540dd3bb9bd2f3b2eb66f9e352b914f692",
+    "backbone_weights_sha256": "32aa17d6e17b43500f531d5f6dc9bc93e56ed8841b8a75682e1bb295d722405b",
+    "teacher_weight_index_sha256": "aca8afed9da75b0f050b408d270766fd77627f1af401e240f61c3b47d0db02f9",
+    "teacher_weight_shard_sha256": "aa33250c4fc64891ddfaba3a314fd9542ea371843c387178b425fbcc5ed680b1"
+  },
+  "consequences": {
+    "expert_development_probe_run": false,
+    "repair_authorized": false,
+    "teacher_scaling_authorized": false,
+    "full_data_scaling_authorized": false,
+    "multi_seed_authorized": false,
+    "external_test_authorized": false,
+    "surviving_route": "strict VIVID/SPD extension with modern controlled validation"
+  }
+}

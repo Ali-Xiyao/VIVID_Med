@@ -41,17 +41,16 @@ the G3 NLL and macro-F1 gates. Full-data, external-test, multi-seed,
 multi-institution, and Qwen3.5-size experiments are cancelled.
 
 The current scientific authority is
-`audit/RCSD_P0_NO_GO_VERDICT.md`. It records that D2 posterior fusion and the
-tested D3 field anchor are NO-GO, while exact D0 and D1 remain incomplete under
-the proposed common component-audit protocol. This keeps the VIVID journal
-extension conceptually open without authorizing new training or reactivating
-the frozen VSL/BiVES/MORPH routes.
+`audit/RCSD_D0_D1_QWEN35_2B_TERMINAL_RESULT.md`. The final permitted
+common-protocol D0-CP/D1 pilot completed, but D1 made validation token NLL
+0.621% worse rather than at least 3% better. Selective agreement weighting is
+therefore also terminal NO-GO. The machine lock is `TERMINAL`; training jobs
+allowed: zero.
 
-The only prepared next protocol is
-`audit/RCSD_D0_D1_REVIEW_PROTOCOL.md`. It freezes a common-protocol
-reconstruction of the original VIVID token objective and permits D1 to add
-only the predefined entropy agreement weight. Its machine lock is
-`PREPARED_NOT_APPROVED`; training jobs allowed: zero.
+This closes the RCSD additions without declaring the stable historical
+VIVID/SPD representation-learning line invalid. The only surviving paper-one
+option is a strict VIVID/SPD extension with modern controlled validation, not
+another reliability or field-anchor rescue.
 
 ## Validation
 

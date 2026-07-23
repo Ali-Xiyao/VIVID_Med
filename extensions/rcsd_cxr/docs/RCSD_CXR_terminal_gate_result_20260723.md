@@ -1,8 +1,10 @@
 # RCSD-CXR terminal gate result
 
 **Date:** 2026-07-23  
-**Status:** frozen G2/G3 result; full RCSD combination NO-GO
-**Active overall interpretation:** `audit/RCSD_P0_NO_GO_VERDICT.md`
+**Status:** frozen G2/G3/D1 result; RCSD additions terminal NO-GO
+
+**Active overall interpretation:**
+`audit/RCSD_D0_D1_QWEN35_2B_TERMINAL_RESULT.md`
 
 ## Decision
 
@@ -14,6 +16,9 @@ reviewed protocol.
 2. The surviving equal-budget field-anchor comparison failed G3. Its NLL
    improved by only 0.046%, below the required 3%, and macro-F1 improved by
    only 0.0648 percentage points, below the required 0.5 percentage points.
+3. The final permitted common-protocol D0-CP/D1 diagnostic completed with the
+   frozen Qwen3.5-2B teacher. D1 validation token NLL was 0.621% worse than
+   D0, failing the required 3% improvement before downstream probing.
 
 No full-MIMIC run, external evaluation, multi-seed expansion, multi-institution
 training, or Qwen3.5 teacher-size sweep is authorized. There is no active
@@ -131,10 +136,10 @@ invalidate the earlier VIVID-Med UMS/SPD representation-learning evidence,
 which remains a separate historical line requiring its own clean
 paper-code-checkpoint audit.
 
-This result does not declare the whole VIVID journal extension failed. The
-component-attribution audit records that exact D0 and D1 remain incomplete
-under the proposed common diagnostic protocol; that observation does not
-itself authorize a new run.
+This result does not declare the whole VIVID journal extension failed. Exact
+D0-CP and D1 are now complete under the common protocol, and D1 is rejected.
+The surviving route is the strict historical VIVID/SPD extension with modern
+controlled validation; it is not an RCSD rescue.
 
 ## Final acceptance
 

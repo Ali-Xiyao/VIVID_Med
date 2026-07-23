@@ -13,7 +13,8 @@ outputs/
 local_runs/
 checkpoints/
 pretrained/
-models/
+/models/
+*.egg-info/
 *.pt
 *.pth
 *.ckpt

@@ -2,10 +2,15 @@
 
 ## Active authority
 
-`audit/RCSD_P0_NO_GO_VERDICT.md` is the active scientific authority.
-`audit/RCSD_COMPONENT_ATTRIBUTION_PLAN.md` defines the D0-D4 evidence boundary.
-`audit/RCSD_D0_D1_REVIEW_PROTOCOL.md` and
-`audit/rcsd_d0_d1_review_lock.json` define the only prepared next review.
+`audit/RCSD_D0_D1_QWEN35_2B_TERMINAL_RESULT.md` is the active scientific
+authority. D1 selective agreement weighting is terminal NO-GO after the
+frozen Qwen3.5-2B 20k gate; the machine lock authorizes zero training jobs.
+`audit/RCSD_P0_NO_GO_VERDICT.md` is the earlier G2/G3 scientific authority.
+`audit/RCSD_COMPONENT_ATTRIBUTION_PLAN.md` defines the frozen D0-D4 evidence
+boundary. `audit/RCSD_D0_D1_REVIEW_PROTOCOL.md` and
+`audit/rcsd_d0_d1_review_lock.json` preserve the completed final review.
+`audit/RCSD_D0_D1_AUTO_DEV_PROTOCOL.md` records the user's explicit
+2026-07-23 execution approval and the bounded automatic development loop.
 The original proposal and historical execution protocol remain provenance and
 may not override the audit.
 
@@ -30,13 +35,15 @@ The historical SPD baseline is exactly four groups by two tokens.
 
 ## Execution boundary
 
-Documentation, aggregate-evidence validation, and CPU unit tests are allowed.
-No D0-D4 training is currently authorized. The D0/D1 review package has frozen
-the proposed comparison but explicitly records incomplete implementation,
-manifest, expert-development, launcher, and approval prerequisites. Do not
-change `PREPARED_NOT_APPROVED`, fill artifact hashes without producing and
-validating them, or start a job. External-test evaluation, data download,
-server upload/replacement, and GPU or Slurm jobs remain unauthorized.
+The user explicitly revoked the workstation-only boundary on 2026-07-23 and
+authorized RCSD-CXR execution through retained Slurm allocation `3066` on
+`gpu01`, with existing server datasets and caches referenced in place. The
+primary Qwen3.5-2B D0-CP/D1 pilot completed and failed its first promotion
+condition. No preregistered repair exists. D1 repair, expert-development
+probing, paired-pilot replay, external-test evaluation, threshold relaxation,
+result-driven label replacement, and unrelated frozen-method reactivation are
+forbidden. Full-data, multi-seed, teacher-sensitivity, D2, D3, and D4 remain
+locked.
 
 ## Coding and validation
 

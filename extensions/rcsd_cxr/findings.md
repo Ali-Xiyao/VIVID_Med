@@ -336,3 +336,209 @@
   historical dataset renderer deliberately emits the simplified target with
   only `modality`, selected `findings` objects (`state`, normally `score`), and
   `study_view`. D0-CP must reproduce this renderer, not the full schema.
+
+## 2026-07-23 automatic D0/D1 continuation
+
+- The user explicitly approved continuous experiments, failure case studies,
+  and bounded improvements. The approval is recorded without changing any
+  scientific threshold or opening a test surface.
+- Higher-priority repository authority keeps all active work on the
+  workstation. Server and Slurm permission will not be exercised.
+- Live preflight found two RTX 3090 GPUs. GPU 1 was idle; GPU 0 had only about
+  0.8 GiB baseline allocation. GPU ownership will be rechecked before launch.
+- The frozen Qwen2.5-1.5B-Instruct teacher is already present in the local
+  Hugging Face cache with a 3,087,467,144-byte `model.safetensors`.
+- Local PyTorch 2.5.1+cu121 sees both GPUs; Transformers 5.5.3, timm 1.0.24,
+  and torchvision 0.20.1+cu121 are installed.
+- The historical local SPD output directory exists but its checkpoint
+  directory is empty. D0-H hashes cannot be fabricated from the directory and
+  remain an unresolved provenance prerequisite unless an existing validated
+  audit artifact supplies them.
+- Local MIMIC pixels/reports and official CheXpert/NegBio label tables are
+  available. Existing local runtime output contains only the Gate-0
+  qualification artifact, so the 20k CheXbert, hard-UMS, reliability, and
+  expert-development manifests must be produced locally and hashed.
+- R0 parity now passes. Clean and retained SPD implementations each have
+  13,000,704 parameters and produce 205 visual tokens (8 query plus 197 ViT)
+  in the 1,536-dimensional Qwen space. D0 and D1 token IDs and hard labels are
+  identical.
+- A real-weight one-sample forward/backward smoke passed with finite ViT/SPD
+  gradients, frozen teacher gradients, and 4.36 GB peak allocated GPU memory.
+- The frozen visual surface contains 19,533 train and 1,679 validation rows
+  after fail-closed removal of all-missing CheXbert targets.
+- D1 changes only 5,176 of 97,298 observed finding weights (5.32%); 74 are
+  effectively zero. The only rounded weights are 0, 0.369070246429,
+  0.420619835714, and 1. The percentile cuts are all 1, so reliability
+  quartiles are explicitly degenerate rather than silently presented as four
+  distinct confidence strata.
+- CheXpert probe manifests are frozen at 191,027 frontal training rows and 202
+  frontal expert-development rows with zero patient overlap.
+- R0-R2 passed, all 67 tests passed, and the machine lock now authorizes only
+  two sequential 256-row overfit arms on workstation GPU 1.
+- The strict deterministic paired overfit gate passed. D0 reached token
+  accuracy 0.981992 and NLL 0.050750 at step 400 (97.07% NLL reduction);
+  D1 reached 0.980542 and 0.071878 at step 500 (95.86% reduction).
+- Both arms had finite, nonzero backbone and projector gradients. The 256-row
+  D1 surface had 46/1,176 nonunit finding weights (3.91%) and no exact zero
+  weight. This proves learnability only, not D1 scientific benefit.
+
+## 2026-07-23 remote execution facts
+
+- The active user amendment permits only the bounded RCSD D0/D1 paper-one
+  experiment on SUES allocation `3066`; it does not reopen BiVES, ARISE,
+  VICER, MORPH, CheXlocalize test, VinDr test, or any post-hoc rescue route.
+- Allocation `3066` is live on `gpu01` with one GPU, four CPUs, and 64 GiB RAM.
+  The remote project, data, MIMIC pixels, and Python environment are present.
+- The exact Qwen2.5-1.5B-Instruct snapshot is absent remotely. The local
+  authority contains a 3,087,467,144-byte `model.safetensors` with SHA-256
+  `dd924a11b4c220f385b51ffa522daea7c9f3d850e31b162bb5661df483c6d3ee`;
+  upload and remote hash verification are prerequisites to launch.
+- A fresh server run must begin at D0 step zero and execute D0 then D1
+  sequentially under the same allocation. The stopped workstation D0 step-30
+  attempt is retained only as an invalid pre-metric operational record.
+
+## 2026-07-23 Qwen3.5 inventory and design consequence
+
+- Complete remote models exist at
+  `/ipfs/inspurfileset/home/dqxy/dqxy11/projects/xiyaowang/model/Qwen3.5-{0.8B,2B,4B,9B}`.
+  Their current directory sizes are approximately 1.77 GB, 4.57 GB,
+  18.69 GB, and 25.92 GB.
+- The Qwen3.5-2B config and weight authority matches the local model:
+  config SHA-256 `ed1c1723241f23f7f4e23430759cbd7dcfb4103cbdfe052bfe7626b57c2615b4`,
+  index SHA-256 `aca8afed9da75b0f050b408d270766fd77627f1af401e240f61c3b47d0db02f9`,
+  and weight-shard SHA-256
+  `aa33250c4fc64891ddfaba3a314fd9542ea371843c387178b425fbcc5ed680b1`.
+- Qwen3.5-2B has a 2,048-dimensional text hidden state, so the SPD projector
+  remains structurally 4x2 but changes its output dimension from 1,536 to
+  2,048. This is a teacher-family amendment shared by D0 and D1, not a D1-only
+  architectural delta.
+
+## 2026-07-23 Qwen3.5 acceleration qualification
+
+- The initial Qwen3.5-2B overfit step was stopped at step 10 before any gate
+  metric because Transformers was using its slow fallback path. The run is
+  explicitly invalid and will not be resumed or compared.
+- `flash-linear-attention==0.5.2` and
+  `causal-conv1d==1.6.2.post1` are now installed in the approved remote
+  environment. The latter was built from the PyPI source distribution for
+  `sm_80`; its locally built wheel reported SHA-256
+  `679e464f024cdbb486c2b47416b2dacb43aabbcb4a290d953f4b6ea3d5436fe4`.
+- The first source build failed before installation because the CUDA C++
+  compiler could not find `cuda_runtime_api.h`. The header existed under the
+  Conda target prefix; explicitly adding that include path fixed the
+  environment without changing code, data, weights, or thresholds.
+- A job-local CUDA kernel test passed forward and backward with finite values.
+  Transformers reports the Qwen3.5 fast path available, both FLA gated-delta
+  kernels are callable, and `pip check` reports no broken requirements.
+- The real-weight RCSD smoke passed twice with exact repeat equality:
+  token loss `3.524507999420166`, orthogonality `0.9854222536087036`, peak
+  allocation `5,406,058,496` bytes, finite ViT/projector gradients, frozen
+  teacher, and 205 visual tokens. The warm repeat took 17.41 seconds.
+- The replacement paired overfit must start from zero in the new `s2` output
+  root. Launchers now fail closed if the Qwen3.5 acceleration imports or fast
+  path are unavailable.
+- The replacement `s2` paired overfit passed both arms at step 350. D0 reached
+  token accuracy `0.9876102800`, token NLL `0.0342915525`, and `98.15%` NLL
+  reduction. D1 reached token accuracy `0.9854622171`, token NLL
+  `0.0401251204`, and `97.83%` NLL reduction. Both gradient audits passed.
+- The frozen D0, D1, and queue-state SHA-256 values are respectively
+  `9e027a7337003744e10ae6a3612d0ae13c19adabf1320324d7b126a10937697d`,
+  `328c90a838b56ab4d819c2c795d9c17bd73111598d222ce7a3c3f90354b5becf`,
+  and `bb70b6a02d6d605b909079e44673ce7a84b4b9e9721ee8bf8fe456e3a460e9af`.
+- This is a learnability qualification only. It authorizes the paired 20k
+  D0/D1 pilot but is not evidence that D1 improves representation quality.
+- The authorized 20k run identity is
+  `d0_d1_token_pilot_qwen35_2b_20260723_s2`. It started in Slurm step
+  `3066.19012` with D0 first; D1 remains mechanically blocked until D0 exits
+  successfully. The first observed D0 training record was step 30 with finite
+  loss and no acceleration fallback.
+- D0 completed its first frozen 20k validation at step 500 with token NLL
+  `0.0868966725` and token accuracy `0.9660930965` over 169,523 observed
+  tokens. This is a checkpoint-selection trajectory point, not a promotion
+  decision; training continues to the unchanged 3,000-step budget.
+- At step 1,000, D0 validation token NLL improved to `0.0820955950` and token
+  accuracy to `0.9678922624` on the same 169,523-token surface. The strictly
+  lower-NLL checkpoint rule therefore selects step 1,000 over step 500; no
+  endpoint or gate has been applied early.
+- At step 1,500, D0 validation token NLL improved again to `0.0805892760` and
+  token accuracy reached `0.9684113660`. Step 1,500 is therefore the current
+  strictly lower-NLL checkpoint; the full 3,000-step budget remains active.
+- At step 2,000, D0 validation token NLL improved to `0.0785858087` and token
+  accuracy to `0.9694849666`. The current checkpoint advanced to step 2,000
+  under the same rule; there were no non-finite values or resource failures.
+- At step 2,500, D0 validation token NLL improved to `0.0774704031` and token
+  accuracy to `0.9697209228`. Step 2,500 became the current best checkpoint;
+  the final step-3,000 validation remains binding.
+- D0 completed all 3,000 steps in 5,915.03 seconds. Its final and best
+  validation was step 3,000 with token NLL `0.0768119148` and token accuracy
+  `0.9698801932`; all scheduled validation NLL values improved monotonically.
+  ViT/projector gradient audits were finite and nonzero.
+- The frozen D0 summary SHA-256 is
+  `6d39051eecb6fb00af58da2b14269fe2f7eb2f4262f85dd393f43b9e9c6b52dd`;
+  the selected checkpoint SHA-256 is
+  `37ab60d2782043d0cffc7e8925b385143264731f4283112e5666744384e14895`.
+  D1 then started from zero under the same queue and budget.
+- D1 step-500 validation produced token NLL `0.0883252861` and token accuracy
+  `0.9653321378`. At the matched step, D1 NLL was 1.64% higher than D0
+  (`0.0868966725`) and accuracy was 0.0761 percentage points lower. This is
+  an intermediate trajectory comparison only; the frozen promotion gate uses
+  the final selected checkpoints and remains unopened until D1 completes.
+- D1 step-1,000 validation produced token NLL `0.0827696097` and token
+  accuracy `0.9675147325` over the same 169,523-token surface. Against D0 at
+  matched step 1,000 (`0.0820955950`, `0.9678922624`), D1 NLL is 0.82%
+  higher and accuracy is 0.0378 percentage points lower. The gap narrowed
+  relative to step 500, but this remains an intermediate trajectory point;
+  no promotion endpoint has been applied.
+- D1 step-1,500 validation produced token NLL `0.0813829365` and token
+  accuracy `0.9679571504`. Against D0 at matched step 1,500
+  (`0.0805892760`, `0.9684113660`), D1 NLL is 0.98% higher and accuracy is
+  0.0454 percentage points lower. D1 remains stable and its own NLL continues
+  to improve, but it has not crossed D0 at any matched validation point.
+- D1 step-2,000 validation produced token NLL `0.0790323267` and token
+  accuracy `0.9693433929`. Against D0 at matched step 2,000
+  (`0.0785858087`, `0.9694849666`), D1 NLL is 0.57% higher and accuracy is
+  0.0142 percentage points lower. This is D1's narrowest matched gap so far,
+  but the direction remains below D0 and the final selected-checkpoint gate
+  is still unopened.
+- D1 step-2,500 validation produced token NLL `0.0780412085` and token
+  accuracy `0.9694200787`. Against D0 at matched step 2,500
+  (`0.0774704031`, `0.9697209228`), D1 NLL is 0.74% higher and accuracy is
+  0.0301 percentage points lower. D1's own NLL improved again, but all five
+  matched validation comparisons remain directionally below D0.
+- D1 completed the full 3,000-step budget with final/best token NLL
+  `0.0772889282` and token accuracy `0.9697445184`. D0's frozen final/best
+  values were `0.0768119148` and `0.9698801932`. D1 therefore made token NLL
+  approximately 0.62% worse rather than meeting the frozen requirement of at
+  least 3% improvement (`relative change <= -0.03`). The first required
+  promotion condition fails, so downstream expert-development probing is not
+  unlocked.
+- Both queue arms exited with return code 0 and the queue ended with
+  `pass: true`; this is execution completion, not a scientific gate pass. The
+  D1 summary SHA-256 is
+  `200d5c3cc541ccee2634b2781f71eb9bf03f26cacab00c9b3291c243831178ab`
+  and the final queue-state SHA-256 is
+  `c7c8c26a8910497b3df237fc37d79f373b1dc0beaf2824fd19cdde167d1a1548`.
+- A read-only hash command assumed the checkpoint filename
+  `best_checkpoint.pt`, which does not exist. The already frozen D0 checkpoint
+  hash remains valid, but the exact D1 checkpoint filename and hash must be
+  resolved from a file inventory before terminal freeze.
+- The actual checkpoint filename in both arms is `best.pt`. D0 retains SHA-256
+  `37ab60d2782043d0cffc7e8925b385143264731f4283112e5666744384e14895`;
+  D1's selected checkpoint SHA-256 is
+  `f08357394e4c96ef1c4d2d42b92add9eb2e8313a45e5a0cee616fb3216b3023e`.
+- A repository-wide preregistration search found no named in-identity repair
+  for a valid 20k D1 scientific failure. The review protocol uniquely states
+  that D1 failure closes RCSD reliability and field-anchor development, and
+  the auto-development protocol permits case study only unless such a repair
+  exists. Therefore no rerun, expert-development probe, teacher-size
+  sensitivity, or new weighting rule is authorized.
+- The development-only case study found that only 4,791/89,622 (5.35%) of
+  observed training finding fields and 385/7,676 (5.02%) of validation fields
+  were downweighted. Only 4.04% of validation target tokens were affected;
+  mean target-token weight remained 0.9762. Pneumonia had the highest
+  concentration, with 19.75% of its training fields downweighted.
+- D1 was behind D0 at every frozen matched validation point, from step 500
+  through step 3,000. This rules out a checkpoint-selection explanation.
+  Together with the passed overfit and finite-gradient audits, the result is a
+  valid scientific failure of the weakly supported scalar weighting mechanism,
+  not an implementation or learnability failure.

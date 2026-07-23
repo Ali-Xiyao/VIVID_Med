@@ -1,9 +1,29 @@
 {
   "schema_version": 1,
   "artifact": "rcsd_d0_d1_review_lock",
-  "status": "PREPARED_NOT_APPROVED",
+  "status": "TERMINAL",
   "execution_authorized": false,
   "training_jobs_allowed": 0,
+  "execution_environment": {
+    "python": "3.10",
+    "torch": "2.9.0+cu128",
+    "flash_linear_attention": "0.5.2",
+    "causal_conv1d": "1.6.2.post1",
+    "qwen35_fast_path_required": true,
+    "qwen35_fast_path_validated_on": "NVIDIA A800 80GB PCIe",
+    "warm_repeat_token_loss_exact_match": true
+  },
+  "execution_target": {
+    "kind": "sues_hpc_slurm",
+    "host": "sues-hpc",
+    "node": "gpu01",
+    "allocation_id": 3066,
+    "remote_project_root": "/ipfs/inspurfileset/home/dqxy/dqxy11/projects/xiyaowang/02101",
+    "preferred_gpu": 0,
+    "server_allowed": true,
+    "slurm_allowed": true,
+    "ownership_check_required_before_launch": true
+  },
   "base_implementation_commit": "bc1105f880116e97e06da023110b7080debc28a4",
   "audit_branch": "codex/rcsd-no-go-audit",
   "test_sets_opened": [],
@@ -14,9 +34,9 @@
     "cpu_unit_tests"
   ],
   "forbidden_now": [
-    "training",
-    "gpu_job",
-    "slurm_job",
+    "paired_qwen35_2b_20k_pilot",
+    "expert_development_probe",
+    "D1_repair",
     "external_test",
     "full_data_scaling",
     "multi_seed",
@@ -25,6 +45,14 @@
     "D3",
     "D4"
   ],
+  "terminal_decision": {
+    "decision": "NO_GO",
+    "first_failed_condition": "validation_token_nll_relative_change",
+    "observed": 0.006210148801556577,
+    "required_at_most": -0.03,
+    "repair_preregistered": false,
+    "result_artifact": "audit/rcsd_d0_d1_qwen35_2b_terminal_result.json"
+  },
   "historical_d0": {
     "identity": "D0-H",
     "role": "immutable provenance only",
@@ -41,8 +69,10 @@
     "method_contract": {
       "target": "hard deterministic UMS JSON",
       "hard_target_source": "chexbert",
-      "teacher": "Qwen/Qwen2.5-1.5B-Instruct",
-      "teacher_weight_sha256": null,
+      "teacher": "Qwen/Qwen3.5-2B",
+      "teacher_config_sha256": "ed1c1723241f23f7f4e23430759cbd7dcfb4103cbdfe052bfe7626b57c2615b4",
+      "teacher_weight_index_sha256": "aca8afed9da75b0f050b408d270766fd77627f1af401e240f61c3b47d0db02f9",
+      "teacher_weight_shard_sha256": "aa33250c4fc64891ddfaba3a314fd9542ea371843c387178b425fbcc5ed680b1",
       "backbone": "vit_base_patch16_224",
       "backbone_initialization_sha256": "32aa17d6e17b43500f531d5f6dc9bc93e56ed8841b8a75682e1bb295d722405b",
       "spd_groups": 4,
@@ -56,7 +86,7 @@
       "domain": "MIMIC-CXR",
       "canonical_g0_manifest_sha256": "00fde375c608017d5e5700f946a15f32097d44ceecec885ebae41dfc58578133",
       "row_lock_sha256": "5e9e05552712a7c6298ff63731c4250c0bdc6d5e3d2a28e9e4476b7c7c242ae2",
-      "hard_ums_manifest_sha256": null,
+      "hard_ums_manifest_sha256": "1da254ab25ab8f005536ff16ac7a1c40e33f15add2afa25277a8c6e06f6e30b4",
       "train_studies_before_fail_closed_filter": 20000,
       "validation_studies_before_fail_closed_filter": 1733,
       "image_size": 224,
@@ -102,8 +132,8 @@
     "learned_label_model_allowed": false,
     "posterior_fusion_allowed": false,
     "field_anchor_allowed": false,
-    "source_manifest_sha256": null,
-    "reliability_manifest_sha256": null
+    "source_manifest_sha256": "432a4499ca87fffa2bf4641bed08d415e048dd43984c3f28bcb033175cc658d0",
+    "reliability_manifest_sha256": "a06959dfb98a2074a638dfb032c39e540dd3bb9bd2f3b2eb66f9e352b914f692"
   },
   "overfit_gate": {
     "rows": 256,
@@ -112,6 +142,25 @@
     "d1_train_token_accuracy_at_least": 0.98,
     "loss_reduction_at_least": 0.8,
     "nan_or_inf_allowed": 0
+  },
+  "overfit_result": {
+    "run_identity": "d0_d1_token_overfit_qwen35_2b_20260723_s2",
+    "queue_passed": true,
+    "queue_state_sha256": "bb70b6a02d6d605b909079e44673ce7a84b4b9e9721ee8bf8fe456e3a460e9af",
+    "d0": {
+      "step": 350,
+      "token_accuracy": 0.9876102800153433,
+      "token_nll": 0.03429155250961954,
+      "loss_reduction": 0.9814858286556939,
+      "summary_sha256": "9e027a7337003744e10ae6a3612d0ae13c19adabf1320324d7b126a10937697d"
+    },
+    "d1": {
+      "step": 350,
+      "token_accuracy": 0.9854622171077867,
+      "token_nll": 0.04012512043147056,
+      "loss_reduction": 0.9783362577512125,
+      "summary_sha256": "328c90a838b56ab4d819c2c795d9c17bd73111598d222ce7a3c3f90354b5becf"
+    }
   },
   "expert_development": {
     "surface": "CheXpert expert validation",
@@ -123,8 +172,8 @@
       "Edema",
       "Pleural Effusion"
     ],
-    "probe_train_manifest_sha256": null,
-    "expert_dev_manifest_sha256": null,
+    "probe_train_manifest_sha256": "46172e010ecbc4313bbb1981841fee512a2a03064cb10ce54fe15c6552342ef4",
+    "expert_dev_manifest_sha256": "b996b19a5449c2525ffaec856a889c2d69eae040f751d8e4236d5a7da62fbaf0",
     "probe_seed": 100,
     "checkpoint_selection": "probe validation macro AUROC on a patient-locked training-domain split",
     "reported_metrics": [
@@ -148,14 +197,18 @@
   },
   "prerequisites": {
     "historical_checkpoint_hash_imported": false,
-    "clean_d0_token_objective_implemented": false,
-    "d0_serialization_parity_test_passed": false,
-    "d0_spd_parity_test_passed": false,
-    "hard_ums_manifest_frozen": false,
-    "d1_source_manifest_frozen": false,
-    "d1_reliability_manifest_frozen": false,
-    "expert_development_manifests_frozen": false,
-    "paired_launcher_reviewed": false,
-    "explicit_execution_approval_recorded": false
+    "historical_checkpoint_unavailable_recorded": true,
+    "clean_d0_token_objective_implemented": true,
+    "d0_serialization_parity_test_passed": true,
+    "d0_spd_parity_test_passed": true,
+    "hard_ums_manifest_frozen": true,
+    "d1_source_manifest_frozen": true,
+    "d1_reliability_manifest_frozen": true,
+    "expert_development_manifests_frozen": true,
+    "qwen35_primary_teacher_hashes_verified": true,
+    "qwen35_real_weight_smoke_passed": true,
+    "qwen35_acceleration_runtime_validated": true,
+    "paired_launcher_reviewed": true,
+    "explicit_execution_approval_recorded": true
   }
 }

@@ -1,6 +1,6 @@
 # RCSD D0-versus-D1 review protocol
 
-**Status:** prepared for review; execution not approved
+**Status:** prerequisites in progress; user execution approval recorded
 
 **Active parent verdict:** `RCSD_P0_NO_GO_VERDICT.md`
 
@@ -11,9 +11,10 @@ is worth one paired development run. It does not reopen full RCSD, posterior
 fusion, field anchoring, external testing, teacher scaling, multi-seed
 training, or a new method proposal.
 
-No training is authorized by this document. The machine lock remains
-`PREPARED_NOT_APPROVED` until every prerequisite has a frozen artifact hash and
-an explicit execution approval is recorded.
+Training is authorized only through the state machine in
+`RCSD_D0_D1_AUTO_DEV_PROTOCOL.md`. The machine lock remains non-executable
+until every R0-R2 prerequisite has a frozen artifact hash or an explicit
+fail-closed unavailability record.
 
 ## Three identities that must not be conflated
 
@@ -119,7 +120,9 @@ D1 may not:
 
 All must pass:
 
-- import the D0-H checkpoint SHA and historical audit SHA;
+- import the D0-H checkpoint SHA and historical audit SHA, or record that the
+  retained local checkpoint surface is empty and treat D0-H as unavailable
+  provenance only;
 - implement the clean frozen-teacher token objective;
 - verify deterministic UMS serialization against retained historical examples;
 - verify SPD output, parameter count, 4x2 token layout, and orthogonality loss;
@@ -167,7 +170,7 @@ Failure stops the route before the 20k pilot.
 | Steps | 3,000 |
 | Effective batch | 32 |
 | Precision | BF16 |
-| Teacher | Qwen2.5-1.5B-Instruct, frozen |
+| Teacher | Qwen3.5-2B, frozen; other sizes conditional after the primary gate |
 | Checkpoint | strictly lower unweighted validation token NLL |
 | Arm order | D0-CP, then D1 |
 | Restarts | none except an implementation failure before any metric is viewed |
@@ -266,8 +269,12 @@ The machine lock intentionally records these as incomplete:
 - hard-UMS and D1 reliability manifests are not frozen;
 - expert-development manifests are not frozen;
 - no paired launcher has passed review;
-- no explicit execution approval is recorded.
+- explicit execution approval is recorded, but all other implementation,
+  manifest, and launcher prerequisites remain incomplete.
 
 Therefore the current operational decision is:
+
+> **PREREQUISITES IN PROGRESS - ZERO TRAINING JOBS AUTHORIZED UNTIL R0-R2
+> PASS.** This sentence supersedes the stale review-only marker below.
 
 > **REVIEW PACKAGE ONLY — ZERO TRAINING JOBS AUTHORIZED.**
