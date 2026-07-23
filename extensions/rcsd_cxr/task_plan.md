@@ -26,7 +26,7 @@ or diagnostic run in this phase.
 | F. Publish audit branch | completed | pushed `codex/rcsd-no-go-audit` |
 | G. Reconstruct exact D0 contract | completed | source identities and D0-H/D0-CP distinction frozen |
 | H. Freeze D0-vs-D1 review protocol | completed | Markdown protocol, machine lock, pure CPU contracts |
-| I. Validate and publish review package | in progress | 59/59 tests passed; final scope audit and Git push pending |
+| I. Validate and publish review package | completed | 59/59 tests, scope audit, and Git push completed |
 
 ## Binding decisions
 

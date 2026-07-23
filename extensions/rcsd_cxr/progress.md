@@ -223,3 +223,6 @@
 - The review validator passed and the complete local suite passed 59/59. The
   machine lock still authorizes zero training jobs and records every missing
   implementation/data/expert-development prerequisite explicitly.
+- Published the review-gated D0/D1 package to
+  `origin/codex/rcsd-no-go-audit` at content commit
+  `44d89202d0de0bda1141793eb0b2632085e4da80`.
