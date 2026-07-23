@@ -212,3 +212,14 @@
   compiled, and all 48 unit tests passed.
 - Published the bounded audit to `origin/codex/rcsd-no-go-audit`; the audit
   content commit was `cd45646b2bf586609a1bd0e18311a457b1d6c235`.
+- Started the separately review-gated D0-vs-D1 protocol phase. This phase is
+  documentation, provenance reconstruction, and CPU validation only; no
+  training or test evaluation is authorized.
+- Froze D0-H as immutable historical provenance and D0-CP as the only valid
+  common-protocol comparator for D1.
+- Added the review protocol, source-contract table, fail-closed JSON lock,
+  entropy-agreement CPU primitive, deterministic hard-UMS renderer, integrity
+  validator, and contract tests.
+- The review validator passed and the complete local suite passed 59/59. The
+  machine lock still authorizes zero training jobs and records every missing
+  implementation/data/expert-development prerequisite explicitly.

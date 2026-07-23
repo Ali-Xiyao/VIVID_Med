@@ -7,7 +7,8 @@ field-anchored distillation for a deployable chest-radiograph encoder.
 ## Scope
 
 - Keep: frozen text teacher, UMS-compatible structured semantics, SPD 4x2
-  baseline, reliability-calibrated posteriors, and ViT-only deployment.
+  baseline, and ViT-only deployment. Posterior fusion and field anchoring are
+  retained only as terminal audited evidence, not active method components.
 - Exclude: GFTM, FSA consistency, CXR/CT mixed training, VSL four-state
   clinical claims, CEQ/CCSH/AUCH, BiVES rescue, ARISE, VICER, and causal
   evidence claims.
@@ -46,11 +47,19 @@ the proposed common component-audit protocol. This keeps the VIVID journal
 extension conceptually open without authorizing new training or reactivating
 the frozen VSL/BiVES/MORPH routes.
 
+The only prepared next protocol is
+`audit/RCSD_D0_D1_REVIEW_PROTOCOL.md`. It freezes a common-protocol
+reconstruction of the original VIVID token objective and permits D1 to add
+only the predefined entropy agreement weight. Its machine lock is
+`PREPARED_NOT_APPROVED`; training jobs allowed: zero.
+
 ## Validation
 
 ```powershell
 python -m compileall rcsd_cxr scripts tests
 python -m unittest discover -s tests -v
+python scripts\audit_rcsd_component_status.py
+python scripts\audit_rcsd_d0_d1_review.py
 python scripts\validate_data_refs.py --roles track_a_train paper1_external
 ```
 

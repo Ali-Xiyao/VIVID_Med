@@ -24,6 +24,9 @@ or diagnostic run in this phase.
 | D. Build deidentified verdict | completed | Markdown, JSON, and per-finding CSV |
 | E. Validate audit package | completed | integrity pass, 48/48 tests, clean Git scope audit |
 | F. Publish audit branch | completed | pushed `codex/rcsd-no-go-audit` |
+| G. Reconstruct exact D0 contract | completed | source identities and D0-H/D0-CP distinction frozen |
+| H. Freeze D0-vs-D1 review protocol | completed | Markdown protocol, machine lock, pure CPU contracts |
+| I. Validate and publish review package | in progress | 59/59 tests passed; final scope audit and Git push pending |
 
 ## Binding decisions
 
@@ -50,6 +53,14 @@ Before a D1 run could be authorized, a separate protocol must freeze:
 - promotion and stop thresholds.
 
 Until that review exists, the correct action is evidence audit only.
+
+## Current continuation boundary
+
+The 2026-07-23 continuation authorizes preparation and validation of the
+separate D0-vs-D1 review package. It does not authorize training. Phase G must
+first prove which historical objective, query layout, teacher targets, data
+surface, optimizer, and checkpoint rule constitute exact D0. Phase H must
+change only one factor: a prospectively frozen scalar reliability weight.
 
 ## Errors encountered
 

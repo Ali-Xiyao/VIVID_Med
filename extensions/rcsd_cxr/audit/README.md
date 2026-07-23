@@ -11,6 +11,12 @@ Read in order:
    arm status.
 4. `tables/rcsd_g3_per_finding_macro_f1.csv`: aggregate per-finding G3
    comparison.
+5. `RCSD_D0_D1_REVIEW_PROTOCOL.md`: the separately review-gated single-factor
+   D0-CP versus D1 protocol.
+6. `rcsd_d0_d1_review_lock.json`: machine lock that keeps execution disabled
+   until every prerequisite is frozen and explicitly approved.
+7. `tables/rcsd_d0_source_contract.csv`: Git and normalized-byte identities
+   for the retained historical D0 source contract.
 
 The audit does not authorize training. Full RCSD remains NO-GO, all frozen
 thresholds remain unchanged, and external tests remain sealed.

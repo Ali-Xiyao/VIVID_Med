@@ -43,12 +43,23 @@ the tested D3 field anchor are rejected; exact D0 and D1 have not both been
 evaluated under the proposed common component-audit protocol. No new training
 is authorized by that observation.
 
+The next review artifact is
+`extensions/rcsd_cxr/audit/RCSD_D0_D1_REVIEW_PROTOCOL.md`. It distinguishes
+the immutable historical D0-H artifact from the common-protocol D0-CP
+reconstruction and permits D1 to change only entropy-derived loss weights.
+Its machine lock remains `PREPARED_NOT_APPROVED`, with zero training jobs
+authorized.
+
 ## Authoritative files
 
 - Terminal result:
   `extensions/rcsd_cxr/docs/RCSD_CXR_terminal_gate_result_20260723.md`
 - Active component-attribution verdict:
   `extensions/rcsd_cxr/audit/RCSD_P0_NO_GO_VERDICT.md`
+- D0-CP versus D1 review protocol:
+  `extensions/rcsd_cxr/audit/RCSD_D0_D1_REVIEW_PROTOCOL.md`
+- D0/D1 machine lock:
+  `extensions/rcsd_cxr/audit/rcsd_d0_d1_review_lock.json`
 - Final task ledger: `extensions/rcsd_cxr/task_plan.md`
 - Experiment tracker:
   `extensions/rcsd_cxr/refine-logs/EXPERIMENT_TRACKER_20260723T001428+0800.md`
@@ -74,7 +85,8 @@ The server-side experimental evidence remains outside Git.
 
 ## Validation
 
-- Local RCSD unit tests: 45/45 passed.
-- Server RCSD unit tests: 45/45 passed.
-- Packaged source/server manifest entries: 90/90 hash-verified before branch
-  publication.
+- Current audit-branch unit tests: 59/59 passed.
+- Component-attribution integrity: passed.
+- D0/D1 review-lock and historical-source integrity: passed.
+- Frozen base packaged source/server manifest entries: 90/90 hash-verified
+  before the original extension-branch publication.

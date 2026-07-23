@@ -10,8 +10,11 @@
 > The full RCSD combination is **NO-GO**: posterior fusion failed G2 and the
 > simplified equal-budget field-anchor route failed G3. This does not close
 > the whole VIVID journal extension. The only open activity is a bounded
-> component-attribution audit on `codex/rcsd-no-go-audit`; it does not
-> authorize new training. Full-data, external-test, multi-seed,
+> component-attribution audit on `codex/rcsd-no-go-audit`. Its separately
+> review-gated D0-CP-versus-D1 protocol is
+> [`extensions/rcsd_cxr/audit/RCSD_D0_D1_REVIEW_PROTOCOL.md`](extensions/rcsd_cxr/audit/RCSD_D0_D1_REVIEW_PROTOCOL.md).
+> The corresponding machine lock authorizes zero training jobs. Full-data,
+> external-test, multi-seed,
 > multi-institution, and Qwen-size expansion remain cancelled. CheXlocalize
 > test remains sealed.
 >

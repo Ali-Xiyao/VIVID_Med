@@ -4,6 +4,8 @@
 
 `audit/RCSD_P0_NO_GO_VERDICT.md` is the active scientific authority.
 `audit/RCSD_COMPONENT_ATTRIBUTION_PLAN.md` defines the D0-D4 evidence boundary.
+`audit/RCSD_D0_D1_REVIEW_PROTOCOL.md` and
+`audit/rcsd_d0_d1_review_lock.json` define the only prepared next review.
 The original proposal and historical execution protocol remain provenance and
 may not override the audit.
 
@@ -29,11 +31,12 @@ The historical SPD baseline is exactly four groups by two tokens.
 ## Execution boundary
 
 Documentation, aggregate-evidence validation, and CPU unit tests are allowed.
-No D0-D4 training is currently authorized. D1 may be considered only after a
-separate reviewed gate freezes its exact weighting rule, common D0 comparator,
-dataset, seed, budget, checkpoint rule, and endpoints. External-test
-evaluation, data download, server upload/replacement, and GPU or Slurm jobs
-remain unauthorized.
+No D0-D4 training is currently authorized. The D0/D1 review package has frozen
+the proposed comparison but explicitly records incomplete implementation,
+manifest, expert-development, launcher, and approval prerequisites. Do not
+change `PREPARED_NOT_APPROVED`, fill artifact hashes without producing and
+validating them, or start a job. External-test evaluation, data download,
+server upload/replacement, and GPU or Slurm jobs remain unauthorized.
 
 ## Coding and validation
 

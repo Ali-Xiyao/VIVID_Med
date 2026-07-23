@@ -259,3 +259,80 @@
   are unavailable. They must remain missing, not inferred from macro-F1.
 - The only possible future diagnostic is a separately reviewed exact D0 versus
   D1 pair. The current audit does not authorize it.
+
+## 2026-07-23 D0 reconstruction review
+
+- The existing 20k unanchored-SPD implementation is not an exact historical
+  D0. Its targets are CheXbert three-state report labels and its auxiliary
+  semantic objects are Qwen3.5 field prototypes.
+- Exact D0 must be reconstructed from the retained historical VIVID code,
+  accepted 4x2 checkpoint/config metadata, UMS serialization and masking,
+  token-prediction loss, SPD orthogonality term, optimizer, image selection,
+  training surface, and strictly-lower-validation-loss checkpoint rule.
+- The clean RCSD migration deliberately did not copy the old monolithic
+  VIVID model or token-loss contract. Therefore the new review protocol cannot
+  call the current state trainer “original SPD” without an explicit provenance
+  mapping and parity checks.
+- D1 must preserve every frozen D0 element and add only one scalar per-sample
+  or per-field reliability multiplier. It may not add posterior fusion,
+  field-anchored queries, new teacher prototypes, new labels, or new losses.
+- The accepted historical files are now identified as
+  `legacy/vivid_med/configs/ablation_A_ums_spd_12label.yaml`,
+  `legacy/vivid_med/models/spd.py`, `legacy/vivid_med/training/losses.py`, and
+  `legacy/vivid_med/training/trainer.py`, paired with the audited historical
+  `outputs/ablation_A_ums_spd_12label/checkpoints/best.pt`.
+- The accepted SPD config freezes ViT-B/16 at 224 pixels, Qwen2.5-1.5B
+  Instruct, 12 labels, JSON UMS, 4 groups x 2 tokens, orthogonality weight
+  0.02, seed 42, 10,000 steps, effective batch 32, ViT LR 2e-5, projector LR
+  1e-4, weight decay 0.01, warmup 500, BF16, validation every 500 steps, and
+  best-checkpoint selection by strictly lower validation loss.
+- The historical primary loss is next-token cross-entropy over serialized JSON
+  tokens. SPD adds its attention-pattern orthogonality penalty. This is not
+  equivalent to the current three-state classification loss.
+- Historical validation checkpointing uses token-generation validation loss
+  only; the SPD orthogonality penalty is added during training but not to the
+  validation loss. A faithful D0 comparator must preserve this asymmetry.
+- Historical training applies the JSON token loss to all target tokens unless
+  an explicitly enabled weighting/mask config is present. The accepted SPD
+  config enables neither token weighting nor answerability masking.
+- Historical loading uses separate CheXpert UMS train/validation JSONL files,
+  a fixed 1,000-row validation cap, shuffled training, and deterministic seed
+  42. The legacy image fallback and non-patient-safe fallback split are known
+  defects; the controlled reconstruction must preserve scientific semantics
+  while retaining the clean project's fail-closed image and patient-lock
+  safety contracts.
+- The supplied diagnostic specifies D1 as entropy-based agreement weighting,
+  not a learned posterior: average the available source one-hot distributions,
+  compute normalized entropy, and use
+  `w_ic = m_ic * (1 - H(q_bar_ic) / log(3))`. The hard target itself must
+  remain the frozen best single source.
+- To keep the comparison single-factor, D0 and D1 must use identical hard UMS
+  strings. D1 may alter only the token-loss weights associated with a finding;
+  it may not replace states, add a learned confidence model, or change the SPD
+  projector.
+- “Exact D0” needs two explicit identities: D0-H is the immutable historical
+  CheXpert artifact; D0-CP is the controlled-protocol reconstruction of its
+  method contract on the locked 20k MIMIC surface. D1 must be paired against
+  D0-CP, not compared numerically against the historical artifact.
+- The earlier source-migration manifest is not sufficient as the D0 authority:
+  several byte hashes differ from the current Windows checkout and it omitted
+  the full D0 contract. The review package must record current Git blob
+  identity plus LF-normalized SHA-256 and must fail closed if those identities
+  drift before implementation review.
+- The current `track_a_pilot.yaml` remains a placeholder-era RCSD config and
+  cannot authorize D0/D1. A separate machine-readable review lock is required;
+  all dataset, reliability, expert-development, and implementation artifact
+  hashes that do not yet exist must stay explicit `null` prerequisites.
+- Historical narrative surfaces disagree: the May revision log reports a
+  single SPD LP AUC of 0.8208 below no-SPD UMS at 0.8439, while the older
+  mentor-summary surface reports a later/compiled three-seed SPD mean of
+  0.8588 above UMS at 0.8431. The latter document also contains a stale 3x2
+  method description beside a 4-group table. These values cannot be pooled or
+  treated as a single protocol.
+- No deidentified G1 checkpoint-audit JSON is present in the local clean
+  worktree. The checkpoint and audit hashes therefore remain unresolved
+  prerequisites rather than being inferred from narrative documents.
+- The retained UMS v0.2 schema is broader than the training target. The actual
+  historical dataset renderer deliberately emits the simplified target with
+  only `modality`, selected `findings` objects (`state`, normally `score`), and
+  `study_view`. D0-CP must reproduce this renderer, not the full schema.

@@ -1,0 +1,161 @@
+{
+  "schema_version": 1,
+  "artifact": "rcsd_d0_d1_review_lock",
+  "status": "PREPARED_NOT_APPROVED",
+  "execution_authorized": false,
+  "training_jobs_allowed": 0,
+  "base_implementation_commit": "bc1105f880116e97e06da023110b7080debc28a4",
+  "audit_branch": "codex/rcsd-no-go-audit",
+  "test_sets_opened": [],
+  "allowed_now": [
+    "documentation",
+    "read_only_provenance",
+    "aggregate_evidence_validation",
+    "cpu_unit_tests"
+  ],
+  "forbidden_now": [
+    "training",
+    "gpu_job",
+    "slurm_job",
+    "external_test",
+    "full_data_scaling",
+    "multi_seed",
+    "teacher_scaling",
+    "D2",
+    "D3",
+    "D4"
+  ],
+  "historical_d0": {
+    "identity": "D0-H",
+    "role": "immutable provenance only",
+    "training_domain": "CheXpert UMS",
+    "config": "legacy/vivid_med/configs/ablation_A_ums_spd_12label.yaml",
+    "checkpoint_path_hint": "outputs/ablation_A_ums_spd_12label/checkpoints/best.pt",
+    "checkpoint_sha256": null,
+    "checkpoint_audit_sha256": null,
+    "source_contract": "audit/tables/rcsd_d0_source_contract.csv"
+  },
+  "controlled_d0": {
+    "identity": "D0-CP",
+    "role": "paired common-protocol comparator",
+    "method_contract": {
+      "target": "hard deterministic UMS JSON",
+      "hard_target_source": "chexbert",
+      "teacher": "Qwen/Qwen2.5-1.5B-Instruct",
+      "teacher_weight_sha256": null,
+      "backbone": "vit_base_patch16_224",
+      "backbone_initialization_sha256": "32aa17d6e17b43500f531d5f6dc9bc93e56ed8841b8a75682e1bb295d722405b",
+      "spd_groups": 4,
+      "tokens_per_group": 2,
+      "spd_orthogonality_weight": 0.02,
+      "loss": "unweighted next-token cross-entropy plus training-only SPD orthogonality",
+      "prompt": "Generate a structured medical report:\\n",
+      "inference_deployment": "ViT only"
+    },
+    "data_contract": {
+      "domain": "MIMIC-CXR",
+      "canonical_g0_manifest_sha256": "00fde375c608017d5e5700f946a15f32097d44ceecec885ebae41dfc58578133",
+      "row_lock_sha256": "5e9e05552712a7c6298ff63731c4250c0bdc6d5e3d2a28e9e4476b7c7c242ae2",
+      "hard_ums_manifest_sha256": null,
+      "train_studies_before_fail_closed_filter": 20000,
+      "validation_studies_before_fail_closed_filter": 1733,
+      "image_size": 224,
+      "frontal_only": true,
+      "patient_overlap_allowed": false
+    },
+    "training_contract": {
+      "seed": 0,
+      "optimizer": "AdamW",
+      "vit_learning_rate": 0.00002,
+      "projector_learning_rate": 0.0001,
+      "weight_decay": 0.01,
+      "warmup_steps": 500,
+      "max_steps": 3000,
+      "batch_size": 4,
+      "gradient_accumulation_steps": 8,
+      "effective_batch_size": 32,
+      "max_grad_norm": 1.0,
+      "precision": "bf16",
+      "eval_interval": 500,
+      "checkpoint_rule": "strictly lower unweighted validation token NLL",
+      "same_checkpoint_for_all_endpoints": true
+    }
+  },
+  "candidate_d1": {
+    "identity": "D1",
+    "only_delta_from_d0_cp": "entropy agreement weight on hard-target finding token spans",
+    "hard_target_source": "chexbert",
+    "sources": [
+      "chexpert",
+      "negbio",
+      "chexbert"
+    ],
+    "states": [
+      "present",
+      "absent",
+      "uncertain"
+    ],
+    "missing_policy": "exclude missing sources; mask a missing CheXbert hard target",
+    "mean_distribution": "unweighted arithmetic mean of available one-hot source states",
+    "weight_formula": "m_ic * (1 - H(q_bar_ic) / log(3))",
+    "target_replacement_allowed": false,
+    "learned_label_model_allowed": false,
+    "posterior_fusion_allowed": false,
+    "field_anchor_allowed": false,
+    "source_manifest_sha256": null,
+    "reliability_manifest_sha256": null
+  },
+  "overfit_gate": {
+    "rows": 256,
+    "max_steps": 500,
+    "d0_train_token_accuracy_at_least": 0.98,
+    "d1_train_token_accuracy_at_least": 0.98,
+    "loss_reduction_at_least": 0.8,
+    "nan_or_inf_allowed": 0
+  },
+  "expert_development": {
+    "surface": "CheXpert expert validation",
+    "role": "exposed development gate only; never final evidence",
+    "findings": [
+      "Atelectasis",
+      "Cardiomegaly",
+      "Consolidation",
+      "Edema",
+      "Pleural Effusion"
+    ],
+    "probe_train_manifest_sha256": null,
+    "expert_dev_manifest_sha256": null,
+    "probe_seed": 100,
+    "checkpoint_selection": "probe validation macro AUROC on a patient-locked training-domain split",
+    "reported_metrics": [
+      "macro AUROC",
+      "macro AUPRC",
+      "15-bin classwise ECE",
+      "per-finding AUROC",
+      "per-finding AUPRC",
+      "paired patient bootstrap 95% CI"
+    ]
+  },
+  "promotion_gate": {
+    "validation_token_nll_relative_change_at_most": -0.03,
+    "expert_dev_macro_auroc_gain_at_least": 0.005,
+    "expert_dev_ece_change_at_most": 0.01,
+    "findings_below_minus_0_02_at_most": 2,
+    "positive_prevalence_tiers_at_least": 2,
+    "positive_findings_at_least": 3,
+    "threshold_changes_allowed": false,
+    "all_conditions_required": true
+  },
+  "prerequisites": {
+    "historical_checkpoint_hash_imported": false,
+    "clean_d0_token_objective_implemented": false,
+    "d0_serialization_parity_test_passed": false,
+    "d0_spd_parity_test_passed": false,
+    "hard_ums_manifest_frozen": false,
+    "d1_source_manifest_frozen": false,
+    "d1_reliability_manifest_frozen": false,
+    "expert_development_manifests_frozen": false,
+    "paired_launcher_reviewed": false,
+    "explicit_execution_approval_recorded": false
+  }
+}
