@@ -28,3 +28,7 @@
   serialize job steps. Our S0-only step `3066.19335` was stopped before model
   loading, its empty/pretraining-free run root was removed, and the launcher
   now explicitly waits until allocation 3066 has no non-batch step.
+- The corrected launcher is active as remote PID `2207535`. It is waiting
+  behind unrelated step `3066.19219`; no strict-route GPU training has started
+  yet. A ten-minute heartbeat monitor now owns the automatic handoff and
+  bounded failure policy.
