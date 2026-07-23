@@ -98,3 +98,7 @@
   `0.98466` and NLL reduction `97.22%`. The same queue advanced to fresh S1
   `ums_spd4x2_no_ortho`; no method identity, threshold, or data surface
   changed.
+- Diagnostic S1 `ums_spd4x2_no_ortho` passed at step 350 with token accuracy
+  `0.98769` and NLL reduction `98.16%`. Both bounded diagnostic arms are
+  learnable, so the queue advanced to fresh S2 `ums_prefix8` at the unchanged
+  3,000-step pilot budget.
