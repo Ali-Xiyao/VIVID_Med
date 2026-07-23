@@ -60,3 +60,11 @@
   The repaired queue launched from an empty original run root as step
   `3066.19599` at `2026-07-24T03:13:50+08:00`; its queue state was healthy and
   rerunning S0 before fresh paired S1 execution.
+- S1 `ums_prefix4` passed after 400 steps: token accuracy `0.98907`, token NLL
+  reduction `97.74%`, and finite nonzero gradients in both the backbone and
+  projector. The queue advanced automatically to a fresh
+  `ums_spd4x2` overfit run.
+- S1 `ums_spd4x2` passed after 350 steps: token accuracy `0.98761`, token NLL
+  reduction `98.15%`, and finite nonzero gradients in both the backbone and
+  projector. The paired S1 gate is therefore PASS. The queue advanced to S2
+  and began the 20k-study `ums_prefix4` pilot from initialization.

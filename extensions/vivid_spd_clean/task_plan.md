@@ -14,8 +14,9 @@ training budgets, and fail-closed promotion gates.
   evaluation surfaces.
 - [x] S0c: implement the paired model, trainer, linear-probe evaluator, queue,
   audits, and tests.
-- [ ] S1: run both 256-row overfit gates sequentially.
-- [ ] S2: run both 20k-study token-pretraining pilots sequentially.
+- [x] S1: run both 256-row overfit gates sequentially.
+- [ ] S2: run both 20k-study token-pretraining pilots sequentially. (in
+  progress)
 - [ ] S3: run the locked CheXpert development linear probe from each
   validation-NLL-selected ViT checkpoint and freeze PASS/NO-GO.
 - [ ] S4: only after PASS, run three seeds and then the full MIMIC scale track.
@@ -24,8 +25,8 @@ training budgets, and fail-closed promotion gates.
 
 ## Current action
 
-Submit the S1-S3 queue as an exclusive step behind the currently active,
-unrelated step in allocation 3066.
+Monitor the paired S2 20k-study pilots, beginning with `ums_prefix4`, then
+`ums_spd4x2`.
 
 ## Stop conditions
 

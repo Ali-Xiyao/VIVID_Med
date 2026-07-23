@@ -40,3 +40,10 @@
   initial validation forward pass before training, so it does not bear on
   either scientific arm. Setting the workspace contract before importing
   PyTorch is the one identity-preserving repair.
+- The repaired historical prefix4 arm passed the locked S1 overfit gate
+  (`0.98907` token accuracy; `97.74%` NLL reduction), confirming that the
+  cuBLAS workspace repair restored deterministic execution without changing
+  the scientific identity.
+- Historical SPD 4x2 also passed S1 (`0.98761` token accuracy; `98.15%` NLL
+  reduction). Both primary identities can fit the locked hard-UMS development
+  surface, so the scientific comparison proceeds to paired S2 pilots.
