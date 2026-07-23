@@ -86,3 +86,11 @@
   `ums_prefix8` and `ums_spd4x2_no_ortho`, preserve the strict hashes and
   protected-test ban, and freeze the sole repair-nomination rule before any
   diagnostic run.
+- Committed and pushed the diagnostic authority and runner as `7bc62c6`.
+  Server-side shell syntax, Python compilation, and all 10 extension unit
+  tests passed before launch.
+- The bounded diagnostic queue started on allocation 3066 as Slurm step
+  `3066.19836` at `2026-07-24T07:08:23+08:00`. It verified all five strict
+  authority hashes before training and began fresh S1 `ums_prefix8` overfit.
+  The first optimizer records are healthy; no protected evaluation surface was
+  accessed.
