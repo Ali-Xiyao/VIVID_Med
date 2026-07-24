@@ -72,3 +72,19 @@
   prerequisite claim that A2 improves over free text and direct schema did
   not hold. No identity-preserving repair can alter those baseline
   comparisons, so no repair or lambda sensitivity is nominated.
+
+## 2026-07-24 case-study follow-up
+
+- GitHub branch `codex/vivid-gds-extension` and local HEAD matched at
+  `66d411d40c86395661a727793fc388442f691bd2` before the follow-up update.
+- The repaired server run remains present and occupies about 2.0 GB; the
+  isolated server project occupies about 2.7 GB.
+- Finding-level deltas show that A3 mainly recovered A2 weaknesses on
+  cardiomegaly, edema, and pleural effusion. It was not uniformly better:
+  atelectasis declined relative to A2.
+- De-identified disagreement examples contain both large A3 corrections and
+  large new errors. This supports a regularization/rebalancing interpretation,
+  not a claim of uniformly better clinical evidence.
+- The most informative next experiment is a new, separately locked,
+  fresh-development replication of unchanged A3 against both A0 and A2. The
+  current exposed expert-development set must not be used for selection again.

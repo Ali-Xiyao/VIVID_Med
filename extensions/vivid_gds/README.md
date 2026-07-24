@@ -13,10 +13,11 @@ test surface was opened.
 Start with:
 
 1. `audit/VIVID_GDS_STAGE_A_TERMINAL_NO_GO_20260724.md`;
-2. `audit/VIVID_GDS_EXPERIMENT_PROTOCOL_20260724.md`;
-3. `audit/vivid_gds_stage_a_lock.json`;
-4. `refine-logs/EXPERIMENT_TRACKER.md`;
-5. `progress.md`.
+2. `audit/VIVID_GDS_CASE_STUDY_AND_NEXT_DIRECTION_20260724.md`;
+3. `audit/VIVID_GDS_EXPERIMENT_PROTOCOL_20260724.md`;
+4. `audit/vivid_gds_stage_a_lock.json`;
+5. `refine-logs/EXPERIMENT_TRACKER.md`;
+6. `progress.md`.
 
 The first decision is deliberately small: paired 20k MIMIC Stage-A arms under
 one data lock, followed by one CheXpert expert-development probe protocol.

@@ -79,3 +79,11 @@
 - Froze terminal `STAGE_A_NO_GO`. Completed the authorized bounded case study,
   nominated no repair, kept every external/protected surface closed, and
   recorded evidence hashes in the terminal report.
+- Reverified cloud persistence: local and GitHub branch heads matched, the
+  remote verdict remained present, and the full repaired server run remained
+  intact.
+- Added a de-identified finding-level disagreement case study and a ranked
+  next-direction recommendation. No experiment was reactivated and no
+  protected surface was opened.
+- Removed the temporary local copies of the three patient-level prediction
+  CSVs after aggregating the de-identified case study; none entered Git.

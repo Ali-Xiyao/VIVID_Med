@@ -66,6 +66,10 @@ not run: A3 already passed its primary comparison, while changing its loss
 weight cannot repair the failed `A2 - A1` and `A2 - A0` claims. Additional
 case selection or same-surface tuning would be post-hoc.
 
+The de-identified finding-level analysis and recommended fresh-split decision
+gate are recorded in
+`VIVID_GDS_CASE_STUDY_AND_NEXT_DIRECTION_20260724.md`.
+
 ## Evidence authority
 
 Remote run root:
@@ -102,4 +106,3 @@ data remain outside Git.
   scale Qwen.
 - Do not open CheXlocalize test, VinDr test, NIH, PadChest, CheXpert-Plus, or
   any other protected/external surface for rescue.
-
