@@ -3,8 +3,8 @@
 | ID | Stage | Arm | Status | Promotion |
 |---|---|---|---|---|
 | G0 | contract | all | PASS | 21,212 rows; hashes/assets/patient split pass |
-| G1-A0 | overfit | direct schema | RUNNING | schema accuracy/reduction |
-| G1-A1 | overfit | free-text Qwen | PENDING | token accuracy/reduction |
+| G1-A0 | overfit | direct schema | PASS | step 300; acc 0.9932; NLL reduction 90.29% |
+| G1-A1 | overfit | free-text Qwen | RUNNING | step >310; token overfit gate |
 | G1-A3 | overfit | VIVID-GDS | PENDING | generation and schema gates |
 | G2-A0 | 20k | direct schema | LOCKED | G1 pass |
 | G2-A1 | 20k | free-text Qwen | LOCKED | G1 pass |

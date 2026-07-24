@@ -26,3 +26,8 @@
   `3066.20183`; launcher PID is `632970`.
 - G0 passed and G1 `A0_direct` began on GPU. At the first observed milestone,
   step 50 schema NLL was `0.842170` and schema accuracy was `0.701531`.
+- G1 `A0_direct` passed at step 300: schema NLL fell from `1.093667` to
+  `0.106180` (`90.29%` reduction), schema accuracy reached `0.993197`, and
+  backbone/schema-head gradients were finite and nonzero.
+- G1 `A1_freetext` is running. At step 300, token NLL was `0.358975` and token
+  accuracy was `0.873562`; it had advanced beyond step 310 at the latest poll.
