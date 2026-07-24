@@ -49,3 +49,9 @@
   (schema accuracy `0.993197`, schema NLL reduction `90.29%`). `A1_freetext`
   then started its frozen 1000-step feasibility run and reached step 170 with
   finite training loss at the latest poll.
+- Repaired-run `A1_freetext` passed at step 550: token accuracy `0.983383`,
+  token NLL `0.064278`, NLL reduction `97.28%`, and finite nonzero backbone
+  and projector gradients. This is the first post-warmup checkpoint and clears
+  the fixed 0.98/80% gate without using the remaining budget.
+- G1 `A3_gds` started automatically and reached step 150; token accuracy was
+  `0.947603` and schema accuracy was `0.735544` at that milestone.

@@ -37,3 +37,7 @@
 - The single A1 schedule repair gives generative overfit arms 500 additional
   post-warmup steps. It does not change the fixed thresholds, pilot budget,
   data, model, targets, or checkpoint rules. The original run is preserved.
+- The repaired A1 crossed the unchanged gate at step 550: token accuracy
+  `0.983383`, token NLL `0.064278`, and NLL reduction `97.28%`. This confirms
+  the first failure was caused by the missing post-warmup interval rather than
+  an unlearnable deterministic free-text target.
