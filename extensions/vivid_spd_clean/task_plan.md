@@ -19,18 +19,17 @@ training budgets, and fail-closed promotion gates.
 - [x] S3: run the locked CheXpert development linear probe from each
   validation-NLL-selected ViT checkpoint and freeze PASS/NO-GO. The strict
   route is frozen as `STRICT_NO_GO_DIAGNOSTIC_OPEN`.
-- [ ] D1: run only the preregistered `ums_prefix8` and
+- [x] D1: run only the preregistered `ums_prefix8` and
   `ums_spd4x2_no_ortho` bounded diagnostics from initialization, then freeze
-  either `REPAIR_NOMINATED` or `TERMINAL_NO_GO`. (in progress)
-- [ ] S4: only after PASS, run three seeds and then the full MIMIC scale track.
-- [ ] S5: only after S4, freeze external mappings and run independent external
-  evaluation.
+  either `REPAIR_NOMINATED` or `TERMINAL_NO_GO`. Result:
+  `TERMINAL_NO_GO`.
+- [x] S4: locked and not run because S3/diagnostics did not survive.
+- [x] S5: locked and not run because S4 was not authorized.
 
 ## Current action
 
-Launch and monitor the two-arm bounded diagnostic queue on retained allocation
-3066. The strict result remains NO-GO; prefix8 is diagnostic-only, and
-no-ortho is the sole repair candidate under the pre-frozen nomination rule.
+Terminal closure is complete. Preserve the strict and diagnostic artifacts;
+do not launch further experiments under this route.
 
 ## Stop conditions
 

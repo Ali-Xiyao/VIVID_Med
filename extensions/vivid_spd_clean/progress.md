@@ -129,3 +129,10 @@
   `validate`. The failed log was preserved. The sole split-reader repair
   aligns the descriptive lock with the existing manifest and reruns the same
   first 128 rows; it cannot affect the terminal verdict.
+- The repaired CPU-only attention analysis completed for both SPD
+  checkpoints. Historical SPD had mean pairwise group-attention cosine
+  `0.0000718`; no-ortho had `0.99284`, demonstrating near-total attention
+  collapse after removing the term.
+- Frozen terminal outcome: `TERMINAL_NO_GO`. No repair is nominated, and S4,
+  S5, larger teachers, additional seeds, full-data scaling, and protected
+  tests remain locked.

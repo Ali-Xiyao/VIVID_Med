@@ -7,12 +7,13 @@ This directory rebuilds the last experimentally defensible VIVID-Med question:
 > projector when both are trained through the same frozen Qwen3.5 teacher?
 
 The route intentionally excludes RCSD reliability weighting and every later
-VSL/BiVES/MORPH claim. The initial experiment is a bounded Qwen3.5-2B,
-MIMIC-CXR development gate. Full data, three seeds, external evaluation, and
-larger teachers unlock only after the frozen promotion gate passes.
+VSL/BiVES/MORPH claim. The bounded Qwen3.5-2B MIMIC-CXR development gate is
+complete with terminal outcome **`TERMINAL_NO_GO`**. Full data, three seeds,
+external evaluation, and larger teachers remain locked.
 
 Start with:
 
+- `audit/VIVID_SPD_CLEAN_TERMINAL_RESULT_20260724.md`
 - `audit/VIVID_SPD_CLEAN_EXPERIMENT_PROTOCOL.md`
 - `audit/vivid_spd_clean_lock.json`
 - `task_plan.md`

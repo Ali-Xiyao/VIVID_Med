@@ -68,3 +68,13 @@
   (`-0.00132`), and macro AUPRC is `0.68625` versus `0.69087` (`-0.00463`).
   Thus simply matching SPD's eight learned query/prefix tokens does not explain
   or rescue the strict comparison.
+- No-ortho also failed to support a repair. Its macro AUROC was `0.85886`,
+  which is `0.00035` below prefix4 and `0.00499` below historical SPD,
+  although macro AUPRC increased to `0.70329`.
+- On 128 frozen MIMIC validation rows, historical SPD attention groups were
+  strongly separated (mean pairwise cosine `0.0000718`), whereas no-ortho
+  collapsed to almost identical maps (mean cosine `0.99284`) with normalized
+  entropy `0.988–0.994`. The orthogonality loss is therefore mechanistically
+  active, but that separation did not yield a gate-passing stable gain.
+- The final route verdict is `TERMINAL_NO_GO`; neither bounded diagnostic
+  supports a repaired identity.
