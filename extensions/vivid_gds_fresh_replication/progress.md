@@ -36,3 +36,7 @@
   `1.40079` to `0.07827` (94.41% reduction), with finite/nonzero backbone and
   projector gradients and the locked best checkpoint at step 3000. The queue
   advanced to `seed0_A3_gds`.
+- R1 `seed0_A3_gds` completed and passed: validation token NLL fell from
+  `1.74675` to `0.07699` (95.59% reduction) and schema NLL from `1.10009` to
+  `0.50511` (54.09% reduction). All three trainable groups passed gradient
+  audit, and the queue advanced to `seed1_A0_direct`.
