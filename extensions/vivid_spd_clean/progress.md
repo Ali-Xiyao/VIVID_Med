@@ -113,3 +113,9 @@
   `0.68625`, both below the frozen prefix4 result. Prefix8 remains a
   diagnostic-only negative result. The queue advanced to the final
   `ums_spd4x2_no_ortho` S3 probe.
+- S3 `ums_spd4x2_no_ortho` completed with macro AUROC `0.85886` and macro
+  AUPRC `0.70329`. Before the formal comparison could be written, the
+  read-only verdict script failed on a JSON-style `false` literal used in
+  Python. Both S3 summaries and hashes were preserved. The one-token
+  reporting-only repair changes it to `False`; no training or scoring is
+  rerun.

@@ -148,7 +148,7 @@ def main() -> int:
         "repair_checks": repair_checks,
         "historical_spd_gate": historical_gate,
         "prefix8_diagnostic": {
-            "promotion_eligible": false,
+            "promotion_eligible": False,
             "gate_against_prefix4": prefix8_gate,
             "macro_auroc_vs_historical_spd": (
                 prefix8["expert_development"]["macro_auroc"]
