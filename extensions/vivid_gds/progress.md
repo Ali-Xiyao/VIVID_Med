@@ -38,3 +38,10 @@
 - Preserved the failed run and froze the only schedule repair: generative
   overfit arms receive 1000 steps with the same 500-step warmup. G1 will restart
   from zero under run root suffix `_r1`.
+- Validated and pushed the repair as commit `3836e8c`; local and server unit
+  tests, lock audits, Python compilation, LF inspection, and launcher syntax
+  checks passed.
+- Started repaired run root
+  `local_runs/vivid_gds_stage_a_qwen35_2b_20260724_r1` as Slurm step
+  `3066.20209` (launcher PID `704958`). Repaired G0 passed and G1 restarted
+  from zero with `A0_direct` currently using GPU 0.
