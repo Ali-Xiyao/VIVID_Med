@@ -119,3 +119,8 @@
   Python. Both S3 summaries and hashes were preserved. The one-token
   reporting-only repair changes it to `False`; no training or scoring is
   rerun.
+- The repaired summarizer passed compilation and reused the preserved hashes.
+  It froze `TERMINAL_NO_GO`: no-ortho failed the unchanged S3 gate, achieved
+  macro AUROC `0.00035` below prefix4 and `0.00499` below historical SPD, and
+  did not support a repaired identity. One final preregistered descriptive
+  attention-group collapse analysis remains; it has no promotion effect.

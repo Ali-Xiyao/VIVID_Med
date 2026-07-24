@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "artifact": "strict_vivid_spd_attention_group_diagnostic_lock",
+  "frozen_at": "2026-07-24",
+  "purpose": "descriptive_attention_group_collapse_only",
+  "promotion_effect": "none",
+  "models": [
+    "ums_spd4x2",
+    "ums_spd4x2_no_ortho"
+  ],
+  "data": {
+    "source": "frozen_hard_ums_manifest",
+    "split": "validation",
+    "selection": "lexicographically_first_row_id",
+    "max_rows": 128,
+    "image_transform": "resize_224_imagenet_normalization"
+  },
+  "metrics": [
+    "pairwise_group_attention_cosine",
+    "normalized_group_attention_entropy"
+  ],
+  "protected_surfaces": [
+    "CheXlocalize_test",
+    "VinDr_test"
+  ]
+}
