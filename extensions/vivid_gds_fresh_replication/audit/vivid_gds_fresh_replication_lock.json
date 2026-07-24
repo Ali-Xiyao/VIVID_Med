@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "artifact": "vivid_gds_fresh_replication_lock",
+  "frozen_at": "2026-07-24",
+  "data": {
+    "source": "CheXpert-v1.0-small/train.csv",
+    "source_sha256": "b4bcd3d7942de23349bbe922a2389185d639cb06a24e700efb4980caae80b8e8",
+    "protected_valid_sha256": "aa43403f7bb183a35ae3bb9152896c1fe9a5b297635e0b541e363b776830ec4a",
+    "eligible_view": "Frontal",
+    "patient_hash_salt": "vivid-gds-fresh-v1",
+    "bucket_modulus": 20,
+    "fresh_development_buckets": [0],
+    "probe_validation_buckets": [1],
+    "probe_train_buckets": [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19],
+    "expected": {
+      "probe_train": {"rows": 172478, "patients": 58230},
+      "probe_validation": {"rows": 9144, "patients": 3186},
+      "fresh_development": {"rows": 9405, "patients": 3118}
+    },
+    "findings": [
+      "Atelectasis",
+      "Cardiomegaly",
+      "Consolidation",
+      "Edema",
+      "Pleural Effusion"
+    ],
+    "label_policy": "literal_0_1_observed_missing_and_uncertain_masked"
+  },
+  "pretraining": {
+    "arms": ["A0_direct", "A2_ums", "A3_gds"],
+    "seeds": [0, 1, 2],
+    "teacher": "Qwen3.5-2B",
+    "projector": "historical_prefix4",
+    "backbone": "vit_base_patch16_224.augreg2_in21k_ft_in1k",
+    "hard_ums_manifest_sha256": "1da254ab25ab8f005536ff16ac7a1c40e33f15add2afa25277a8c6e06f6e30b4",
+    "pilot_steps": 3000,
+    "batch_size": 4,
+    "gradient_accumulation": 8,
+    "effective_batch_size": 32,
+    "lambda_schema": 0.5,
+    "lambda_ramp_steps": 500,
+    "checkpoint": {
+      "A0_direct": "minimum_mimic_validation_schema_nll",
+      "A2_ums": "minimum_mimic_validation_token_nll",
+      "A3_gds": "minimum_mimic_validation_token_nll"
+    }
+  },
+  "probe": {
+    "epochs": 50,
+    "learning_rate": 0.001,
+    "weight_decay": 0.0001,
+    "checkpoint": "minimum_probe_validation_masked_nll",
+    "seed_policy": "matched_to_pretraining_seed"
+  },
+  "promotion": {
+    "mean_macro_auroc_delta_min": {
+      "A3_minus_A0": 0.005,
+      "A3_minus_A2": 0.005
+    },
+    "all_seed_auroc_direction_positive": true,
+    "primary_bootstrap": {
+      "comparison": "A3_minus_A0",
+      "replicates": 10000,
+      "seed": 20260724,
+      "lower_bound_strictly_above": 0.0
+    },
+    "mean_macro_auprc_delta_min": {
+      "A3_minus_A0": -0.005,
+      "A3_minus_A2": -0.005
+    },
+    "per_finding_mean_auroc_delta_min": -0.02
+  },
+  "forbidden": [
+    "old_CheXpert_expert_development_scores",
+    "CheXpert_official_valid_scoring",
+    "CheXlocalize_validation_scoring",
+    "CheXlocalize_test",
+    "VinDr_test",
+    "threshold_change",
+    "new_module",
+    "new_projector",
+    "loss_change",
+    "Qwen3.5-4B",
+    "Qwen3.5-9B",
+    "same_surface_repair"
+  ]
+}

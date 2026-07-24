@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "artifact": "vivid_gds_fresh_replication_prelaunch_readiness_summary",
+  "audited_at": "2026-07-24",
+  "pass": true,
+  "checks": {
+    "split_audit_pass": true,
+    "hard_manifest_hash": true,
+    "pretraining_identity": true,
+    "teacher_present": true,
+    "backbone_present": true,
+    "scripts_present": true,
+    "probe_train_identity": true,
+    "probe_validation_identity": true,
+    "fresh_development_identity": true,
+    "patient_disjoint": true,
+    "path_disjoint": true,
+    "chexpert_images_present": true,
+    "protected_tests_not_referenced": true
+  },
+  "hashes": {
+    "lock": "17c09345de091ec14ba44be59937f500fbe749173735b5d4f7a4e4330e56d567",
+    "split_audit": "36d8741bb9d7c12004f3bb06572026e172e6b587ecd8018c202b6c28685c43a6",
+    "hard_manifest": "1da254ab25ab8f005536ff16ac7a1c40e33f15add2afa25277a8c6e06f6e30b4",
+    "backbone_weights": "32aa17d6e17b43500f531d5f6dc9bc93e56ed8841b8a75682e1bb295d722405b",
+    "training_script_remote_crlf": "9c5a1d4fe52dbc27952a2f20f0bee46c9fcd8a078d27117623c5602e131842a3",
+    "training_script_normalized_lf": "93eeb17112a27a5c3184f8def18791e6e8f21b1cc7f32278abd9f2f2c96e306e",
+    "probe_script": "883ba1c2a195fc18ac686dff0e06fae43750dcd0054c46a62830c527b8fb89a0",
+    "gate_script": "95b60f4f6aa8817c8c8f689479628c3cdecc5bc38a97179eac09eaf0d2ce2444"
+  }
+}
+

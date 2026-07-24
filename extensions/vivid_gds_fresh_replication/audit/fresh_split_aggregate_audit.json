@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "artifact": "vivid_gds_fresh_split_aggregate_audit",
+  "audited_at": "2026-07-24",
+  "pass": true,
+  "checks": {
+    "source_hash": true,
+    "protected_valid_hash": true,
+    "bucket_partition": true,
+    "expected_counts": true,
+    "patient_disjoint": true,
+    "path_disjoint": true,
+    "protected_surface_disjoint": true,
+    "images_present": true,
+    "findings_nondegenerate": true
+  },
+  "splits": {
+    "probe_train": {
+      "rows": 172478,
+      "patients": 58230,
+      "sha256": "21960f9b252d286d24558892a5976d1903019059f0297e4103e4e1d9f8f5245e"
+    },
+    "probe_validation": {
+      "rows": 9144,
+      "patients": 3186,
+      "sha256": "85c79cd2bcfb77e3325b6ecf942196d64129bdf9e6cbf404bfff1084dfbee6ef"
+    },
+    "fresh_development": {
+      "rows": 9405,
+      "patients": 3118,
+      "sha256": "33c26ec5d67efd434b2a0df5bb1c62733c8cfa1ac95a83f7d341e083b4a67f4b"
+    }
+  },
+  "overlap": {
+    "between_split_patients": 0,
+    "between_split_paths": 0,
+    "official_valid_patients": 0,
+    "official_valid_paths": 0
+  },
+  "source_hashes": {
+    "train_csv": "b4bcd3d7942de23349bbe922a2389185d639cb06a24e700efb4980caae80b8e8",
+    "protected_valid_csv": "aa43403f7bb183a35ae3bb9152896c1fe9a5b297635e0b541e363b776830ec4a"
+  },
+  "privacy": "patient rows and paths retained only on the SUES server"
+}
+
