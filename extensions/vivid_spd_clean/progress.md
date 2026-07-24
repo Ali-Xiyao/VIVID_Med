@@ -124,3 +124,8 @@
   macro AUROC `0.00035` below prefix4 and `0.00499` below historical SPD, and
   did not support a repaired identity. One final preregistered descriptive
   attention-group collapse analysis remains; it has no promotion effect.
+- The first CPU-only attention analysis failed before image loading because
+  the reader used split literal `validation` while the frozen manifest uses
+  `validate`. The failed log was preserved. The sole split-reader repair
+  aligns the descriptive lock with the existing manifest and reruns the same
+  first 128 rows; it cannot affect the terminal verdict.

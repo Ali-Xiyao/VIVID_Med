@@ -34,7 +34,7 @@ class ValidationImages(Dataset):
         max_rows: int,
     ) -> None:
         rows = [
-            row for row in load_jsonl(manifest) if row["split"] == "validation"
+            row for row in load_jsonl(manifest) if row["split"] == "validate"
         ]
         self.rows = sorted(rows, key=lambda row: str(row["row_id"]))[:max_rows]
         if len(self.rows) != max_rows:

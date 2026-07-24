@@ -10,7 +10,7 @@
   ],
   "data": {
     "source": "frozen_hard_ums_manifest",
-    "split": "validation",
+    "split": "validate",
     "selection": "lexicographically_first_row_id",
     "max_rows": 128,
     "image_transform": "resize_224_imagenet_normalization"
