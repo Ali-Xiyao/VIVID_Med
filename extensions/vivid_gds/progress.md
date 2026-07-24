@@ -61,3 +61,6 @@
   schema head.
 - All G1 arms are now PASS. The queue promoted automatically to G2 and started
   the frozen 3000-step `A0_direct` pilot.
+- G2 `A0_direct` completed all 3000 steps: validation schema NLL `0.508074`,
+  schema accuracy `0.816180`, and NLL reduction `53.82%`. The queue then
+  started the paired `A1_freetext` pilot, which reached step 90 normally.

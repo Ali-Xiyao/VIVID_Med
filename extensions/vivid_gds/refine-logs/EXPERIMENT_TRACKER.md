@@ -6,8 +6,8 @@
 | G1-A0 | overfit | direct schema | PASS | repaired run reproduced acc 0.9932; NLL reduction 90.29% |
 | G1-A1 | overfit | free-text Qwen | PASS | step 550; acc 0.9834; NLL reduction 97.28% |
 | G1-A3 | overfit | VIVID-GDS | PASS | step 400; token acc 0.9899; schema acc 0.9872 |
-| G2-A0 | 20k | direct schema | RUNNING | frozen 3000-step pilot |
-| G2-A1 | 20k | free-text Qwen | LOCKED | G1 pass |
+| G2-A0 | 20k | direct schema | PASS | 3000 steps; schema NLL 0.5081; acc 0.8162 |
+| G2-A1 | 20k | free-text Qwen | RUNNING | frozen 3000-step pilot |
 | G2-A2 | 20k | frozen UMS prefix4 | REUSE_CANDIDATE | hash parity |
 | G2-A3 | 20k | VIVID-GDS | LOCKED | G1 pass |
 | G3 | probe | A0–A3 | LOCKED | all G2 ready |

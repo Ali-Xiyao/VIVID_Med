@@ -45,3 +45,6 @@
   accuracy `0.989912`, schema accuracy `0.987245`, token NLL reduction
   `98.20%`, and schema NLL reduction `92.12%`. All three trainable modules had
   finite nonzero gradients, so the dual-path implementation is learnable.
+- The G2 A0 pilot completed all 3000 steps on the frozen split. Validation
+  schema NLL fell from `1.100093` to `0.508074` (`53.82%`) and schema accuracy
+  rose from `0.316571` to `0.816180`; gradients remained finite and nonzero.
