@@ -29,3 +29,6 @@
 - Queue R0 passed and R1 began with `seed0_A0_direct`; the first ten GPU
   optimization steps completed normally. The remaining A0/A2/A3 seed pairs
   and all probes remain queued.
+- R1 `seed0_A0_direct` completed and passed: validation schema NLL fell from
+  `1.10009` to `0.50807` (53.82% reduction), with the locked best checkpoint
+  at step 3000. The queue advanced to `seed0_A2_ums`.
