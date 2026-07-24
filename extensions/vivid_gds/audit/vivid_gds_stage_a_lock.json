@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "artifact": "vivid_gds_stage_a_lock",
+  "frozen_at": "2026-07-24",
+  "method": {
+    "name": "VIVID-GDS",
+    "teacher": "Qwen3.5-2B",
+    "projector": "historical_prefix4",
+    "backbone": "vit_base_patch16_224.augreg2_in21k_ft_in1k",
+    "findings": 12,
+    "states": ["present", "absent", "uncertain"],
+    "missing_policy": "supervision_mask",
+    "schema_hidden_dim": 512,
+    "schema_dropout": 0.1,
+    "lambda_schema": 0.5,
+    "lambda_ramp_steps": 500
+  },
+  "data": {
+    "hard_ums_manifest_sha256": "1da254ab25ab8f005536ff16ac7a1c40e33f15add2afa25277a8c6e06f6e30b4",
+    "train_studies": 20000,
+    "split": "frozen_patient_level",
+    "free_text_policy": "deterministic_historical_templates_same_selected_fields"
+  },
+  "budget": {
+    "seed": 0,
+    "pilot_steps": 3000,
+    "overfit_rows": 256,
+    "overfit_max_steps": 500,
+    "batch_size": 4,
+    "gradient_accumulation": 8,
+    "effective_batch_size": 32
+  },
+  "checkpoint": {
+    "A0_direct": "strictly_lower_validation_schema_nll",
+    "A1_freetext": "strictly_lower_validation_generation_token_nll",
+    "A2_ums": "reuse_frozen_strict_prefix4_checkpoint",
+    "A3_gds": "strictly_lower_validation_generation_token_nll"
+  },
+  "promotion": {
+    "primary_findings": [
+      "Atelectasis",
+      "Cardiomegaly",
+      "Consolidation",
+      "Edema",
+      "Pleural Effusion"
+    ],
+    "A2_minus_A1": {
+      "macro_auroc_at_least": 0.005,
+      "macro_auprc_at_least": -0.005,
+      "nonnegative_findings_at_least": 4,
+      "findings_below_minus_0_02_at_most": 1
+    },
+    "A2_minus_A0": {
+      "macro_auroc_at_least": 0.003,
+      "macro_auprc_at_least": -0.005
+    },
+    "A3_minus_A2": {
+      "macro_auroc_at_least": 0.005,
+      "macro_auprc_at_least": -0.005,
+      "nonnegative_findings_at_least": 4,
+      "findings_below_minus_0_02_at_most": 1
+    }
+  },
+  "forbidden": [
+    "CheXlocalize_test",
+    "VinDr_test",
+    "threshold_relaxation",
+    "Qwen3.5-4B",
+    "Qwen3.5-9B",
+    "SPD",
+    "new_projector",
+    "contrastive_loss",
+    "graph_module",
+    "causal_selector"
+  ]
+}

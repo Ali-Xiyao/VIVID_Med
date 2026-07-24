@@ -1,0 +1,18 @@
+# VIVID-GDS
+
+VIVID-GDS is the clean VIVID-Med journal-extension route after the terminal
+strict-SPD result. It tests whether a training-only UMS schema readout can
+align the frozen-Qwen generation objective with the representation that is
+actually deployed and probed downstream.
+
+Start with:
+
+1. `audit/VIVID_GDS_EXPERIMENT_PROTOCOL_20260724.md`;
+2. `audit/vivid_gds_stage_a_lock.json`;
+3. `refine-logs/EXPERIMENT_PLAN.md`;
+4. `refine-logs/EXPERIMENT_TRACKER.md`;
+5. `progress.md`.
+
+The first decision is deliberately small: paired 20k MIMIC Stage-A arms under
+one data lock, followed by one CheXpert expert-development probe protocol.
+No external or protected test set is used for method selection.

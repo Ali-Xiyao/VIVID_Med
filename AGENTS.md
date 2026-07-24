@@ -2,24 +2,29 @@
 
 ## Active authority
 
-This branch activates the isolated strict VIVID/SPD clean extension under:
+This branch activates the isolated VIVID-GDS extension under:
 
-- `extensions/vivid_spd_clean/audit/VIVID_SPD_CLEAN_EXPERIMENT_PROTOCOL.md`;
-- `extensions/vivid_spd_clean/audit/vivid_spd_clean_lock.json`;
-- `extensions/vivid_spd_clean/AGENTS.md`.
+- `extensions/vivid_gds/audit/VIVID_GDS_EXPERIMENT_PROTOCOL_20260724.md`;
+- `extensions/vivid_gds/audit/vivid_gds_stage_a_lock.json`;
+- `extensions/vivid_gds/AGENTS.md`.
 
-The active question is the paired hard-UMS comparison between the historical
-four-prefix projector and historical four-by-two SPD using frozen
-Qwen3.5-2B. Qwen3.5-4B/9B remain locked behind the primary gate.
+The active question is whether a training-only UMS schema readout,
+synchronized with the retained hard-UMS prefix4 generation path, improves the
+deployed ViT representation. The four Stage-A arms are direct schema
+supervision, free-text generation, UMS generation, and VIVID-GDS.
 
-BiVES, RCSD, VSL, ARISE, VICER, and MORPH are frozen history. Do not merge
-their targets, losses, selectors, posterior weighting, field anchors,
-interventions, or claims into the strict VIVID/SPD route.
+The strict VIVID/SPD route ended terminal NO-GO and is frozen under
+`extensions/vivid_spd_clean/audit/VIVID_SPD_CLEAN_TERMINAL_RESULT_20260724.md`.
+BiVES, RCSD, VSL, ARISE, VICER, MORPH, and strict SPD are history. Do not merge
+their failed modules, selectors, posterior weighting, field anchors,
+interventions, or claims into VIVID-GDS.
 
 ## Project structure
 
-- `extensions/vivid_spd_clean/`: only active method, protocol, code, tests,
+- `extensions/vivid_gds/`: only active method, protocol, code, tests,
   launchers, and planning state on this branch.
+- `extensions/vivid_spd_clean/`: frozen strict-SPD terminal evidence and
+  reusable audited prefix4 implementation.
 - `extensions/rcsd_cxr/`: terminal RCSD audit history; not an active method.
 - `bives_cxr/`: active evidence model, closed-form decoder, intervention logic,
   losses, metrics, Qwen3.5 adapter, and manifest dataset.
@@ -58,13 +63,13 @@ python scripts/audit_bives_manifest.py \
   --val data/bives_cxr/manifests/val_locked.jsonl
 # Formal P0 uses qwen35_2b_p0.yaml without --debug, only after its locks pass.
 
-python -m unittest discover -s extensions/vivid_spd_clean/tests -v
-python extensions/vivid_spd_clean/scripts/smoke_vivid_spd_clean.py
-python extensions/vivid_spd_clean/scripts/audit_vivid_spd_lock.py
+python -m unittest discover -s extensions/vivid_gds/tests -v
+python extensions/vivid_gds/scripts/smoke_vivid_gds.py
+python extensions/vivid_gds/scripts/audit_vivid_gds_lock.py
 ```
 
 The user explicitly authorized server execution and cached models for the
-strict extension. It may run through retained SUES allocation `3066` on
+VIVID-GDS extension. It may run through retained SUES allocation `3066` on
 `gpu01` as a sequential queue after read-only ownership/capacity checks. Do not
 stop or alter unrelated jobs. All older routes remain frozen and are not
 authorized for server replay.
