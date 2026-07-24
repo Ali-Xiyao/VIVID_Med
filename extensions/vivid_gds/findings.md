@@ -62,3 +62,13 @@
   macro AUPRC of `0.689420` from the internally selected epoch-23 probe. These
   values are development evidence only; A1, reused A2, and A3 must finish
   before the frozen three-comparison gate can be applied.
+- All G3 probes completed. Macro AUROC/AUPRC were A0 `0.865671/0.689420`,
+  A1 `0.860507/0.687679`, reused A2 `0.859209/0.690875`, and A3
+  `0.869484/0.698273`.
+- G4 froze `STAGE_A_NO_GO`: A2-A1 failed (`-0.001299` AUROC), A2-A0 failed
+  (`-0.006462` AUROC), and A3-A2 passed (`+0.010275` AUROC and `+0.007398`
+  AUPRC, 4/5 nonnegative findings, no decline below -0.02).
+- The bounded case study shows that A3 learned and improved over A2, but the
+  prerequisite claim that A2 improves over free text and direct schema did
+  not hold. No identity-preserving repair can alter those baseline
+  comparisons, so no repair or lambda sensitivity is nominated.

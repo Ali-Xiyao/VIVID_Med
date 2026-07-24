@@ -14,8 +14,8 @@ reactivating strict SPD or protected evaluation surfaces.
 - [x] Synchronize code-only assets to the isolated server root.
 - [x] Launch M0 overfit gates on retained allocation 3066.
 - [x] If M0 passes, run 20k A0/A1/A3 pilots sequentially.
-- [ ] Probe A0/A1/A2/A3 and apply the frozen three-comparison gate (G3 active).
-- [ ] Freeze PASS or NO-GO, update Git, and stop the monitor.
+- [x] Probe A0/A1/A2/A3 and apply the frozen three-comparison gate.
+- [x] Freeze terminal NO-GO, update Git, and stop the monitor.
 
 ## Boundaries
 

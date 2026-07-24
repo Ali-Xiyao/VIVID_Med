@@ -11,7 +11,7 @@
 | G2-A2 | 20k | frozen UMS prefix4 | REUSE_CANDIDATE | hash parity |
 | G2-A3 | 20k | VIVID-GDS | PASS | 3000 steps; token NLL 0.0770; schema acc 0.8210 |
 | G3-A0 | probe | direct schema | PASS | macro AUROC 0.8657; macro AUPRC 0.6894 |
-| G3-A1 | probe | free-text Qwen | RUNNING | internally selected CheXpert probe |
-| G3-A2 | probe | frozen UMS prefix4 | QUEUED | reuse frozen A2 checkpoint |
-| G3-A3 | probe | VIVID-GDS | QUEUED | starts after A2 |
-| G4 | verdict | three comparisons | LOCKED | frozen thresholds |
+| G3-A1 | probe | free-text Qwen | PASS | macro AUROC 0.8605; macro AUPRC 0.6877 |
+| G3-A2 | probe | frozen UMS prefix4 | PASS | reused macro AUROC 0.8592; macro AUPRC 0.6909 |
+| G3-A3 | probe | VIVID-GDS | PASS | macro AUROC 0.8695; macro AUPRC 0.6983 |
+| G4 | verdict | three comparisons | TERMINAL_NO_GO | A2-A1 fail; A2-A0 fail; A3-A2 pass |

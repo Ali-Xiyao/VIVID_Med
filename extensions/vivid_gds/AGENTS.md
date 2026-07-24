@@ -6,6 +6,10 @@
 `audit/vivid_gds_stage_a_lock.json` are the only active scientific and
 execution authorities in this directory.
 
+Stage A is terminal `NO-GO`. The result authority is
+`audit/VIVID_GDS_STAGE_A_TERMINAL_NO_GO_20260724.md`. Do not rerun, repair,
+scale, or open external/protected surfaces.
+
 The method identity is fixed as VIVID-GDS:
 
 - frozen Qwen3.5-2B;

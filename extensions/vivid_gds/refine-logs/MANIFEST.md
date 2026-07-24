@@ -3,6 +3,8 @@
 - `docs/VIVID_MED_PLUS_PROPOSAL_20260724.md`: normalized proposal.
 - `audit/VIVID_GDS_EXPERIMENT_PROTOCOL_20260724.md`: execution authority.
 - `audit/vivid_gds_stage_a_lock.json`: machine-readable frozen identity.
+- `audit/VIVID_GDS_STAGE_A_TERMINAL_NO_GO_20260724.md`: terminal result,
+  bounded case study, evidence hashes, and closed boundaries.
 - `refine-logs/EXPERIMENT_PLAN_20260724.md`: timestamped plan.
 - `refine-logs/EXPERIMENT_PLAN.md`: stable plan entrypoint.
 - `refine-logs/EXPERIMENT_TRACKER.md`: live stage ledger.

@@ -5,11 +5,16 @@ strict-SPD result. It tests whether a training-only UMS schema readout can
 align the frozen-Qwen generation objective with the representation that is
 actually deployed and probed downstream.
 
+Stage A is terminal `NO-GO`: A3 improved over A2, but the frozen A2-A1 and
+A2-A0 prerequisite comparisons failed. The current result authority is
+`audit/VIVID_GDS_STAGE_A_TERMINAL_NO_GO_20260724.md`. No external or protected
+test surface was opened.
+
 Start with:
 
-1. `audit/VIVID_GDS_EXPERIMENT_PROTOCOL_20260724.md`;
-2. `audit/vivid_gds_stage_a_lock.json`;
-3. `refine-logs/EXPERIMENT_PLAN.md`;
+1. `audit/VIVID_GDS_STAGE_A_TERMINAL_NO_GO_20260724.md`;
+2. `audit/VIVID_GDS_EXPERIMENT_PROTOCOL_20260724.md`;
+3. `audit/vivid_gds_stage_a_lock.json`;
 4. `refine-logs/EXPERIMENT_TRACKER.md`;
 5. `progress.md`.
 

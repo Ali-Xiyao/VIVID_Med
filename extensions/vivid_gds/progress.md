@@ -74,3 +74,8 @@
 - The queue promoted to G3. `A0_direct` probe completed with expert-development
   macro AUROC `0.865671` and macro AUPRC `0.689420`; `A1_freetext` probe is
   now running automatically.
+- G3 completed all probes and G4 applied the frozen comparisons. A3 was the
+  strongest arm and passed A3-A2, but A2 failed both A2-A1 and A2-A0.
+- Froze terminal `STAGE_A_NO_GO`. Completed the authorized bounded case study,
+  nominated no repair, kept every external/protected surface closed, and
+  recorded evidence hashes in the terminal report.
