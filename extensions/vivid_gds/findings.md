@@ -52,3 +52,13 @@
   `2.368876` to `0.480147` (`79.73%`) and token accuracy rose from `0.549314`
   to `0.819989`; the best checkpoint was the final checkpoint and gradients
   remained finite and nonzero.
+- The G2 A3 pilot completed all 3000 steps and passed. Validation token NLL
+  fell from `1.746747` to `0.076986` (`95.59%`) while token accuracy reached
+  `0.969969`; schema NLL fell from `1.100093` to `0.505107` (`54.09%`) and
+  schema accuracy reached `0.821001`. The final checkpoint was best under the
+  frozen token-NLL rule, and all three trainable modules had finite nonzero
+  gradients.
+- G3 A0 produced a CheXpert expert-development macro AUROC of `0.865671` and
+  macro AUPRC of `0.689420` from the internally selected epoch-23 probe. These
+  values are development evidence only; A1, reused A2, and A3 must finish
+  before the frozen three-comparison gate can be applied.

@@ -67,3 +67,10 @@
 - G2 `A1_freetext` completed all 3000 steps: validation token NLL `0.480147`,
   token accuracy `0.819989`, and NLL reduction `79.73%`. G2 `A3_gds` started
   automatically and reached step 120 with both training losses decreasing.
+- G2 `A3_gds` completed all 3000 steps and passed: validation token NLL
+  `0.076986`, token accuracy `0.969969`, schema NLL `0.505107`, schema
+  accuracy `0.821001`, and finite nonzero gradients for the backbone,
+  projector, and schema head.
+- The queue promoted to G3. `A0_direct` probe completed with expert-development
+  macro AUROC `0.865671` and macro AUPRC `0.689420`; `A1_freetext` probe is
+  now running automatically.
