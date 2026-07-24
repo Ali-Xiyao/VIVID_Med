@@ -41,3 +41,7 @@
   `0.983383`, token NLL `0.064278`, and NLL reduction `97.28%`. This confirms
   the first failure was caused by the missing post-warmup interval rather than
   an unlearnable deterministic free-text target.
+- A3 passed both unchanged feasibility gates together at step 400: token
+  accuracy `0.989912`, schema accuracy `0.987245`, token NLL reduction
+  `98.20%`, and schema NLL reduction `92.12%`. All three trainable modules had
+  finite nonzero gradients, so the dual-path implementation is learnable.

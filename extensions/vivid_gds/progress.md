@@ -55,3 +55,9 @@
   the fixed 0.98/80% gate without using the remaining budget.
 - G1 `A3_gds` started automatically and reached step 150; token accuracy was
   `0.947603` and schema accuracy was `0.735544` at that milestone.
+- G1 `A3_gds` passed at step 400 with token accuracy `0.989912`, schema
+  accuracy `0.987245`, token NLL reduction `98.20%`, schema NLL reduction
+  `92.12%`, and finite nonzero gradients for the backbone, projector, and
+  schema head.
+- All G1 arms are now PASS. The queue promoted automatically to G2 and started
+  the frozen 3000-step `A0_direct` pilot.
