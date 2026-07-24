@@ -26,3 +26,8 @@
 - The one allowed identity-preserving implementation repair changes only the
   declared/checking counts to those exact observed values; it does not change
   the manifest, split, target, threshold, teacher, or checkpoint.
+- The first launcher invocation then failed before creating a Slurm step
+  because the Windows-exported shell file had CRLF line endings. The run root
+  was never created and no GPU work occurred. The remote log is preserved.
+- Shell files are now explicitly locked to LF through `.gitattributes`; this
+  is a transport repair and does not alter the scientific identity.

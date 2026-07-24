@@ -18,4 +18,6 @@
 - Preserved a prelaunch G0 failure caused by an incorrect documented row count.
   Applied the single allowed identity-preserving repair: the lock now records
   the actual immutable 19,533/1,679/21,212 split.
+- Preserved a pre-step launcher failure caused by CRLF shell line endings.
+  Added an LF repository contract; no Slurm GPU step or run root had started.
 - Server revalidation and launch are in progress.
