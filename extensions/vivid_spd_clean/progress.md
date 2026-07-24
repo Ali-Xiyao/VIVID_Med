@@ -102,3 +102,7 @@
   `0.98769` and NLL reduction `98.16%`. Both bounded diagnostic arms are
   learnable, so the queue advanced to fresh S2 `ums_prefix8` at the unchanged
   3,000-step pilot budget.
+- Diagnostic S2 `ums_prefix8` passed at step 3000. Validation NLL fell from
+  `1.43329` to `0.07734` (`94.60%` reduction), token accuracy reached
+  `0.96954`, and the minimum-NLL checkpoint was step 3000. The queue advanced
+  to fresh S2 `ums_spd4x2_no_ortho`.
