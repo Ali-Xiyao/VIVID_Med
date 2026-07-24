@@ -48,3 +48,7 @@
 - The G2 A0 pilot completed all 3000 steps on the frozen split. Validation
   schema NLL fell from `1.100093` to `0.508074` (`53.82%`) and schema accuracy
   rose from `0.316571` to `0.816180`; gradients remained finite and nonzero.
+- The G2 A1 pilot completed all 3000 steps. Validation token NLL fell from
+  `2.368876` to `0.480147` (`79.73%`) and token accuracy rose from `0.549314`
+  to `0.819989`; the best checkpoint was the final checkpoint and gradients
+  remained finite and nonzero.

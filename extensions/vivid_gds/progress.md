@@ -64,3 +64,6 @@
 - G2 `A0_direct` completed all 3000 steps: validation schema NLL `0.508074`,
   schema accuracy `0.816180`, and NLL reduction `53.82%`. The queue then
   started the paired `A1_freetext` pilot, which reached step 90 normally.
+- G2 `A1_freetext` completed all 3000 steps: validation token NLL `0.480147`,
+  token accuracy `0.819989`, and NLL reduction `79.73%`. G2 `A3_gds` started
+  automatically and reached step 120 with both training losses decreasing.
