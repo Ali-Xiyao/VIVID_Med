@@ -106,3 +106,10 @@
   `1.43329` to `0.07734` (`94.60%` reduction), token accuracy reached
   `0.96954`, and the minimum-NLL checkpoint was step 3000. The queue advanced
   to fresh S2 `ums_spd4x2_no_ortho`.
+- Diagnostic S2 `ums_spd4x2_no_ortho` passed at step 3000. Validation NLL
+  fell from `1.85146` to `0.07702` (`95.84%` reduction), token accuracy
+  reached `0.97006`, and step 3000 was selected.
+- S3 `ums_prefix8` completed with macro AUROC `0.85788` and macro AUPRC
+  `0.68625`, both below the frozen prefix4 result. Prefix8 remains a
+  diagnostic-only negative result. The queue advanced to the final
+  `ums_spd4x2_no_ortho` S3 probe.

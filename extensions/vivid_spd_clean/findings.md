@@ -63,3 +63,8 @@
   orthogonality loss is the sole possible repaired identity, and it may only
   be nominated if it passes the unchanged S3 gate and improves on historical
   SPD under the pre-frozen rule.
+- The prefix8 sequence-budget diagnostic does not improve the frozen prefix4
+  expert-development result: macro AUROC is `0.85788` versus `0.85921`
+  (`-0.00132`), and macro AUPRC is `0.68625` versus `0.69087` (`-0.00463`).
+  Thus simply matching SPD's eight learned query/prefix tokens does not explain
+  or rescue the strict comparison.
