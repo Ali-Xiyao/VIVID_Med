@@ -40,3 +40,6 @@
   `1.74675` to `0.07699` (95.59% reduction) and schema NLL from `1.10009` to
   `0.50511` (54.09% reduction). All three trainable groups passed gradient
   audit, and the queue advanced to `seed1_A0_direct`.
+- R1 `seed1_A0_direct` completed and passed: validation schema NLL fell from
+  `1.07115` to `0.51409` (52.01% reduction); the locked best checkpoint was
+  step 2500. The queue advanced to `seed1_A2_ums`.
