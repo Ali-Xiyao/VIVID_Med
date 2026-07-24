@@ -31,3 +31,10 @@
   backbone/schema-head gradients were finite and nonzero.
 - G1 `A1_freetext` is running. At step 300, token NLL was `0.358975` and token
   accuracy was `0.873562`; it had advanced beyond step 310 at the latest poll.
+- The first G1 `A1_freetext` run stopped at step 500 with a scientific gate
+  code but an implementation-level schedule mismatch: NLL reduction was
+  `95.05%`, while accuracy was `0.964316` versus `0.98`. The 500-step run had
+  no post-warmup interval.
+- Preserved the failed run and froze the only schedule repair: generative
+  overfit arms receive 1000 steps with the same 500-step warmup. G1 will restart
+  from zero under run root suffix `_r1`.

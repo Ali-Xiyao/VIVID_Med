@@ -31,3 +31,9 @@
   was never created and no GPU work occurred. The remote log is preserved.
 - Shell files are now explicitly locked to LF through `.gitattributes`; this
   is a transport repair and does not alter the scientific identity.
+- G1 A1 failed the original 500-step overfit gate despite a 95.05% NLL
+  reduction because token accuracy reached 0.9643 rather than 0.98. The
+  optimizer was still in its 500-step warmup for the entire feasibility run.
+- The single A1 schedule repair gives generative overfit arms 500 additional
+  post-warmup steps. It does not change the fixed thresholds, pilot budget,
+  data, model, targets, or checkpoint rules. The original run is preserved.

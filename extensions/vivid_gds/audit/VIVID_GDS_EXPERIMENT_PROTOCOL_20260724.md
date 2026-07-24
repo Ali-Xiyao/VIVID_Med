@@ -50,6 +50,10 @@ Before 20k pilots:
 - audit all paths, hashes, row counts, patient disjointness, field/state schema,
   teacher weights, ViT weights, and protected-test non-use;
 - A0, A1, and A3 must pass the 256-row overfit gate;
+- A0 has a 500-step feasibility budget. After the preserved A1 schedule
+  failure, generative arms have one repaired 1000-step budget: 500 warmup
+  steps followed by 500 post-warmup steps. This does not change the 3000-step
+  pilot budget or any promotion threshold;
 - A0 schema accuracy >= 0.98 and schema NLL reduction >= 80%;
 - A1 token accuracy >= 0.98 and token NLL reduction >= 80%;
 - A3 must satisfy both A1 generation and A0 schema criteria;

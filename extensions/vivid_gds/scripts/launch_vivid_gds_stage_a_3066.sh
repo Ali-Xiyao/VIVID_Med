@@ -5,7 +5,7 @@ ROOT=/ipfs/inspurfileset/home/dqxy/dqxy11/projects/xiyaowang/02101_vivid_gds
 RCSD=/ipfs/inspurfileset/home/dqxy/dqxy11/projects/xiyaowang/02101
 STRICT=/ipfs/inspurfileset/home/dqxy/dqxy11/projects/xiyaowang/02101_vivid_spd_clean
 PY=/ipfs/inspurfileset/home/dqxy/dqxy11/miniforge3/envs/vivid_med310/bin/python
-RUN_ROOT="$ROOT/local_runs/vivid_gds_stage_a_qwen35_2b_20260724"
+RUN_ROOT="$ROOT/local_runs/vivid_gds_stage_a_qwen35_2b_20260724_r1"
 
 if [[ -e "$RUN_ROOT" ]]; then
   echo "run root already exists: $RUN_ROOT" >&2
@@ -48,4 +48,5 @@ exec srun \
     --a2-checkpoint "$STRICT/local_runs/strict_vivid_spd_qwen35_2b_20260723_s0_s3/s2/ums_prefix4/best.pt" \
     --a2-probe-summary "$STRICT/local_runs/strict_vivid_spd_qwen35_2b_20260723_s0_s3/s3/ums_prefix4/summary.json" \
     --lock "$ROOT/audit/vivid_gds_stage_a_lock.json" \
+    --generative-overfit-max-steps 1000 \
     --device cuda:0

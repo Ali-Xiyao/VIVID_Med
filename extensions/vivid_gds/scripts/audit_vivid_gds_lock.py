@@ -24,7 +24,9 @@ def main() -> int:
         "lambda": payload["method"]["lambda_schema"] == 0.5,
         "ramp": payload["method"]["lambda_ramp_steps"] == 500,
         "budget": payload["budget"]["pilot_steps"] == 3000
-        and payload["budget"]["effective_batch_size"] == 32,
+        and payload["budget"]["effective_batch_size"] == 32
+        and payload["budget"]["overfit_max_steps"]["A0_direct"] == 500
+        and payload["budget"]["overfit_max_steps"]["generative_arms"] == 1000,
         "protected_tests": {"CheXlocalize_test", "VinDr_test"}.issubset(
             payload["forbidden"]
         ),

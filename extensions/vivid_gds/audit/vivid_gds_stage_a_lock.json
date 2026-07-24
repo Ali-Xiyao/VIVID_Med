@@ -29,7 +29,10 @@
     "seed": 0,
     "pilot_steps": 3000,
     "overfit_rows": 256,
-    "overfit_max_steps": 500,
+    "overfit_max_steps": {
+      "A0_direct": 500,
+      "generative_arms": 1000
+    },
     "batch_size": 4,
     "gradient_accumulation": 8,
     "effective_batch_size": 32

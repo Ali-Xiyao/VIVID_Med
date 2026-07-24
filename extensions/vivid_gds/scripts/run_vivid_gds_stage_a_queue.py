@@ -75,6 +75,7 @@ def main() -> int:
     parser.add_argument("--a2-probe-summary", required=True, type=Path)
     parser.add_argument("--lock", required=True, type=Path)
     parser.add_argument("--device", default="cuda:0")
+    parser.add_argument("--generative-overfit-max-steps", type=int, default=1000)
     args = parser.parse_args()
     scripts = Path(__file__).resolve().parent
     args.run_root.mkdir(parents=True, exist_ok=False)
@@ -162,6 +163,13 @@ def main() -> int:
                 command.extend(["--teacher-path", str(args.teacher_path)])
             if mode == "overfit":
                 command.extend(["--overfit-ids", str(args.overfit_ids)])
+                if arm != "A0_direct":
+                    command.extend(
+                        [
+                            "--max-steps",
+                            str(args.generative_overfit_max_steps),
+                        ]
+                    )
             returncode = record_run(
                 state,
                 state_path,
