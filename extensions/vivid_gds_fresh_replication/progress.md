@@ -23,3 +23,9 @@
   fresh-development prediction has been produced.
 - Validated shell syntax, Python entrypoints, the six inherited VIVID-GDS
   contract tests, and the fresh replication lock tests.
+- Committed and pushed the locked replication at Git commit `2882789`.
+- Synchronized that source state to the isolated SUES project and launched the
+  sequential queue through retained allocation 3066 on `gpu01`.
+- Queue R0 passed and R1 began with `seed0_A0_direct`; the first ten GPU
+  optimization steps completed normally. The remaining A0/A2/A3 seed pairs
+  and all probes remain queued.

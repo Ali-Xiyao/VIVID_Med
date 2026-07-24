@@ -15,13 +15,13 @@ without reusing the terminal Stage-A surface for selection.
   rules, statistics, and survival thresholds.
 - [x] Implement a fail-closed readiness audit and replication queue.
 - [x] Validate locally and on the server without opening the new scores.
-- [ ] Launch the smallest authorized three-seed survival gate.
+- [x] Launch the smallest authorized three-seed survival gate.
 - [ ] Freeze PASS or NO-GO and update GitHub.
 
 ## Next Step
 
-Commit and push the locked protocol/code, synchronize the final source state,
-then launch the sequential allocation-3066 queue.
+Monitor R1 training, R2 probes, and R3 frozen gate. Preserve any failure and
+do not repair the scientific identity or reuse the fresh-development surface.
 
 ## Boundaries
 
