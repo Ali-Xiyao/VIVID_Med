@@ -43,3 +43,7 @@
 - R1 `seed1_A0_direct` completed and passed: validation schema NLL fell from
   `1.07115` to `0.51409` (52.01% reduction); the locked best checkpoint was
   step 2500. The queue advanced to `seed1_A2_ums`.
+- R1 `seed1_A2_ums` completed and passed: validation token NLL fell from
+  `1.35102` to `0.07736` (94.27% reduction), with finite/nonzero backbone and
+  projector gradients and the locked best checkpoint at step 3000. The queue
+  advanced to `seed1_A3_gds`.
