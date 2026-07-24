@@ -12,7 +12,8 @@
 
 1. Contract audit: hashes, patient split, fields/states, protected non-use.
 2. 256-row overfit: A0, A1, A3.
-3. 20k single-seed pilots: A0, A1, A3; reuse locked A2.
+3. Frozen 19,533-train/1,679-validation single-seed pilots: A0, A1, A3;
+   reuse locked A2.
 4. Identical CheXpert expert-development probes: A0–A3.
 5. Frozen verdict and only then optional Stage-B multiseed.
 

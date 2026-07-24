@@ -13,4 +13,9 @@
   frozen promotion-gate scripts.
 - Passed six unit tests, the CPU smoke, the lock audit, Python compilation,
   CLI parsing, and `git diff --check`.
-- Server synchronization and launch are in progress.
+- Synced the code-only package to the isolated server root. Server unit tests,
+  smoke, and lock audit passed.
+- Preserved a prelaunch G0 failure caused by an incorrect documented row count.
+  Applied the single allowed identity-preserving repair: the lock now records
+  the actual immutable 19,533/1,679/21,212 split.
+- Server revalidation and launch are in progress.

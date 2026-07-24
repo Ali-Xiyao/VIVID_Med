@@ -57,7 +57,11 @@ def main() -> int:
         }
         checks["manifest_schema"] = all(required <= set(row) for row in rows)
         split_counts = Counter(str(row["split"]) for row in rows)
-        checks["frozen_20k_train"] = split_counts["train"] == 20000
+        checks["frozen_row_counts"] = (
+            split_counts["train"] == 19533
+            and split_counts["validate"] == 1679
+            and len(rows) == 21212
+        )
         train_patients = {
             str(row["patient_id"]) for row in rows if row["split"] == "train"
         }

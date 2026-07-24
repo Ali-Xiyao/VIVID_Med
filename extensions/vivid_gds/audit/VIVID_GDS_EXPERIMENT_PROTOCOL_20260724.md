@@ -16,6 +16,8 @@ These are survival claims, not publication claims. No external test is opened.
 
 All arms use the hard-UMS manifest and patient split with SHA-256
 `1da254ab25ab8f005536ff16ac7a1c40e33f15add2afa25277a8c6e06f6e30b4`.
+The exact frozen population is 19,533 train rows and 1,679 validation rows
+(21,212 total); “20k” is only the historical pilot shorthand.
 All trainable arms start from the same ViT-B/16 safetensors authority and use
 seed 0, 3000 optimizer steps, effective batch 32, AdamW, identical augmentation,
 and the same deterministic CUDA contract.
@@ -57,7 +59,7 @@ Before 20k pilots:
 An implementation failure permits at most one identity-preserving repair and a
 restart of the failed arm from zero.
 
-## Stage M1: 20k pilots
+## Stage M1: frozen 21,212-row (“20k”) pilots
 
 Run A0, A1, and A3 for 3000 optimizer steps. Reuse A2 only after its manifest,
 teacher, ViT initialization, optimizer budget, and selected checkpoint hashes

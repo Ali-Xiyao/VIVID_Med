@@ -53,7 +53,8 @@ findings 上求平均，防止高覆盖字段支配损失。首轮只允许
 
 ## 4. Stage A 核心生存实验
 
-四个实验使用相同 20k MIMIC study 锁、患者划分、ViT-B/16 初始化、3000
+四个实验使用相同冻结 MIMIC pilot 锁（19,533 train、1,679 validation，
+共 21,212 行；“20k”仅为历史简称）、患者划分、ViT-B/16 初始化、3000
 optimizer steps、seed 0、增强、checkpoint 规则和 CheXpert
 expert-development probe：
 
@@ -108,7 +109,7 @@ CheXlocalize test 保持关闭。
 
 ## 6. Stage B 与最终实验
 
-Stage B 首先在 20k 上运行 A0–A3 的 seeds 0/1/2。A3 相对 A2 需要至少
+Stage B 首先在同一冻结 pilot 上运行 A0–A3 的 seeds 0/1/2。A3 相对 A2 需要至少
 2/3 seeds 为正、平均 delta AUROC >= +0.005，并且患者级配对 bootstrap
 95% CI 下界大于 0。之后才运行 full MIMIC；多机构
 MIMIC+CheXpert-Plus 必须先排除 CheXpert expert val/test 和

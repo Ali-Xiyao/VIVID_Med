@@ -17,7 +17,11 @@
   },
   "data": {
     "hard_ums_manifest_sha256": "1da254ab25ab8f005536ff16ac7a1c40e33f15add2afa25277a8c6e06f6e30b4",
-    "train_studies": 20000,
+    "rows": {
+      "train": 19533,
+      "validate": 1679,
+      "total": 21212
+    },
     "split": "frozen_patient_level",
     "free_text_policy": "deterministic_historical_templates_same_selected_fields"
   },
