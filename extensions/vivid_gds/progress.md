@@ -45,3 +45,7 @@
   `local_runs/vivid_gds_stage_a_qwen35_2b_20260724_r1` as Slurm step
   `3066.20209` (launcher PID `704958`). Repaired G0 passed and G1 restarted
   from zero with `A0_direct` currently using GPU 0.
+- Repaired-run `A0_direct` reproduced its PASS exactly at step 300
+  (schema accuracy `0.993197`, schema NLL reduction `90.29%`). `A1_freetext`
+  then started its frozen 1000-step feasibility run and reached step 170 with
+  finite training loss at the latest poll.
