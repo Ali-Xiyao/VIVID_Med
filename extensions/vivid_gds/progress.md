@@ -20,4 +20,9 @@
   the actual immutable 19,533/1,679/21,212 split.
 - Preserved a pre-step launcher failure caused by CRLF shell line endings.
   Added an LF repository contract; no Slurm GPU step or run root had started.
-- Server revalidation and launch are in progress.
+- Repaired G0 passed all data, model, checkpoint, patient, image, and protected
+  surface checks.
+- Launched the sequential Stage-A queue on allocation 3066 as Slurm step
+  `3066.20183`; launcher PID is `632970`.
+- G0 passed and G1 `A0_direct` began on GPU. At the first observed milestone,
+  step 50 schema NLL was `0.842170` and schema accuracy was `0.701531`.
